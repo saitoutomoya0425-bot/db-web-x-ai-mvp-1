@@ -1,0 +1,4 @@
+product_code,title,actress_name,actress_name_kana,maker_name,series_name,label_name,genre,tags,duration,release_date,sample_images,thumbnail_url,video_url,affiliate_url,description,popularity,favorite_count
+SAMPLE-001,サンプル作品1,サンプル女優,サンプルジョユウ,サンプルメーカー,サンプルシリーズ,サンプルレーベル,ドラマ,初心者向け|ドラマ,120,2026-01-01,,,,,CSV投入確認用データ,10,2
+SAMPLE-002,サンプル作品2,テスト女優,テストジョユウ,サンプルメーカー,別シリーズ,サンプルレーベル,企画,企画|人気,90,2026-02-01,,,,,重複スキップ確認にも使用できます,20,4
+SAMPLE-003,サンプル作品3,,,別メーカー,,,その他,その他,60,2026-03-01,,,,,画像未登録時の表示確認用データ,0,0
