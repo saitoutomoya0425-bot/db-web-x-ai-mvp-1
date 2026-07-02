@@ -32,6 +32,9 @@ importers:
       papaparse:
         specifier: ^5.5.3
         version: 5.5.4
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
       react:
         specifier: ^19.1.1
         version: 19.2.7
@@ -41,6 +44,9 @@ importers:
       react-hook-form:
         specifier: ^7.62.0
         version: 7.80.0(react@19.2.7)
+      stack:
+        specifier: ^0.1.0
+        version: 0.1.0
       tailwind-merge:
         specifier: ^2.6.0
         version: 2.6.1
@@ -1689,6 +1695,10 @@ packages:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
+  postgres@3.4.9:
+    resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
+    engines: {node: '>=12'}
+
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
@@ -1818,6 +1828,10 @@ packages:
 
   stable-hash@0.0.5:
     resolution: {integrity: sha512-+L3ccpzibovGXFK+Ap/f8LOS0ahMrHTf3xu7mMLSpEGU0EO9ucaysSylKo9eRDFNhWve/y275iPmIZ4z39a9iA==}
+
+  stack@0.1.0:
+    resolution: {integrity: sha512-MCDcCsqemsYpCg/eeR48p6RqA18We4AaXcYmiZyppx27AA58oleDMZpG+ewRA61vG5iUeAGPHinkFQg/REZMfA==}
+    engines: {'0': node >= 0.2.0}
 
   stop-iteration-iterator@1.1.0:
     resolution: {integrity: sha512-eLoXW/DHyl62zxY4SCaIgnRhuMr6ri4juEYARS8E6sCEqzKpOiE521Ucofdx+KnDZl5xmvGYaaKCk5FEOxJCoQ==}
@@ -3621,6 +3635,8 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  postgres@3.4.9: {}
+
   prelude-ls@1.2.1: {}
 
   prop-types@15.8.1:
@@ -3801,6 +3817,8 @@ snapshots:
   source-map-js@1.2.1: {}
 
   stable-hash@0.0.5: {}
+
+  stack@0.1.0: {}
 
   stop-iteration-iterator@1.1.0:
     dependencies:
