@@ -3,3 +3,50 @@
 :root { color-scheme: dark; }
 body { background: #020617; color: #e2e8f0; }
 ::selection { background: #7c3aed; color: white; }
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a,
+button,
+img {
+  -webkit-touch-callout: none;
+}
+
+a,
+a:visited,
+a:hover,
+a:active {
+  color: inherit;
+}
+
+a:focus,
+button:focus {
+  outline: none;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgba(196, 181, 253, 0.75);
+  outline-offset: 3px;
+}
+
+@keyframes okazuFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes okazuImageIn {
+  from { opacity: 0; filter: blur(6px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes okazuCarouselNudge {
+  0%, 100% { transform: translateX(0); }
+  38% { transform: translateX(-6px); }
+}
+
+main {
+  animation: okazuFadeIn 280ms ease-out both;
+}

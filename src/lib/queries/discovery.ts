@@ -23,7 +23,7 @@ export async function getTrendingWorks(limit = 12) {
 
 export async function getRecommendedWorks(limit = 12): Promise<WorkDetail[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("videos").select("*")
+  const { data } = await supabase.from("videos").select("*").eq("is_published", true)
     .order("popularity", { ascending: false }).order("favorite_count", { ascending: false }).limit(limit);
   return weightedRecommendationProvider.recommend(toWorkDetails(data), {}, limit);
 }
@@ -35,12 +35,18 @@ export async function getTagWorks(name: string, limit = 24, offset = 0) {
   const { data: links } = await supabase.from("video_tags").select("video_id").eq("tag_id", tag.id).range(offset, offset + limit - 1);
   const ids = (links ?? []).map((link) => link.video_id);
   if (!ids.length) return [];
-  const { data } = await supabase.from("videos").select("*").in("id", ids).order("popularity", { ascending: false });
+  const { data } = await supabase.from("videos").select("*").eq("is_published", true).in("id", ids).order("popularity", { ascending: false });
   return toWorkDetails(data);
 }
 
 export async function getPopularTags(limit = 30) {
   const supabase = await createClient();
-  const { data } = await supabase.from("tags").select("id,name").order("name").limit(limit);
+  const { data: published } = await supabase.from("videos").select("id").eq("is_published", true).limit(10_000);
+  const ids = (published ?? []).map((item) => item.id);
+  if (!ids.length) return [];
+  const { data: links } = await supabase.from("video_tags").select("tag_id").in("video_id", ids);
+  const tagIds = [...new Set((links ?? []).map((item) => item.tag_id))];
+  if (!tagIds.length) return [];
+  const { data } = await supabase.from("tags").select("id,name").in("id", tagIds).order("name").limit(limit);
   return data ?? [];
 }

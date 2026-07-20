@@ -72,24 +72,24 @@ export async function getActressPageData(
   }
 
   const safeQuery = options.query.replace(/[,%()]/g, " ").trim();
-  let workQuery = supabase.from("videos").select("*").eq("actress_name", name);
+  let workQuery = supabase.from("videos").select("*").eq("is_published", true).eq("actress_name", name);
   if (safeQuery) workQuery = workQuery.or(`product_code.ilike.%${safeQuery}%,title.ilike.%${safeQuery}%,maker_name.ilike.%${safeQuery}%,series_name.ilike.%${safeQuery}%`);
   if (options.sort === "release") workQuery = workQuery.order("release_date", { ascending: false, nullsFirst: false });
   else if (options.sort === "maker") workQuery = workQuery.order("maker_name", { ascending: true });
   else workQuery = workQuery.order("popularity", { ascending: false });
 
-  let totalQuery = supabase.from("videos").select("id", { count: "exact", head: true }).eq("actress_name", name);
+  let totalQuery = supabase.from("videos").select("id", { count: "exact", head: true }).eq("is_published", true).eq("actress_name", name);
   if (safeQuery) totalQuery = totalQuery.or(`product_code.ilike.%${safeQuery}%,title.ilike.%${safeQuery}%,maker_name.ilike.%${safeQuery}%,series_name.ilike.%${safeQuery}%`);
   const [fallbackWorks, fallbackCount, allOwnWorks] = await Promise.all([
     workQuery.range(offset, offset + options.pageSize - 1),
     totalQuery,
-    supabase.from("videos").select("maker_name,genre").eq("actress_name", name).limit(10_000),
+    supabase.from("videos").select("maker_name,genre").eq("is_published", true).eq("actress_name", name).limit(10_000),
   ]);
   const makers = [...new Set((allOwnWorks.data ?? []).map((row) => row.maker_name).filter((value): value is string => Boolean(value)))];
   const genres = [...new Set((allOwnWorks.data ?? []).map((row) => row.genre).filter((value): value is string => Boolean(value)))];
   const [makerRows, genreRows] = await Promise.all([
-    makers.length ? supabase.from("videos").select("actress_name,popularity").in("maker_name", makers).neq("actress_name", name).order("popularity", { ascending: false }).limit(1000) : Promise.resolve({ data: [] }),
-    genres.length ? supabase.from("videos").select("actress_name,popularity").in("genre", genres).neq("actress_name", name).order("popularity", { ascending: false }).limit(1000) : Promise.resolve({ data: [] }),
+    makers.length ? supabase.from("videos").select("actress_name,popularity").eq("is_published", true).in("maker_name", makers).neq("actress_name", name).order("popularity", { ascending: false }).limit(1000) : Promise.resolve({ data: [] }),
+    genres.length ? supabase.from("videos").select("actress_name,popularity").eq("is_published", true).in("genre", genres).neq("actress_name", name).order("popularity", { ascending: false }).limit(1000) : Promise.resolve({ data: [] }),
   ]);
   return {
     name,

@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import type { PopularWork, WorkDetail } from "@/types/database";
+import { officialFanzaImageUrl } from "@/lib/fanza/media";
+import type { Actress, PopularWork, WorkDetail } from "@/types/database";
+
+type WorkActress = Pick<Actress, "id" | "name" | "name_kana" | "profile_url">;
 
 export function normalizeCode(code: string) {
   try { return decodeURIComponent(code).trim().toUpperCase(); }
@@ -34,6 +37,7 @@ export function toWorkDetail(input: unknown): WorkDetail | null {
   const id = text(video.id) ?? productCode;
   const actressName = text(video.actress_name);
   const makerName = text(video.maker_name);
+  const sourceName = text(video.source_name);
   return {
     id,
     product_code: productCode,
@@ -41,16 +45,21 @@ export function toWorkDetail(input: unknown): WorkDetail | null {
     actress_id: actressName,
     maker_id: makerName,
     release_date: text(video.release_date),
-    thumbnail_url: imageUrl(video.thumbnail_url),
+    card_thumbnail_url: officialFanzaImageUrl(video.card_thumbnail_url),
+    thumbnail_url: officialFanzaImageUrl(video.thumbnail_url),
     sample_url: imageUrl(video.video_url),
+    official_url: imageUrl(video.official_url),
     affiliate_url: imageUrl(video.affiliate_url),
+    source_name: sourceName,
+    external_product_id: text(video.external_product_id),
+    source_checked_at: text(video.source_checked_at),
     description: text(video.description),
     series_name: text(video.series_name),
     label_name: text(video.label_name),
     genre: text(video.genre),
     duration: numberValue(video.duration),
     sample_images: Array.isArray(video.sample_images)
-      ? video.sample_images.map(imageUrl).filter((url): url is string => url !== null)
+      ? video.sample_images.map(officialFanzaImageUrl).filter((url): url is string => url !== null)
       : [],
     popularity: numberValue(video.popularity) ?? 0,
     favorite_count: numberValue(video.favorite_count) ?? 0,
@@ -59,11 +68,27 @@ export function toWorkDetail(input: unknown): WorkDetail | null {
     actresses: actressName
       ? { id: actressName, name: actressName, name_kana: null, profile_url: null }
       : null,
+    actress_list: actressName
+      ? [{ id: actressName, name: actressName, name_kana: null, profile_url: null }]
+      : [],
     makers: makerName
       ? { id: makerName, name: makerName, official_url: null }
       : null,
     work_tags: [],
   };
+}
+
+function applyActressList(work: WorkDetail, actresses: WorkActress[]) {
+  const unique = new Map<string, WorkActress>();
+  for (const actress of actresses) {
+    if (actress?.id && actress.name) unique.set(actress.id, actress);
+  }
+  const list = [...unique.values()];
+  if (!list.length) return work;
+  work.actress_list = list;
+  work.actresses = list[0] ?? work.actresses;
+  work.actress_id = list[0]?.id ?? work.actress_id;
+  return work;
 }
 export function toWorkDetails(input: unknown): WorkDetail[] {
   if (!Array.isArray(input)) return [];
@@ -82,7 +107,7 @@ export async function searchVideos(query: string, limit = 24, offset = 0, sort: 
   try {
     const supabase = await createClient();
     if (actress || maker || series) {
-      let filtered = supabase.from("videos").select("*");
+      let filtered = supabase.from("videos").select("*").eq("is_published", true);
       const safeQuery = clean(normalized);
       if (safeQuery) filtered = filtered.or(`product_code.ilike.%${safeQuery}%,title.ilike.%${safeQuery}%`);
       if (actress) filtered = filtered.ilike("actress_name", `%${actress}%`);
@@ -106,7 +131,7 @@ export async function searchVideos(query: string, limit = 24, offset = 0, sort: 
       const compactCode = safeQuery.replace(/[^a-zA-Z0-9]/g, "");
       const codeMatch = compactCode.match(/^([a-zA-Z]+)(\d+)$/);
       const hyphenCode = codeMatch ? `${codeMatch[1]}-${codeMatch[2]}` : safeQuery;
-      let fallbackQuery = supabase.from("videos").select("*")
+      let fallbackQuery = supabase.from("videos").select("*").eq("is_published", true)
         .or(`product_code.ilike.%${safeQuery}%,product_code.ilike.%${hyphenCode}%,title.ilike.%${safeQuery}%,actress_name.ilike.%${safeQuery}%,maker_name.ilike.%${safeQuery}%,series_name.ilike.%${safeQuery}%`);
       if (sort === "new") fallbackQuery = fallbackQuery.order("created_at", { ascending: false });
       else if (sort === "release") fallbackQuery = fallbackQuery.order("release_date", { ascending: false, nullsFirst: false });
@@ -137,6 +162,7 @@ export async function getWorkByCode(code: string) {
   const { data, error } = await supabase
     .from("videos")
     .select("*")
+    .eq("is_published", true)
     .or(`product_code.ilike.${normalized},product_code.ilike.${hyphenated}`)
     .limit(1)
     .maybeSingle();
@@ -147,7 +173,18 @@ export async function getWorkByCode(code: string) {
   if (data) {
     const work = toWorkDetail(data);
     if (!work) return null;
-    const { data: links } = await supabase.from("video_tags").select("tag_id").eq("video_id", work.id);
+    const [{ data: links }, { data: actressLinks }] = await Promise.all([
+      supabase.from("video_tags").select("tag_id").eq("video_id", work.id),
+      supabase
+        .from("video_actresses")
+        .select("position,actresses(id,name,name_kana,profile_url)")
+        .eq("video_id", work.id)
+        .order("position", { ascending: true }),
+    ]);
+    const linkedActresses = (actressLinks ?? [])
+      .map((link) => Array.isArray(link.actresses) ? link.actresses[0] : link.actresses)
+      .filter((actress): actress is WorkActress => Boolean(actress?.id && actress.name));
+    applyActressList(work, linkedActresses);
     const tagIds = (links ?? []).map((link) => link.tag_id);
     if (tagIds.length) {
       const { data: tags } = await supabase.from("tags").select("id,name").in("id", tagIds);
@@ -164,19 +201,39 @@ export async function getRelatedWorks(work: WorkDetail, limit = 8) {
   let actressWorks: WorkDetail[] = [];
   let makerWorks: WorkDetail[] = [];
   let seriesWorks: WorkDetail[] = [];
-  if (work.actresses?.name) {
-    const { data } = await supabase.from("videos").select("*").eq("actress_name", work.actresses.name).neq("id", work.id).order("popularity", { ascending: false }).limit(limit);
+  const actressIds = (work.actress_list ?? []).map((actress) => actress.id).filter(Boolean);
+  if (actressIds.length) {
+    const { data: relationRows } = await supabase
+      .from("video_actresses")
+      .select("video_id")
+      .in("actress_id", actressIds)
+      .neq("video_id", work.id)
+      .limit(limit * 4);
+    const videoIds = [...new Set((relationRows ?? []).map((row) => row.video_id))].slice(0, limit * 2);
+    if (videoIds.length) {
+      const { data } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("is_published", true)
+        .in("id", videoIds)
+        .neq("id", work.id)
+        .order("popularity", { ascending: false })
+        .limit(limit);
+      actressWorks = toWorkDetails(data);
+    }
+  } else if (work.actresses?.name) {
+    const { data } = await supabase.from("videos").select("*").eq("is_published", true).eq("actress_name", work.actresses.name).neq("id", work.id).order("popularity", { ascending: false }).limit(limit);
     actressWorks = toWorkDetails(data);
   }
   if (work.makers?.name) {
-    const { data } = await supabase.from("videos").select("*").eq("maker_name", work.makers.name).neq("id", work.id).order("popularity", { ascending: false }).limit(limit);
+    const { data } = await supabase.from("videos").select("*").eq("is_published", true).eq("maker_name", work.makers.name).neq("id", work.id).order("popularity", { ascending: false }).limit(limit);
     makerWorks = toWorkDetails(data);
   }
   if (work.series_name) {
-    const { data } = await supabase.from("videos").select("*").eq("series_name", work.series_name).neq("id", work.id).order("popularity", { ascending: false }).limit(limit);
+    const { data } = await supabase.from("videos").select("*").eq("is_published", true).eq("series_name", work.series_name).neq("id", work.id).order("popularity", { ascending: false }).limit(limit);
     seriesWorks = toWorkDetails(data);
   }
-  let relatedQuery = supabase.from("videos").select("*").neq("id", work.id);
+  let relatedQuery = supabase.from("videos").select("*").eq("is_published", true).neq("id", work.id);
   if (work.genre) relatedQuery = relatedQuery.eq("genre", work.genre);
   const { data: relatedData } = await relatedQuery.order("popularity", { ascending: false }).order("created_at", { ascending: false }).limit(limit);
   return { actressWorks, makerWorks, seriesWorks, relatedWorks: toWorkDetails(relatedData) };
@@ -186,7 +243,7 @@ export async function getPopularWorks(limit = 12) {
   const supabase = await createClient();
   const { data: ranks } = await supabase.rpc("get_popular_works", { result_limit: limit });
   if (ranks?.length) {
-    const { data } = await supabase.from("videos").select("*").in("product_code", ranks.map((rank) => rank.product_code));
+    const { data } = await supabase.from("videos").select("*").eq("is_published", true).in("product_code", ranks.map((rank) => rank.product_code));
     const videos = toWorkDetails(data);
     const byCode = new Map(videos.map((video) => [video.product_code.toUpperCase(), video]));
     return ranks.flatMap((rank) => {
@@ -194,7 +251,7 @@ export async function getPopularWorks(limit = 12) {
       return video ? [{ ...video, search_count: Number(rank.search_count) || 0 }] : [];
     });
   }
-  const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false }).limit(limit);
+  const { data } = await supabase.from("videos").select("*").eq("is_published", true).order("created_at", { ascending: false }).limit(limit);
   return toWorkDetails(data).map((video) => ({ ...video, search_count: 0 })) as PopularWork[];
 }
 
@@ -206,7 +263,7 @@ export async function getPopularWorksPeriod(limit = 40, offset = 0, days: number
     result_offset: offset,
   });
   if (error || !ranks?.length) return offset === 0 ? getPopularWorks(limit) : [];
-  const { data } = await supabase.from("videos").select("*").in("product_code", ranks.map((rank) => rank.product_code));
+  const { data } = await supabase.from("videos").select("*").eq("is_published", true).in("product_code", ranks.map((rank) => rank.product_code));
   const byCode = new Map(toWorkDetails(data).map((video) => [video.product_code.toUpperCase(), video]));
   return ranks.flatMap((rank) => {
     const video = byCode.get(rank.product_code.toUpperCase());
@@ -217,7 +274,7 @@ export async function getPopularWorksPeriod(limit = 40, offset = 0, days: number
 export async function getNewestWorks(limit = 8) {
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false }).limit(limit);
+    const { data } = await supabase.from("videos").select("*").eq("is_published", true).order("created_at", { ascending: false }).limit(limit);
     return toWorkDetails(data);
   } catch {
     return [];

@@ -10,7 +10,11 @@ export type Work = {
   release_date: string | null;
   thumbnail_url: string | null;
   sample_url: string | null;
+  official_url?: string | null;
   affiliate_url: string | null;
+  source_name?: string | null;
+  external_product_id?: string | null;
+  source_checked_at?: string | null;
   description: string | null;
   created_at: string;
   updated_at: string;
@@ -21,9 +25,11 @@ export type WorkDetail = Work & {
   genre?: string | null;
   duration?: number | null;
   sample_images?: string[];
+  card_thumbnail_url?: string | null;
   popularity?: number;
   favorite_count?: number;
   actresses: Pick<Actress, "id" | "name" | "name_kana" | "profile_url"> | null;
+  actress_list?: Pick<Actress, "id" | "name" | "name_kana" | "profile_url">[];
   makers: Pick<Maker, "id" | "name" | "official_url"> | null;
   work_tags: { tags: Pick<Tag, "id" | "name"> | null }[];
 };
@@ -32,6 +38,9 @@ export type Video = {
   id: string;
   product_code: string;
   title: string;
+  actress_id: string | null;
+  maker_id: string | null;
+  series_id: string | null;
   actress_name: string | null;
   maker_name: string | null;
   series_name: string | null;
@@ -40,12 +49,19 @@ export type Video = {
   duration: number | null;
   release_date: string | null;
   sample_images: string[];
+  card_thumbnail_url: string | null;
   thumbnail_url: string | null;
   video_url: string | null;
+  official_url: string | null;
   affiliate_url: string | null;
+  source_name: string | null;
+  external_product_id: string | null;
+  source_checked_at: string | null;
   description: string | null;
   popularity: number;
   favorite_count: number;
+  is_published: boolean;
+  content_category: "commercial_av" | "creator" | "doujin";
   created_at: string;
   updated_at: string;
 };
@@ -64,11 +80,22 @@ export type Database = {
       makers: Table<Maker>;
       tags: Table<Tag>;
       works: Table<Work>;
-      videos: Table<Video, Omit<Video, "id" | "created_at" | "updated_at"> & { id?: string; created_at?: string; updated_at?: string }>;
+      videos: Table<Video,
+        Omit<Video, "id" | "created_at" | "updated_at" | "actress_id" | "maker_id" | "series_id" | "is_published" | "content_category" | "official_url" | "source_name" | "external_product_id" | "source_checked_at" | "card_thumbnail_url"> &
+        { id?: string; actress_id?: string | null; maker_id?: string | null; series_id?: string | null;
+          is_published?: boolean; content_category?: "commercial_av" | "creator" | "doujin";
+          official_url?: string | null; source_name?: string | null; external_product_id?: string | null;
+          card_thumbnail_url?: string | null;
+          source_checked_at?: string | null; created_at?: string; updated_at?: string }
+      >;
+      contact_messages: Table<{
+        id:string;name:string;email:string;subject:string;message:string;status:string;
+        user_agent:string|null;referrer:string|null;created_at:string;
+      },{id?:string;name:string;email:string;subject:string;message:string;status?:string;user_agent?:string|null;referrer?:string|null;created_at?:string}>;
       import_jobs: Table<{
         id: string; user_id: string; file_name: string; file_size: number; status: string;
         processed_count: number; imported_count: number; failed_count: number;
-        duplicate_count: number; total_count: number | null; file_fingerprint: string | null;
+        duplicate_count: number; updated_count: number; total_count: number | null; file_fingerprint: string | null;
         last_error: string | null; errors: unknown[]; created_at: string; updated_at: string;
       }>;
       import_errors: Table<{
@@ -80,10 +107,12 @@ export type Database = {
       }>;
       affiliate_clicks: Table<{
         id: number; product_code: string; store: string | null; destination_url: string | null;
-        referrer: string | null; user_agent: string | null; created_at: string;
+        referrer: string | null; user_agent: string | null; video_id: string | null;
+        session_id: string | null; source: string | null; created_at: string;
       }, {
         id?: number; product_code: string; store?: string | null; destination_url?: string | null;
-        referrer?: string | null; user_agent?: string | null; created_at?: string;
+        referrer?: string | null; user_agent?: string | null; video_id?: string | null;
+        session_id?: string | null; source?: string | null; created_at?: string;
       }>;
       source_items: Table<{
         id: number; source: string; source_key: string; source_url: string | null; observed_at: string;
@@ -129,6 +158,57 @@ export type Database = {
         clicks: number; score: number; rank: number | null; metadata: unknown; calculated_at: string;
       }>;
       video_tags: Table<{ video_id: string; tag_id: string }, { video_id: string; tag_id: string }>;
+      video_actresses: Table<
+        {video_id:string;actress_id:string;position:number;created_at:string},
+        {video_id:string;actress_id:string;position?:number;created_at?:string}
+      >;
+      series: Table<{id:string;name:string;maker_id:string|null;created_at:string}>;
+      genres: Table<{id:string;name:string;created_at:string}>;
+      video_genres: Table<{video_id:string;genre_id:string},{video_id:string;genre_id:string}>;
+      data_sources: Table<{
+        id:string;name:string;source_type:string;priority:number;terms_note:string|null;
+        is_active:boolean;created_at:string;updated_at:string;
+      }>;
+      source_products: Table<{
+        id:string;data_source_id:string;external_product_id:string;product_code:string|null;
+        original_product_code:string|null;normalized_product_code:string|null;normalized_data:unknown;
+        preview_status:string;review_status:string;duplicate_video_id:string|null;promoted_video_id:string|null;
+        reviewed_at:string|null;reviewed_by:string|null;error_message:string|null;
+        raw_payload:unknown;payload_hash:string|null;fetched_at:string;
+        import_job_id:string|null;attempt_count:number;last_attempt_at:string|null;next_retry_at:string|null;
+        created_at:string;updated_at:string;
+      }>;
+      fanza_import_jobs: Table<{
+        id:string;requested_by:string|null;data_source_id:string;status:string;keyword:string|null;
+        page_size:number;max_items:number;next_offset:number;processed_count:number;staged_count:number;
+        unchanged_count:number;duplicate_count:number;needs_review_count:number;failed_count:number;
+        retry_count:number;dry_run:boolean;last_error:string|null;started_at:string|null;completed_at:string|null;
+        created_at:string;updated_at:string;
+      }>;
+      fanza_import_errors: Table<{
+        id:number;job_id:string;external_product_id:string|null;original_product_code:string|null;
+        api_offset:number|null;processing_stage:string;error_type:string;attempt_count:number;
+        error_code:string|null;message:string;raw_payload:unknown|null;retryable:boolean;
+        resolved_at:string|null;created_at:string;
+      }>;
+      product_offers: Table<{
+        id:string;video_id:string;data_source_id:string;external_product_id:string;seller_name:string;
+        official_url:string|null;affiliate_url:string|null;price:number|null;currency:string;
+        availability_status:string;last_checked_at:string|null;source_product_id:string|null;created_at:string;updated_at:string;
+      }>;
+      video_source_links: Table<{
+        id:string;video_id:string;source_product_id:string;confidence:number|null;created_at:string;
+      }>;
+      video_change_logs: Table<{
+        id:number;video_id:string;changed_fields:string[];before_data:unknown;after_data:unknown;
+        change_source:string;created_at:string;
+      }>;
+      video_page_views: Table<{
+        id:number;video_id:string;session_id:string|null;referrer:string|null;source:string;created_at:string;
+      },{id?:number;video_id:string;session_id?:string|null;referrer?:string|null;source?:string;created_at?:string}>;
+      related_video_clicks: Table<{
+        id:number;video_id:string;related_video_id:string;session_id:string|null;referrer:string|null;source:string;created_at:string;
+      },{id?:number;video_id:string;related_video_id:string;session_id?:string|null;referrer?:string|null;source?:string;created_at?:string}>;
       collection_sources: Table<{
         id: string; source: string; query: string; enabled: boolean; since_id: string | null;
         next_run_at: string | null; last_run_at: string | null; last_error: string | null;
@@ -143,8 +223,8 @@ export type Database = {
       }>;
       work_tags: Table<{ work_id: string; tag_id: string }, { work_id: string; tag_id: string }>;
       search_logs: Table<
-        { id: string; product_code: string; source: string; user_agent: string | null; referrer: string | null; created_at: string },
-        { id?: string; product_code: string; source?: string; user_agent?: string | null; referrer?: string | null; created_at?: string }
+        { id: string; product_code: string; source: string; user_agent: string | null; referrer: string | null; session_id:string|null; created_at: string },
+        { id?: string; product_code: string; source?: string; user_agent?: string | null; referrer?: string | null; session_id?:string|null; created_at?: string }
       >;
     };
     Views: Record<string, never>;
@@ -207,6 +287,10 @@ export type Database = {
       sync_catalog_dimensions:{Args:Record<PropertyKey,never>;Returns:undefined};
       get_catalog_makers:{Args:{result_limit?:number;result_offset?:number};Returns:{name:string;work_count:number;popularity:number}[]};
       get_catalog_genres:{Args:{result_limit?:number;result_offset?:number};Returns:{name:string;work_count:number;popularity:number}[]};
+      match_videos_for_import:{
+        Args:{external_ids:string[];normalized_codes:string[]};
+        Returns:Video[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
