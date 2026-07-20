@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { Video } from "@/types/database";
+import type { Database } from "@/types/database";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-type Insert = Omit<Video, "id" | "created_at" | "updated_at">;
+type Insert = Database["public"]["Tables"]["videos"]["Insert"];
 type Raw = Record<string, unknown>;
 type RowError = { row: number; product_code?: string; message: string };
 const names: Record<string, string> = {
