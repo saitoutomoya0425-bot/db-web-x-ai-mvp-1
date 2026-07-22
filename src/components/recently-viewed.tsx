@@ -10,7 +10,7 @@ const STORAGE_KEY = "okazu:recently-viewed:v1";
 const MAX_ITEMS = 20;
 const EVENT_NAME = "okazu:recently-viewed-updated";
 const CARD_THUMBNAIL_OVERRIDES: Record<string, string> = {
-  RBB00339: "/card-thumbnails/RBB00339-right.jpg",
+  RBB00339: "/card-thumbnails/RBB00339-full.jpg",
   "1SBP00426": "/card-thumbnails/1SBP00426-rotated.jpg",
   "1SBP00427": "/card-thumbnails/1SBP00427-rotated.jpg",
   "1SBP00428": "/card-thumbnails/1SBP00428-rotated.jpg",
