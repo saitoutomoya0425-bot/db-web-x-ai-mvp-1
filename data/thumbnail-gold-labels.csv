@@ -1,0 +1,84 @@
+product_code,expected_type,expected_source,decision_status,decision_basis,notes
+13DSVR01990,sample,sample:1,confirmed,manual_gold_and_final_14,good sample #1
+1FCDSS00115,right,dvd:right,confirmed,manual_gold_and_final_14,right; low-resolution sample rejected
+1FTKD00040,right,dvd:right,confirmed,user_final_14,right
+1IENF00455,right,dvd:right,confirmed,user_final_14,right
+1MGNL00174,center,dvd:center,confirmed,user_final_14,center; side regions unusable
+1MGNL00175,center,dvd:center,confirmed,user_final_14,center; side regions unusable
+1MGNL00178,center,dvd:center,confirmed,user_final_14,center; side regions unusable
+1NAMHS00006,right,dvd:right,confirmed,final_human_review,"right cover preserves title, main visual, and performer information"
+1SBP00395,scene_portrait,scene_portrait:revised,confirmed,user_final_56,face and upper body; approved revised crop
+1SBP00396,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00397,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00398,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00399,scene_portrait,scene_portrait:revised,confirmed,user_final_56,face and upper body; approved revised crop
+1SBP00400,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00401,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00402,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00403,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00404,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00405,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00406,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00407,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00408,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00409,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00410,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00411,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00412,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00413,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00414,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00415,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00416,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00417,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00418,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00419,keep_current,current,confirmed,user_final_56,retain current auto-right
+1SBP00420,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00421,keep_current,current,confirmed,user_final_56,retain current auto-right
+1SBP00422,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1SBP00424,scene_portrait,scene_portrait:rotate_clockwise_b,confirmed,user_final_56,approved rotated candidate B
+1SBP00425,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+1START00590,sample,sample:1,confirmed,manual_gold_and_final_14,good sample #1
+1STCV00598,center,dvd:center,confirmed,user_final_14,center
+1VRNC00094,full,dvd:full,confirmed,user_final_56,full
+1VRNC00096,center,dvd:center,confirmed,manual_gold_and_final_14,blurred sides; center only
+301MBDD02185,right,dvd:right,confirmed,user_final_14,right replaces prior full
+5561SGKT00002,right,dvd:right,confirmed,manual_gold_and_final_14,right
+AGEOM00035,keep_current,current,confirmed,user_final_56,retain current auto-right
+AGMX00269,full,dvd:full,confirmed,user_final_56,full
+AQUGL00004,sample,sample:12,confirmed,manual_gold,last good sample
+BEBL00058,sample,sample:4,confirmed,human_batch_02,human approved sample sample:4
+BIBIVR00173,right,dvd:right,confirmed,human_batch_02,human approved right dvd:right
+DSVR00064,sample,sample:1_high_resolution,confirmed,user_final_56,same high-resolution sample 588x800
+EBWH00348,sample,sample:2,confirmed,human_batch_02,human approved sample sample:2
+ERDX00003,right,dvd:right,confirmed,human_batch_02,human approved right dvd:right
+H_068MXDLP00335,full,dvd:full,confirmed,manual_gold,DVD full
+H_1664VNDS05237,sample,sample:2,confirmed,human_batch_04,human approved exact sample:2 candidate
+H_1711HMRK00044,right,dvd:right,confirmed,human_batch_04,human approved exact dvd:right candidate
+H_1780GPPBY00023,full,dvd:full,confirmed,user_final_56,full
+H_1784FTO00061,full,dvd:full,confirmed,manual_gold,uniform schoolgirl compilation; full
+H_283PMFT00430,sample,sample:4,confirmed,human_batch_04,human approved exact sample:4 candidate
+H_283PMFT00431,sample,sample:2,confirmed,human_batch_04,human approved exact sample:2 candidate
+H_283PMFT00432,sample,sample:4,confirmed,human_batch_02,human approved sample sample:4
+H_283PMFT00433,sample,sample:4,confirmed,human_batch_04,human approved exact sample:4 candidate
+H_283PMFT00434,sample,sample:4,confirmed,human_batch_02,human approved sample sample:4
+H_283PMFT00435,scene_portrait,scene_portrait,confirmed,user_final_56,approved scene portrait
+H_283PMFT00436,sample,sample:4,confirmed,human_batch_04,human approved exact sample:4 candidate
+H_283PMFT00437,sample,sample:3,confirmed,human_batch_04,human approved exact sample:3 candidate
+H_283PMFT00440,sample,sample:2,confirmed,human_batch_04,human approved exact sample:2 candidate
+H_283PMFT00442,sample,sample:2,confirmed,human_batch_04,human approved exact sample:2 candidate
+H_283PMFT00443,sample,sample:2,confirmed,human_batch_04,human approved exact sample:2 candidate
+H_283PMFT00444,sample,sample:3,confirmed,human_batch_04,human approved exact sample:3 candidate
+H_346REBD01049,right,dvd:right,confirmed,manual_gold,right
+H_491KDMN00050,keep_current,current,confirmed,user_final_56,retain current auto-right
+H_491KDMN00051,keep_current,current,confirmed,user_final_56,retain current auto-right
+HMN00870,keep_current,current,confirmed,user_final_56,retain current auto-right
+JUVR00300,right,dvd:right,confirmed,human_batch_03,human approved existing right candidate
+MIZD00545,right,dvd:right,confirmed,human_batch_01,human approved existing right candidate
+MNGS00065,right,dvd:right,confirmed,human_batch_03,human approved existing right candidate
+MUDR00393,keep_current,current,confirmed,user_final_56,retain current auto-right
+NBES00114,right,dvd:right,confirmed,human_batch_03,human approved existing right candidate
+RBB00339,right,dvd:right,confirmed,manual_gold_latest,later user decision supersedes prior full
+ROE00515,right,dvd:right,confirmed,user_final_56,right replaces center
+ROE00520,right,dvd:right,confirmed,user_final_56,right replaces center
+SNOS00263,right,dvd:right,confirmed,human_batch_03,human approved existing right candidate
+YMDS00300,right,dvd:right,confirmed,human_batch_03,human approved existing right candidate

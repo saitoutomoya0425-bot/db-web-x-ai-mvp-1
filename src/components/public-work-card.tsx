@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ImageIcon } from "lucide-react";
-import { officialFanzaImageUrl } from "@/lib/fanza/media";
+import { resolvedCardThumbnailUrl } from "@/lib/fanza/media";
 import { currentListViewKey, writeListViewState } from "@/lib/list-view-state";
 import type { WorkDetail } from "@/types/database";
 
@@ -12,7 +12,7 @@ type RelatedTracking = { videoId: string; source: string };
 export type PublicWorkCardItem = Pick<WorkDetail, "product_code" | "title"> & Partial<Pick<WorkDetail, "id" | "card_thumbnail_url" | "thumbnail_url" | "series_name" | "actresses" | "actress_list" | "makers">>;
 
 export function PublicWorkCard({ work, rank, count, relatedTracking }: { work: PublicWorkCardItem; rank?: number; count?: number; relatedTracking?: RelatedTracking; compact?: boolean }) {
-  const cardImageUrl = officialFanzaImageUrl(work.card_thumbnail_url ?? null);
+  const cardImageUrl = resolvedCardThumbnailUrl(work.product_code, work.card_thumbnail_url ?? null);
   const [imageSrc, setImageSrc] = useState(cardImageUrl);
   useEffect(() => {
     setImageSrc(cardImageUrl);
