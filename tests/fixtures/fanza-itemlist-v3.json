@@ -1,0 +1,70 @@
+{
+  "result": {
+    "status": 200,
+    "result_count": 5,
+    "total_count": 5,
+    "first_position": 1,
+    "items": [
+      {
+        "content_id": "mock001",
+        "product_id": "abc-001",
+        "title": "架空作品アルファ",
+        "date": "2026-01-01 10:00:00",
+        "URL": "https://video.dmm.co.jp/item/mock001",
+        "affiliateURL": "https://video.dmm.co.jp/affiliate/mock001",
+        "imageURL": {"large": "https://video.dmm.co.jp/images/mock001.jpg"},
+        "sampleImageURL": {"sample_l": {"image": ["https://video.dmm.co.jp/images/mock001-1.jpg"]}},
+        "sampleMovieURL": {"size_720_480": "https://video.dmm.co.jp/movies/mock001.mp4"},
+        "iteminfo": {
+          "actress": [{"id": 1, "name": "架空女優A"}],
+          "maker": [{"id": 11, "name": "架空メーカーA"}],
+          "series": [{"id": 21, "name": "架空シリーズA"}],
+          "genre": [{"id": 31, "name": "架空ドラマ"}, {"id": 32, "name": "架空企画"}]
+        }
+      },
+      {
+        "content_id": "mock001",
+        "product_id": "ABC001",
+        "title": "架空作品アルファ",
+        "date": "2026-01-01 10:00:00",
+        "URL": "https://video.dmm.co.jp/item/mock001",
+        "iteminfo": {
+          "actress": [{"id": 1, "name": "架空 女優 A"}],
+          "maker": [{"id": 11, "name": "架空メーカーA"}],
+          "series": [{"id": 21, "name": "架空シリーズA"}],
+          "genre": [{"id": 31, "name": "架空ドラマ"}]
+        }
+      },
+      {
+        "content_id": "mock002",
+        "product_id": "xyz-002",
+        "title": "架空作品ベータ",
+        "URL": "https://video.dmm.co.jp/item/mock002",
+        "imageURL": {},
+        "iteminfo": {
+          "actress": [{"id": 2, "name": "架空女優B"}],
+          "maker": [{"id": 11, "name": "架空メーカーA"}],
+          "series": [{"id": 22, "name": "架空シリーズB"}],
+          "genre": [{"id": 33, "name": "架空コメディ"}]
+        }
+      },
+      {
+        "content_id": "mock003",
+        "product_id": "XYZ-003",
+        "title": "架空作品ガンマ",
+        "URL": "https://video.dmm.co.jp/item/mock003",
+        "affiliateURL": "https://video.dmm.co.jp/affiliate/mock003",
+        "iteminfo": {
+          "actress": [{"id": 2, "name": "架空女優B"}],
+          "maker": [{"id": 12, "name": "架空メーカーB"}],
+          "genre": [{"id": 33, "name": "架空コメディ"}, {"id": 34, "name": "架空短編"}]
+        }
+      },
+      {
+        "content_id": "mock004",
+        "URL": "https://video.dmm.co.jp/item/mock004",
+        "iteminfo": {"maker": [{"id": 12, "name": "架空メーカーB"}]}
+      }
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Bot, Clock3, Database, FileSpreadsheet, Gauge, HardDrive, Link2, SearchCheck, Settings2, ShieldAlert, Users } from "lucide-react";
+import { Activity, Bot, Clock3, Database, DownloadCloud, FileSpreadsheet, Gauge, HardDrive, Link2, SearchCheck, Settings2, ShieldAlert, SquarePlay, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const groups:{label:string;items:[string,string,LucideIcon][]}[]=[
   {label:"概要",items:[["/admin","ダッシュボード",Gauge]]},
-  {label:"データ",items:[["/admin/import-csv","CSVインポート",FileSpreadsheet],["/admin/sources","収集候補",Database],["/admin/ai-quality","AI品質管理",Bot]]},
+  {label:"データ",items:[["/admin/works","作品管理",SquarePlay],["/admin/import-csv","CSVインポート",FileSpreadsheet],["/admin/fanza-import","FANZA少量取得",DownloadCloud],["/admin/sources","収集候補",Database],["/admin/ai-quality","AI品質管理",Bot]]},
   {label:"分析・収益",items:[["/admin/analytics","分析",Activity],["/admin/affiliate","アフィリエイト",Link2]]},
   {label:"システム",items:[["/admin/seo","SEO設定",SearchCheck],["/admin/api-settings","API設定",Settings2],["/admin/cron","Cron状況",Clock3],["/admin/errors","エラーログ",ShieldAlert],["/admin/backups","バックアップ",HardDrive],["/admin/users","ユーザー管理",Users]]},
 ];

@@ -58,7 +58,7 @@ export async function PATCH(request: Request) {
     const { error: promoteError } = await supabase.from("videos").upsert(valid.map((item) => ({
       product_code: item.product_code!, title: item.title!, actress_name: item.actress_name,
       maker_name: item.maker_name, series_name: item.series_name, sample_images: [],
-      label_name: null, genre: null, duration: null, release_date: null, thumbnail_url: null,
+      label_name: null, genre: null, duration: null, release_date: null, card_thumbnail_url: null, thumbnail_url: null,
       video_url: null, affiliate_url: null, description: null, popularity: 0, favorite_count: 0,
     })), { onConflict: "product_code", ignoreDuplicates: true });
     if (promoteError) return NextResponse.json({ error: promoteError.message }, { status: 500 });

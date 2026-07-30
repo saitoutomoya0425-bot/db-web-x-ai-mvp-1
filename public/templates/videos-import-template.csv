@@ -1,0 +1,2 @@
+product_code,title,actress_name,actress_name_kana,maker_name,series_name,label_name,genre,tags,duration,release_date,sample_images,thumbnail_url,video_url,affiliate_url,description,popularity,favorite_count,clear_fields
+ABC-001,作品タイトル,女優名,じょゆうめい,メーカー名,シリーズ名,レーベル名,ジャンル名,タグ1|タグ2,120,2026-01-01,https://example.com/sample1.jpg|https://example.com/sample2.jpg,https://example.com/thumbnail.jpg,https://example.com/sample.mp4,,作品説明,0,0,

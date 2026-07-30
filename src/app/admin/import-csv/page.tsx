@@ -1,4 +1,5 @@
 import { FileSpreadsheet, Info } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CsvImporter } from "@/components/admin/csv-importer-v2";
 import { SignOutButton } from "@/components/admin/sign-out-button";
@@ -14,8 +15,9 @@ export default async function ImportCsvPage() {
       <section className="rounded-2xl border border-slate-800 bg-slate-950 p-5 shadow-xl sm:p-7"><CsvImporter /></section>
       <section className="mt-6 rounded-xl border border-slate-800 bg-slate-900/40 p-5">
         <h2 className="flex items-center gap-2 font-semibold"><Info className="size-5 text-violet-400" />CSVフォーマット</h2>
-        <p className="mt-3 text-sm leading-6 text-slate-400"><code>product_code</code> と <code>title</code> は必須です。日本語ヘッダーにも対応しています。<code>sample_images</code> はURLを <code>|</code> で区切るか、JSON配列で指定してください。</p>
-        <div className="mt-4 overflow-x-auto rounded-lg bg-slate-950 p-4"><code className="whitespace-nowrap text-xs text-slate-300">product_code,title,actress_name,actress_name_kana,maker_name,series_name,label_name,genre,tags,duration,release_date,sample_images,thumbnail_url,video_url,affiliate_url,description,popularity,favorite_count</code></div>
+        <p className="mt-3 text-sm leading-6 text-slate-400"><code>product_code</code> は必須で、新規登録では <code>title</code> も必須です。更新時の空欄は既存値を保持します。明示的に削除する場合だけ <code>clear_fields</code> に項目名を指定してください。<code>sample_images</code> はURLを <code>|</code> で区切るか、JSON配列で指定できます。</p>
+        <Link href="/templates/videos-import-template.csv" download className="mt-4 inline-flex rounded-lg border border-violet-700 px-4 py-2 text-sm font-bold text-violet-300 hover:bg-violet-950/40">実データ用CSVテンプレートをダウンロード</Link>
+        <div className="mt-4 overflow-x-auto rounded-lg bg-slate-950 p-4"><code className="whitespace-nowrap text-xs text-slate-300">product_code,title,actress_name,actress_name_kana,maker_name,series_name,label_name,genre,tags,duration,release_date,sample_images,card_thumbnail_url,thumbnail_url,video_url,affiliate_url,description,popularity,favorite_count,clear_fields</code></div>
       </section>
     </main>
   );
