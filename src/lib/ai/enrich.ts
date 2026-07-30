@@ -68,7 +68,7 @@ export async function runCandidateEnrichment(batchSize = 20) {
     if(shouldAutoApprove&&productCode) {
       const promoted=await supabase.from("videos").upsert({product_code:productCode,title:result.title||item.title!,actress_name:result.actress_name||item.actress_name,
         maker_name:result.maker_name||item.maker_name,series_name:result.series_name||item.series_name,label_name:null,genre:null,duration:null,
-        release_date:null,sample_images:[],thumbnail_url:null,video_url:null,affiliate_url:null,description:null,popularity:0,favorite_count:0},
+        release_date:null,sample_images:[],card_thumbnail_url:null,thumbnail_url:null,video_url:null,affiliate_url:null,description:null,popularity:0,favorite_count:0},
       {onConflict:"product_code",ignoreDuplicates:true});
       if(!promoted.error) {
         autoApproved++;

@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:thumbnail-gold": "node scripts/validate-thumbnail-gold-labels.mjs",
     "test:ai": "node --no-warnings --experimental-strip-types --test tests/ai-extraction.test.mjs",
     "check:supabase": "node --env-file=.env.local scripts/check-supabase.mjs",
     "configure:db": "node scripts/configure-db-url.mjs",

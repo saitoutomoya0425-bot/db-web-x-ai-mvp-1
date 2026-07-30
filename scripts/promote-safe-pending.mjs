@@ -1,6 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { normalizeTargetBaseUrl, prepareProductionAccess } from "./lib/production-access-guard.mjs";
+
+const execFileAsync = promisify(execFile);
+
+// Promotion is a write path. Never contact Supabase or the site before the
+// reviewed thumbnail contract passes in the local offline acceptance gate.
+try {
+  await execFileAsync(process.execPath, ["scripts/validate-thumbnail-gold-labels.mjs"], {
+    cwd: process.cwd(),
+    maxBuffer: 1024 * 1024,
+  });
+} catch {
+  throw new Error("GOLD_LABEL_ACCEPTANCE_FAILED: thumbnail promotion stopped before any DB or HTTP access");
+}
 
 const required = [
   "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY",

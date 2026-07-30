@@ -70,6 +70,25 @@ product_code,title,actress_name,actress_name_kana,maker_name,series_name,label_n
 
 CSV取込時に `actresses`、`makers`、`tags`、`video_tags`、女優かな別名も同期されます。ジャンルとシリーズは作品データから一覧・詳細ページを自動生成します。
 
+### 実データCSVの投入
+
+必須カラムは `product_code` と `title` です。その他のカラムは空欄でも登録できます。管理画面の「実データ用CSVテンプレートをダウンロード」から全18列の雛形を取得できます。
+
+| 区分 | カラム |
+| --- | --- |
+| 必須 | `product_code`, `title` |
+| 人物・分類 | `actress_name`, `actress_name_kana`, `maker_name`, `series_name`, `label_name`, `genre`, `tags` |
+| 作品情報 | `duration`, `release_date`, `description`, `popularity`, `favorite_count` |
+| URL | `sample_images`, `thumbnail_url`, `video_url`, `affiliate_url` |
+
+1. `/admin/import-csv` へ管理者でログインします。
+2. CSVを選択します。
+3. 重複時は通常「スキップ」を選びます。既存作品をCSV内容で更新する場合だけ「更新」を選びます。
+4. 「Supabaseへ一括登録」を押し、完了件数とエラー行を確認します。
+5. 失敗時は内容を修正し、同じファイルを再選択すると続きから再開できます。処理モードを変更した場合は別ジョブとして先頭から処理されます。
+
+検証用10件ファイルは `samples/production-import-test-10.csv` です。品番は `CSVTEST-001`〜`CSVTEST-010` です。
+
 ## 必要な環境変数
 
 `.env.example` を `.env.local` にコピーして設定します。
@@ -201,3 +220,41 @@ X候補収集は `/api/cron/collect-x`、分析更新は `/api/cron/refresh-metr
 モデル利用量と失敗は `ai_extraction_runs`、管理者の修正前後は `ai_correction_examples` に保存されます。画像・動画URLは `media_analysis_jobs` に登録され、将来の非同期Vision解析から候補本体を分離しています。
 
 候補は高・中・低信頼、重複、必須項目不足へ自動分類されます。`/admin/ai-quality` で閾値と品質ゲートを管理できます。自動承認は初期状態では無効で、最低評価件数・高信頼帯精度・重複なし・必須項目ありをすべて満たした場合だけ有効になります。
+
+## FANZA Webサービス少量取得
+
+`FANZA_API_ID` と `FANZA_AFFILIATE_ID` をサーバー環境変数へ設定すると、`/admin/fanza-import` から公式APIの商品を1回10件または20件だけ取得できます。未設定時は待機表示となり、公開機能には影響しません。
+
+取得結果は直ちに公開せず、次の順に処理します。
+
+1. 公式API応答を `source_products.raw_payload` へ保存
+2. 正規化結果と元品番を別々に保存
+3. 新規・更新・変更なし・重複候補・要確認へ分類
+4. 管理画面で内容を確認
+5. 選択した候補だけを承認
+6. `videos` と補助テーブル、`product_offers` へ反映
+
+設定項目：
+
+```dotenv
+FANZA_API_ID=
+FANZA_AFFILIATE_ID=
+FANZA_API_SITE=FANZA
+FANZA_API_SERVICE=digital
+FANZA_API_FLOOR=videoa
+```
+
+大量取得、定期実行、自動承認は実装していません。
+
+## 再審査前の公式データ手動登録
+
+FANZA Webサービスがサイト承認待ちで利用できない場合は、`/admin/works` から公式商品ページを根拠に少数だけ登録します。
+
+1. 品番・タイトル・女優・メーカー・シリーズ・発売日・ジャンルを公式ページと照合
+2. `出典名`、`公式の外部商品ID`、`通常の公式商品URL`を入力
+3. アフィリエイトURLは空欄のまま保存
+4. 画像は利用許可を確認できる公式提供URLだけを入力
+5. 説明は公式文章を転載せず、事実情報から短く独自作成
+6. 最初は非公開で保存し、全項目を再確認してから個別に公開
+
+通常の公式商品URLとアフィリエイトURLは別々に保存されます。承認後は、対象サイト専用のアフィリエイトIDで公式APIから取得したURLをアフィリエイトURL欄へ設定します。他人または別サイト用のアフィリエイトIDを含むURLは登録しないでください。
