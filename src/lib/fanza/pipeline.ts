@@ -76,6 +76,7 @@ export function isAllowedFanzaUrl(value: string | null) {
 
 export function fanzaSafetyReviewReasons(product: NormalizedFanzaProduct) {
   const reasons: string[] = [];
+  if (product.productCodeRejectionCode) reasons.push(product.productCodeRejectionCode);
   if (!product.externalProductId) reasons.push("external_product_id_missing");
   if (!product.productCode) reasons.push("product_code_missing");
   if (!product.normalizedProductCode) reasons.push("normalized_product_code_missing");

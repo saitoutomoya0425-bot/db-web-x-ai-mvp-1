@@ -3,6 +3,8 @@ export type NormalizedFanzaProduct = {
   originalProductCode: string | null;
   productCode: string | null;
   normalizedProductCode: string | null;
+  productCodeRejectionCode: "REJECTED_AUDIT_CODE" | null;
+  productCodeRejectionReason: string | null;
   title: string | null;
   actressNames: string[];
   makerName: string | null;
@@ -21,6 +23,8 @@ export type NormalizedFanzaProduct = {
   currency: "JPY";
   availabilityStatus: "available";
 };
+
+export type CanonicalizedProductCode = ReturnType<typeof canonicalizeProductCodeValue>;
 
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -42,11 +46,55 @@ export function normalizeProductCodeValue(value: unknown) {
   return { original, display, normalized: normalized || null };
 }
 
+const CANONICAL_PRODUCT_CODE_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  H_1784FT000062: "H_1784FTO00062",
+  H_1784FT000064: "H_1784FTO00064",
+});
+
+const REJECTED_AUDIT_PRODUCT_CODES: ReadonlySet<string> = new Set([
+  "1NAMH500006",
+]);
+
+export function canonicalizeProductCodeValue(value: unknown) {
+  const normalized = normalizeProductCodeValue(value);
+  if (!normalized.display) {
+    return {
+      ...normalized,
+      canonical: null,
+      canonicalNormalized: null,
+      aliasApplied: false,
+      rejected: false,
+      rejectionReason: null,
+    };
+  }
+
+  if (REJECTED_AUDIT_PRODUCT_CODES.has(normalized.display)) {
+    return {
+      ...normalized,
+      canonical: null,
+      canonicalNormalized: null,
+      aliasApplied: false,
+      rejected: true,
+      rejectionReason: "audit-only product code is not a runtime identity",
+    };
+  }
+
+  const canonical = CANONICAL_PRODUCT_CODE_ALIASES[normalized.display] ?? normalized.display;
+  return {
+    ...normalized,
+    canonical,
+    canonicalNormalized: canonical.replace(/[^A-Z0-9]/g, "") || null,
+    aliasApplied: canonical !== normalized.display,
+    rejected: false,
+    rejectionReason: null,
+  };
+}
+
 export function normalizeFanzaItem(input: unknown): NormalizedFanzaProduct {
   const item = record(input);
   const itemInfo = record(item.iteminfo);
   const externalProductId = text(item.content_id) ?? text(item.product_id) ?? "";
-  const code = normalizeProductCodeValue(item.product_id ?? item.content_id);
+  const code = canonicalizeProductCodeValue(item.product_id ?? item.content_id);
   const image = record(item.imageURL);
   const sampleImage = record(item.sampleImageURL);
   const sampleImages = [
@@ -65,8 +113,10 @@ export function normalizeFanzaItem(input: unknown): NormalizedFanzaProduct {
   return {
     externalProductId,
     originalProductCode: code.original,
-    productCode: code.display,
-    normalizedProductCode: code.normalized,
+    productCode: code.canonical,
+    normalizedProductCode: code.canonicalNormalized,
+    productCodeRejectionCode: code.rejected ? "REJECTED_AUDIT_CODE" : null,
+    productCodeRejectionReason: code.rejectionReason,
     title: text(item.title),
     actressNames: names(itemInfo.actress),
     makerName: firstName(itemInfo, "maker"),
