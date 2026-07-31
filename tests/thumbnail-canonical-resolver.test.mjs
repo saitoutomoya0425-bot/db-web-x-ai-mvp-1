@@ -7,6 +7,7 @@ import {
 import {
   adaptHumanApprovalRecord,
   adaptLocalAssetRecord,
+  adaptModeApprovalRecord,
 } from "../src/lib/thumbnail/adapters.ts";
 import {
   isTrustedThumbnailOutput,
@@ -170,6 +171,40 @@ test("HUMAN_APPROVED requires approver, date, source hash, and output hash", () 
   }
 });
 
+test("MODE_APPROVED can resolve an exact source but requires approver provenance", () => {
+  const decision = adaptModeApprovalRecord({
+    code: "MODEAPPROVED0001",
+    mode: "full",
+    state: "RESOLVED",
+    source_id: "dvd:full",
+    source_path_or_url: "https://pics.dmm.co.jp/mode-approved-source.jpg",
+    source_hash: HASH_A,
+    output_path_or_url: "https://pics.dmm.co.jp/mode-approved-source.jpg",
+    output_hash: HASH_A,
+    approved_by: "USER_HANDOFF",
+    approved_at: "2026-07-31",
+    reason: "mode and exact source are approved",
+  });
+  assert.equal(decision.kind, "RESOLVED");
+  assert.equal(decision.approval_status, "MODE_APPROVED");
+  assert.equal(decision.render_status, "READY");
+  assert.throws(
+    () =>
+      adaptModeApprovalRecord({
+        code: "MODEAPPROVED0002",
+        mode: "full",
+        state: "RESOLVED",
+        source_id: "dvd:full",
+        source_path_or_url: "https://pics.dmm.co.jp/mode-approved-source.jpg",
+        source_hash: HASH_A,
+        output_path_or_url: "https://pics.dmm.co.jp/mode-approved-source.jpg",
+        output_hash: HASH_A,
+        reason: "missing approver provenance",
+      }),
+    ThumbnailDecisionContractError,
+  );
+});
+
 test("SCENE_FULL requires contain and crop_spec=null", () => {
   const valid = resolvedHumanDecision({
     code: "SCENE00001",
@@ -224,6 +259,24 @@ test("SCENE_CROP requires a resolved human decision and crop_spec", () => {
           approved_by: null,
           approved_at: null,
         },
+      }),
+    ThumbnailDecisionContractError,
+  );
+  assert.throws(
+    () =>
+      adaptModeApprovalRecord({
+        code: "SCENE00002",
+        mode: "scene_crop",
+        state: "RESOLVED",
+        source_id: "scene:2",
+        source_path_or_url: "/card-thumbnails/scene-crop.jpg",
+        source_hash: HASH_A,
+        output_path_or_url: "/card-thumbnails/scene-crop.jpg",
+        output_hash: HASH_A,
+        crop_spec: crop,
+        approved_by: "USER_HANDOFF",
+        approved_at: "2026-07-31",
+        reason: "mode approval cannot authorize a scene crop",
       }),
     ThumbnailDecisionContractError,
   );
@@ -316,27 +369,39 @@ test("only a complete RESOLVED contract is renderable", () => {
   );
 });
 
-test("AQUGL00004 stays PENDING_OUTPUT and never resolves the wrong auto-right file", () => {
+test("AQUGL00004 resolves the approved sample:12 output and never uses stale candidates", () => {
   const decision = getProductionCanonicalThumbnailDecision("AQUGL00004");
-  assert.equal(decision?.kind, "PENDING_OUTPUT");
+  assert.equal(decision?.kind, "RESOLVED");
   assert.equal(decision?.source_id, "sample:12");
   assert.equal(
     decision?.source_hash,
-    "85b6fe7a484af6e4176982e7751dadece1c6eda5e19be4bb246fe0e3c36ae275",
+    "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3",
   );
-  assert.equal(decision?.output_path_or_url, null);
+  assert.equal(
+    decision?.source_path_or_url,
+    "https://pics.dmm.co.jp/digital/video/aqugl00004/aqugl00004jp-12.jpg",
+  );
+  assert.equal(
+    decision?.output_path_or_url,
+    "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+  );
+  assert.equal(decision?.output_hash, decision?.source_hash);
   assert.equal(decision?.approval_status, "HUMAN_APPROVED");
-  assert.equal(decision?.render_status, "PENDING_OUTPUT");
+  assert.equal(decision?.render_status, "READY");
   assert.equal(decision?.approved_by, "USER_HANDOFF");
+  assert.doesNotMatch(JSON.stringify(decision), /b7f305ea|85b6fe7a|auto-right/);
   const result = resolveCanonicalThumbnail({
     code: "AQUGL00004",
     database_url: completeDatabaseFallback(),
   });
-  assert.equal(result.kind, "PENDING_OUTPUT");
+  assert.equal(result.kind, "RESOLVED");
   assert.equal(result.approval_status, "HUMAN_APPROVED");
-  assert.equal(result.render_status, "PENDING_OUTPUT");
-  assert.equal(result.resolved_url, null);
-  assert.equal(isRenderableThumbnailResolution(result), false);
+  assert.equal(result.render_status, "READY");
+  assert.equal(
+    result.resolved_url,
+    "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+  );
+  assert.equal(isRenderableThumbnailResolution(result), true);
 });
 
 test("1START00590 fixes the reviewed sample source separately from its output", () => {
@@ -379,22 +444,111 @@ test("the eight fixed regressions resolve through production decisions", () => {
   }
 });
 
-test("production pending decisions override stale human RIGHT decisions", () => {
-  const cases = [
-    ["1SBP00423", "PENDING_SOURCE"],
-    ["H_1784FTO00062", "NEEDS_USER_REVIEW"],
-    ["H_1784FTO00064", "NEEDS_USER_REVIEW"],
+test("Phase 3A fixes exact source and output provenance for all four works", () => {
+  const expected = [
+    [
+      "AQUGL00004",
+      "SAMPLE",
+      "sample:12",
+      "https://pics.dmm.co.jp/digital/video/aqugl00004/aqugl00004jp-12.jpg",
+      "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+      "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3",
+      "cover",
+    ],
+    [
+      "1SBP00423",
+      "SCENE_FULL",
+      "scene:pl",
+      "https://pics.dmm.co.jp/digital/video/1sbp00423/1sbp00423pl.jpg",
+      "https://pics.dmm.co.jp/digital/video/1sbp00423/1sbp00423pl.jpg",
+      "5467e64d88abe1a9abe13c22c85b53e0871891d89034e77f19abf5ba0080d4ba",
+      "contain",
+    ],
+    [
+      "H_1784FTO00062",
+      "PACKAGE_FULL",
+      "dvd:full",
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00062/h_1784fto00062pl.jpg",
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00062/h_1784fto00062pl.jpg",
+      "e5cf3c1f156f512a2b13d00c0c517c02214338aa143cda9a18aa75319995a8e3",
+      "contain",
+    ],
+    [
+      "H_1784FTO00064",
+      "PACKAGE_FULL",
+      "dvd:full",
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00064/h_1784fto00064pl.jpg",
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00064/h_1784fto00064pl.jpg",
+      "44972d0cad9c01823d9a0a66c470782c9b5185bda449228013e87ca2a63ed59b",
+      "contain",
+    ],
   ];
-  for (const [code, kind] of cases) {
+  for (const [
+    code,
+    mode,
+    sourceId,
+    source,
+    output,
+    hash,
+    objectFit,
+  ] of expected) {
+    const decision = getProductionCanonicalThumbnailDecision(code);
+    assert.equal(decision?.kind, "RESOLVED", code);
+    assert.equal(decision?.mode, mode, code);
+    assert.equal(decision?.source_id, sourceId, code);
+    assert.equal(decision?.source_path_or_url, source, code);
+    assert.equal(decision?.output_path_or_url, output, code);
+    assert.equal(decision?.source_hash, hash, code);
+    assert.equal(decision?.output_hash, hash, code);
+    assert.equal(decision?.object_fit, objectFit, code);
+    assert.equal(decision?.crop_spec, null, code);
+  }
+});
+
+test("Phase 3A records the current FTO PACKAGE_FULL approval provenance", () => {
+  const expected = [
+    [
+      "H_1784FTO00062",
+      "2026-07-31 user approval supersedes the 2026-07-29 PACKAGE_RIGHT approval: PACKAGE_FULL is required because RIGHT omits the title, multi-person composition, and left-side work information",
+    ],
+    [
+      "H_1784FTO00064",
+      "2026-07-31 user approval supersedes the 2026-07-29 PACKAGE_RIGHT approval: PACKAGE_FULL is required because RIGHT omits the left-side description and cast composition",
+    ],
+  ];
+
+  for (const [code, reason] of expected) {
+    const decision = getProductionCanonicalThumbnailDecision(code);
+    assert.equal(decision?.kind, "RESOLVED", code);
+    assert.equal(decision?.mode, "PACKAGE_FULL", code);
+    assert.equal(decision?.source_id, "dvd:full", code);
+    assert.equal(decision?.approval_status, "MODE_APPROVED", code);
+    assert.equal(decision?.render_status, "READY", code);
+    assert.equal(decision?.approved_by, "USER_HANDOFF", code);
+    assert.equal(decision?.approved_at, "2026-07-31", code);
+    assert.equal(decision?.reason, reason, code);
+  }
+});
+
+test("production resolved decisions override stale human RIGHT decisions", () => {
+  const cases = [
+    ["1SBP00423", "SCENE_FULL", "scene:pl"],
+    ["H_1784FTO00062", "PACKAGE_FULL", "dvd:full"],
+    ["H_1784FTO00064", "PACKAGE_FULL", "dvd:full"],
+  ];
+  for (const [code, mode, sourceId] of cases) {
     const staleRight = resolvedHumanDecision({ code });
     const result = resolveCanonicalThumbnail({
       code,
       human_decision: staleRight,
       database_url: completeDatabaseFallback(),
     });
-    assert.equal(result.kind, kind);
+    assert.equal(result.kind, "RESOLVED");
     assert.equal(result.decision_source, "production_canonical");
-    assert.notEqual(result.source_id, "dvd:right");
+    assert.equal(result.mode, mode);
+    assert.equal(result.source_id, sourceId);
+    assert.equal(result.approval_status, "MODE_APPROVED");
+    assert.equal(result.render_status, "READY");
   }
 });
 
@@ -409,21 +563,27 @@ test("one priority definition includes production, human, gold, local, DB, exter
   ]);
 });
 
-test("approval status and render status remain independent for approved pending work", () => {
+test("approval status and render status remain independent for approved ready work", () => {
   const aq = getProductionCanonicalThumbnailDecision("AQUGL00004");
   assert.equal(aq?.approval_status, "HUMAN_APPROVED");
-  assert.equal(aq?.render_status, "PENDING_OUTPUT");
+  assert.equal(aq?.render_status, "READY");
   assert.equal(aq?.source_id, "sample:12");
   assert.equal(aq?.approved_by, "USER_HANDOFF");
-  assert.equal(aq?.output_path_or_url, null);
-  assert.equal(aq?.output_hash, null);
+  assert.equal(
+    aq?.output_path_or_url,
+    "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+  );
+  assert.equal(aq?.output_hash, aq?.source_hash);
 
   const scene = getProductionCanonicalThumbnailDecision("1SBP00423");
   assert.equal(scene?.approval_status, "MODE_APPROVED");
-  assert.equal(scene?.render_status, "PENDING_SOURCE");
+  assert.equal(scene?.render_status, "READY");
   assert.equal(scene?.mode, "SCENE_FULL");
-  assert.equal(scene?.source_id, null);
-  assert.equal(scene?.source_hash, null);
+  assert.equal(scene?.source_id, "scene:pl");
+  assert.equal(
+    scene?.source_hash,
+    "5467e64d88abe1a9abe13c22c85b53e0871891d89034e77f19abf5ba0080d4ba",
+  );
 });
 
 test("full resolution validation makes forged READY values non-renderable", () => {

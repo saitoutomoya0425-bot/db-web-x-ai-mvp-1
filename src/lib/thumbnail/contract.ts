@@ -189,12 +189,23 @@ const SOURCE_APPROVALS: ReadonlySet<ThumbnailApprovalStatus> = new Set([
   "LOCAL_APPROVED",
 ]);
 
-function assertSourceApproval(candidate: Record<string, unknown>, context: string) {
-  if (!SOURCE_APPROVALS.has(candidate.approval_status as ThumbnailApprovalStatus)) {
+function assertSourceApproval(
+  candidate: Record<string, unknown>,
+  context: string,
+  allowModeApproval = false,
+) {
+  const approvalStatus = candidate.approval_status as ThumbnailApprovalStatus;
+  if (
+    !SOURCE_APPROVALS.has(approvalStatus) &&
+    !(allowModeApproval && approvalStatus === "MODE_APPROVED")
+  ) {
     contractError(`${context} requires a confirmed source approval`);
   }
-  if (candidate.approval_status === "HUMAN_APPROVED") {
-    assertApproval(candidate.approved_by, candidate.approved_at, "HUMAN_APPROVED");
+  if (
+    approvalStatus === "HUMAN_APPROVED" ||
+    approvalStatus === "MODE_APPROVED"
+  ) {
+    assertApproval(candidate.approved_by, candidate.approved_at, approvalStatus);
   } else {
     assertOptionalApproval(candidate.approved_by, candidate.approved_at);
   }
@@ -248,7 +259,7 @@ export function assertCanonicalThumbnailDecision(
       contractError("RESOLVED requires a trusted output_path_or_url");
     }
     assertHash(candidate.output_hash, "output_hash");
-    assertSourceApproval(candidate, "RESOLVED");
+    assertSourceApproval(candidate, "RESOLVED", true);
     return decision as CanonicalThumbnailDecision;
   }
 

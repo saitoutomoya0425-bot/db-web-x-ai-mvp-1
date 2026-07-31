@@ -46,13 +46,29 @@ test("trusted external READY output remains the same HTTPS URL", () => {
   );
 });
 
-test("pending, review, and invalid resolutions omit image properties", () => {
+test("Phase 3A READY decisions expose the same image used by presentation", () => {
   for (const code of [
     "AQUGL00004",
     "1SBP00423",
     "H_1784FT000062",
-    "1NAMH500006",
+    "H_1784FT000064",
   ]) {
+    const resolution = resolve(code);
+    const image = resolvedThumbnailPublicUrl(
+      resolution,
+      "https://example.test",
+    );
+    assert.ok(image, code);
+    assert.deepEqual(
+      thumbnailStructuredDataImage(resolution, "https://example.test"),
+      { thumbnailUrl: [image], image },
+      code,
+    );
+  }
+});
+
+test("invalid resolutions omit image properties", () => {
+  for (const code of ["1NAMH500006"]) {
     const fields = thumbnailStructuredDataImage(
       resolve(code),
       "https://example.test",

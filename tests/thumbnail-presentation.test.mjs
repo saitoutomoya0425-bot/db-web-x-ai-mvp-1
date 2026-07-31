@@ -50,13 +50,34 @@ test("one presentation priority separates canonical decisions from legacy compat
   );
 });
 
-test("canonical pending and review states block every legacy URL", () => {
-  for (const code of [
-    "AQUGL00004",
-    "1SBP00423",
-    "H_1784FT000062",
-    "H_1784FT000064",
-  ]) {
+test("the four Phase 3A decisions render canonically and block every legacy URL", () => {
+  const cases = [
+    [
+      "AQUGL00004",
+      "SAMPLE",
+      "sample:12",
+      "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+    ],
+    [
+      "1SBP00423",
+      "SCENE_FULL",
+      "scene:pl",
+      "https://pics.dmm.co.jp/digital/video/1sbp00423/1sbp00423pl.jpg",
+    ],
+    [
+      "H_1784FT000062",
+      "PACKAGE_FULL",
+      "dvd:full",
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00062/h_1784fto00062pl.jpg",
+    ],
+    [
+      "H_1784FT000064",
+      "PACKAGE_FULL",
+      "dvd:full",
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00064/h_1784fto00064pl.jpg",
+    ],
+  ];
+  for (const [code, mode, sourceId, output] of cases) {
     const result = resolveThumbnailPresentation({
       code,
       legacy_runtime_override: legacyRight,
@@ -64,8 +85,10 @@ test("canonical pending and review states block every legacy URL", () => {
       legacy_thumbnail_url: "https://pics.dmm.co.jp/stale.jpg",
     });
     assert.equal(result.resolution_kind, "CANONICAL", code);
-    assert.notEqual(result.render_status, "READY", code);
-    assert.equal(buildThumbnailRenderContract(result).src, null, code);
+    assert.equal(result.render_status, "READY", code);
+    assert.equal(result.mode, mode, code);
+    assert.equal(result.source_id, sourceId, code);
+    assert.equal(buildThumbnailRenderContract(result).src, output, code);
   }
 });
 
@@ -203,12 +226,12 @@ test("all five public surfaces receive the same fixed canonical result", () => {
   const cases = [
     ["1START00590", "SAMPLE", "sample:1", "READY"],
     ["5561SGKT00002", "PACKAGE_RIGHT", "dvd:right", "READY"],
-    ["AQUGL00004", "SAMPLE", "sample:12", "PENDING_OUTPUT"],
+    ["AQUGL00004", "SAMPLE", "sample:12", "READY"],
     ["1NAMHS00006", "PACKAGE_RIGHT", "dvd:right", "READY"],
     ["H_068MXDLP00335", "PACKAGE_FULL", "dvd:full", "READY"],
-    ["1SBP00423", "SCENE_FULL", null, "PENDING_SOURCE"],
-    ["H_1784FT000062", "PACKAGE_FULL", null, "PENDING_SOURCE"],
-    ["H_1784FT000064", "PACKAGE_FULL", null, "PENDING_SOURCE"],
+    ["1SBP00423", "SCENE_FULL", "scene:pl", "READY"],
+    ["H_1784FT000062", "PACKAGE_FULL", "dvd:full", "READY"],
+    ["H_1784FT000064", "PACKAGE_FULL", "dvd:full", "READY"],
   ];
   for (const [code, mode, sourceId, renderStatus] of cases) {
     const surfaces = resolveAcrossSurfaces({
@@ -229,15 +252,11 @@ test("all five public surfaces receive the same fixed canonical result", () => {
       assert.equal(result.object_fit, "contain");
       assert.equal(result.crop_spec, null);
     }
-    if (renderStatus === "READY") {
-      assert.ok(resolvedThumbnailUrl(result), code);
-    } else {
-      assert.equal(resolvedThumbnailUrl(result), null, code);
-    }
+    assert.ok(resolvedThumbnailUrl(result), code);
   }
 });
 
-test("FT and FTO spellings share one non-renderable canonical decision", () => {
+test("FT and FTO spellings share one ready canonical decision", () => {
   for (const suffix of ["62", "64"]) {
     const alias = resolveThumbnailPresentation({
       code: `H_1784FT0000${suffix}`,
@@ -251,8 +270,12 @@ test("FT and FTO spellings share one non-renderable canonical decision", () => {
     });
     assert.equal(alias.canonical_code, canonical.canonical_code);
     assert.equal(alias.resolution_kind, "CANONICAL");
-    assert.equal(alias.kind, "NEEDS_USER_REVIEW");
-    assert.equal(buildThumbnailRenderContract(alias).src, null);
+    assert.equal(alias.kind, "RESOLVED");
+    assert.equal(alias.mode, "PACKAGE_FULL");
+    assert.equal(alias.source_id, "dvd:full");
+    assert.equal(alias.approval_status, "MODE_APPROVED");
+    assert.equal(alias.render_status, "READY");
+    assert.equal(buildThumbnailRenderContract(alias).src, alias.resolved_url);
   }
 });
 

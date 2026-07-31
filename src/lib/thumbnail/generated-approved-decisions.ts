@@ -204,14 +204,14 @@ export const GENERATED_GOLD_DECISION_RECORDS = Object.freeze(
     "code": "AQUGL00004",
     "mode": "SAMPLE",
     "source_id": "sample:12",
-    "source_path_or_url": "tmp/card-thumbnail-v3-dry-run/cache/b7f305ea21fb715f2b98b124b42340d6f4413675.jpg",
-    "source_hash": "85b6fe7a484af6e4176982e7751dadece1c6eda5e19be4bb246fe0e3c36ae275",
+    "source_path_or_url": "public/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+    "source_hash": "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3",
     "approved_by": null,
     "approved_at": null,
     "reason": "Generated from data/thumbnail-gold-labels.csv; basis=manual_gold; notes=last good sample",
-    "state": "PENDING_OUTPUT",
-    "output_path_or_url": null,
-    "output_hash": null
+    "state": "RESOLVED",
+    "output_path_or_url": "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+    "output_hash": "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3"
   },
   {
     "code": "BEBL00058",
@@ -627,7 +627,7 @@ export const GENERATED_APPROVED_REGISTRY_STATS = Object.freeze(
   {
   "gold_total": 83,
   "gold_registry_adopted": 47,
-  "gold_pending": 1,
+  "gold_pending": 0,
   "gold_excluded_unsupported_mode": 36,
   "gold_excluded_invalid_source": 0,
   "human_total": 624,
@@ -646,7 +646,7 @@ export const GENERATED_APPROVED_REGISTRY_STATS = Object.freeze(
 export const GENERATED_APPROVED_REGISTRY_INPUTS = Object.freeze(
   {
   "gold_sha256": "31c5e2443a3c27f5105a62075b68cb7376a84bc8a6fd5d3f6beb6dbfc5196ddc",
-  "human_sha256": "6a7b3c332b01957911eed961be421238ef45ccac05d2480680dc03698bcb644b",
+  "human_sha256": "473b65bd2c3d85917d90bb0a6249faeb961fe618d7e6e2d0c8a3fbc0c4f99bb1",
   "overrides_sha256": "4005d04bb4a0cec19ed0e17c17e7e530fe03914b37961830ba96d6ed291b85b1"
 } as const,
 );

@@ -79,11 +79,8 @@ test("LEGACY_COMPAT READY renders only its validated URL with contain", () => {
   assert.doesNotMatch(html, /data-thumbnail-crop-spec=/);
 });
 
-test("all canonical non-renderable states omit img and stale URLs", () => {
+test("invalid canonical inputs omit img and stale URLs", () => {
   const cases = [
-    ["AQUGL00004", "PENDING_OUTPUT"],
-    ["1SBP00423", "PENDING_SOURCE"],
-    ["H_1784FT000062", "PENDING_SOURCE"],
     ["1NAMH500006", null],
   ];
   for (const [code, renderStatus] of cases) {
@@ -105,6 +102,57 @@ test("all canonical non-renderable states omit img and stale URLs", () => {
         code,
       );
     }
+  }
+});
+
+test("Phase 3A READY decisions render approved sources without provenance leakage", () => {
+  const cases = [
+    [
+      "AQUGL00004",
+      "SAMPLE",
+      "data-thumbnail-source-id=\"sample:1\"|auto-right|b7f305ea|85b6fe7a",
+      "sample:12",
+      "object-cover",
+    ],
+    [
+      "1SBP00423",
+      "SCENE_FULL",
+      "auto-right|scene-portrait",
+      "scene:pl",
+      "object-contain",
+    ],
+    [
+      "H_1784FT000062",
+      "PACKAGE_FULL",
+      "auto-right",
+      "dvd:full",
+      "object-contain",
+    ],
+    [
+      "H_1784FT000064",
+      "PACKAGE_FULL",
+      "auto-right",
+      "dvd:full",
+      "object-contain",
+    ],
+  ];
+  for (const [code, mode, forbidden, sourceId, fit] of cases) {
+    const html = render(resolve(code));
+    assert.match(html, /<img\b/, code);
+    assert.match(html, new RegExp(`data-thumbnail-mode="${mode}"`), code);
+    assert.match(
+      html,
+      new RegExp(`data-thumbnail-source-id="${sourceId}"`),
+      code,
+    );
+    assert.match(html, /data-thumbnail-render-status="READY"/, code);
+    assert.match(html, new RegExp(`class="${fit} `), code);
+    assert.doesNotMatch(html, new RegExp(forbidden), code);
+    assert.doesNotMatch(
+      html,
+      /source_hash|output_hash|source_path_or_url|tmp\/card-thumbnail/,
+      code,
+    );
   }
 });
 

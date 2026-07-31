@@ -108,10 +108,18 @@ type LocalSourceApproval = OptionalApprovalMetadata & {
   readonly approval_status: "LOCAL_APPROVED";
 };
 
+type ModeSourceApproval = RequiredApprovalMetadata & {
+  readonly approval_status: "MODE_APPROVED";
+};
+
 type ConfirmedSourceApproval =
   | HumanSourceApproval
   | GoldSourceApproval
   | LocalSourceApproval;
+
+type ResolvedSourceApproval =
+  | ConfirmedSourceApproval
+  | ModeSourceApproval;
 
 type ResolvedCanonicalProvenance = {
   readonly kind: "RESOLVED";
@@ -126,7 +134,7 @@ export type ResolvedCanonicalThumbnailDecision =
   | (CanonicalDecisionIdentity &
       Exclude<ResolvedThumbnailModeContract, { mode: "SCENE_CROP" }> &
       ResolvedCanonicalProvenance &
-      ConfirmedSourceApproval)
+      ResolvedSourceApproval)
   | (CanonicalDecisionIdentity &
       Extract<ResolvedThumbnailModeContract, { mode: "SCENE_CROP" }> &
       ResolvedCanonicalProvenance &

@@ -84,8 +84,17 @@ function assertAbsent(record: CanonicalDecisionRecord, fields: Array<keyof Canon
 
 function adaptRecord(
   record: CanonicalDecisionRecord,
-  sourceApproval: "HUMAN_APPROVED" | "GOLD_APPROVED" | "LOCAL_APPROVED",
+  sourceApproval:
+    | "HUMAN_APPROVED"
+    | "MODE_APPROVED"
+    | "GOLD_APPROVED"
+    | "LOCAL_APPROVED",
 ): CanonicalThumbnailDecision {
+  if (sourceApproval === "MODE_APPROVED" && record.state !== "RESOLVED") {
+    throw new ThumbnailDecisionContractError(
+      "MODE_APPROVED source provenance requires a RESOLVED decision",
+    );
+  }
   const code = canonicalCode(record.code);
   const mode = canonicalMode(record.mode);
   const contract = modeContract(mode);
@@ -183,6 +192,9 @@ export const adaptGoldLabelRecord = (record: CanonicalDecisionRecord) =>
 
 export const adaptHumanApprovalRecord = (record: CanonicalDecisionRecord) =>
   adaptRecord(record, "HUMAN_APPROVED");
+
+export const adaptModeApprovalRecord = (record: CanonicalDecisionRecord) =>
+  adaptRecord(record, "MODE_APPROVED");
 
 export const adaptLocalAssetRecord = (record: CanonicalDecisionRecord) =>
   adaptRecord(record, "LOCAL_APPROVED");

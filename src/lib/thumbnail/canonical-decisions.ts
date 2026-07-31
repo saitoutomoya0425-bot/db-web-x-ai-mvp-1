@@ -2,12 +2,14 @@ import { canonicalizeProductCodeValue } from "../fanza/normalize.ts";
 import {
   adaptGoldLabelRecord,
   adaptHumanApprovalRecord,
+  adaptModeApprovalRecord,
 } from "./adapters.ts";
 import type { CanonicalThumbnailDecision } from "./types.ts";
 
 const USER_HANDOFF = "USER_HANDOFF";
 const HANDOFF_DATE = "2026-07-29";
 const HANDOFF_REASON = "2026-07-29 handoff confirmed regression case";
+const PHASE_3A_FTO_APPROVAL_DATE = "2026-07-31";
 
 const decisions: CanonicalThumbnailDecision[] = [
   adaptHumanApprovalRecord({
@@ -38,14 +40,16 @@ const decisions: CanonicalThumbnailDecision[] = [
   adaptHumanApprovalRecord({
     code: "AQUGL00004",
     mode: "sample",
-    state: "PENDING_OUTPUT",
+    state: "RESOLVED",
     source_id: "sample:12",
     source_path_or_url:
-      "tmp/card-thumbnail-v3-dry-run/cache/b7f305ea21fb715f2b98b124b42340d6f4413675.jpg",
-    source_hash: "85b6fe7a484af6e4176982e7751dadece1c6eda5e19be4bb246fe0e3c36ae275",
+      "https://pics.dmm.co.jp/digital/video/aqugl00004/aqugl00004jp-12.jpg",
+    source_hash: "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3",
+    output_path_or_url: "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
+    output_hash: "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3",
     approved_by: USER_HANDOFF,
     approved_at: HANDOFF_DATE,
-    reason: `${HANDOFF_REASON}; approved sample:12 has no verified output`,
+    reason: `${HANDOFF_REASON}; sample:12 source and byte-identical output are approved`,
   }),
   adaptHumanApprovalRecord({
     code: "1NAMHS00006",
@@ -74,25 +78,52 @@ const decisions: CanonicalThumbnailDecision[] = [
     approved_at: HANDOFF_DATE,
     reason: `${HANDOFF_REASON}; complete package source and output are approved`,
   }),
-  adaptHumanApprovalRecord({
+  adaptModeApprovalRecord({
     code: "1SBP00423",
     mode: "scene_full",
-    state: "PENDING_SOURCE",
+    state: "RESOLVED",
+    source_id: "scene:pl",
+    source_path_or_url:
+      "https://pics.dmm.co.jp/digital/video/1sbp00423/1sbp00423pl.jpg",
+    source_hash: "5467e64d88abe1a9abe13c22c85b53e0871891d89034e77f19abf5ba0080d4ba",
+    output_path_or_url:
+      "https://pics.dmm.co.jp/digital/video/1sbp00423/1sbp00423pl.jpg",
+    output_hash: "5467e64d88abe1a9abe13c22c85b53e0871891d89034e77f19abf5ba0080d4ba",
     approved_by: USER_HANDOFF,
     approved_at: HANDOFF_DATE,
-    reason: `${HANDOFF_REASON}; SCENE_FULL is fixed but source ID is unknown`,
+    reason: `${HANDOFF_REASON}; scene:pl is approved as the uncropped SCENE_FULL source`,
   }),
-  adaptHumanApprovalRecord({
+  adaptModeApprovalRecord({
     code: "H_1784FTO00062",
     mode: "full",
-    state: "NEEDS_USER_REVIEW",
-    reason: "PACKAGE_FULL is a candidate; its source ID is not confirmed",
+    state: "RESOLVED",
+    source_id: "dvd:full",
+    source_path_or_url:
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00062/h_1784fto00062pl.jpg",
+    source_hash: "e5cf3c1f156f512a2b13d00c0c517c02214338aa143cda9a18aa75319995a8e3",
+    output_path_or_url:
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00062/h_1784fto00062pl.jpg",
+    output_hash: "e5cf3c1f156f512a2b13d00c0c517c02214338aa143cda9a18aa75319995a8e3",
+    approved_by: USER_HANDOFF,
+    approved_at: PHASE_3A_FTO_APPROVAL_DATE,
+    reason:
+      "2026-07-31 user approval supersedes the 2026-07-29 PACKAGE_RIGHT approval: PACKAGE_FULL is required because RIGHT omits the title, multi-person composition, and left-side work information",
   }),
-  adaptHumanApprovalRecord({
+  adaptModeApprovalRecord({
     code: "H_1784FTO00064",
     mode: "full",
-    state: "NEEDS_USER_REVIEW",
-    reason: "PACKAGE_FULL is a candidate; its source ID is not confirmed",
+    state: "RESOLVED",
+    source_id: "dvd:full",
+    source_path_or_url:
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00064/h_1784fto00064pl.jpg",
+    source_hash: "44972d0cad9c01823d9a0a66c470782c9b5185bda449228013e87ca2a63ed59b",
+    output_path_or_url:
+      "https://pics.dmm.co.jp/digital/video/h_1784fto00064/h_1784fto00064pl.jpg",
+    output_hash: "44972d0cad9c01823d9a0a66c470782c9b5185bda449228013e87ca2a63ed59b",
+    approved_by: USER_HANDOFF,
+    approved_at: PHASE_3A_FTO_APPROVAL_DATE,
+    reason:
+      "2026-07-31 user approval supersedes the 2026-07-29 PACKAGE_RIGHT approval: PACKAGE_FULL is required because RIGHT omits the left-side description and cast composition",
   }),
 ];
 

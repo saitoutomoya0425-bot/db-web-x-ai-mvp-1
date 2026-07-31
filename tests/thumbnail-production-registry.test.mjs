@@ -81,7 +81,7 @@ test("generated registry metadata proves conservative human approval selection",
   assert.deepEqual(GENERATED_APPROVED_REGISTRY_STATS, {
     gold_total: 83,
     gold_registry_adopted: 47,
-    gold_pending: 1,
+    gold_pending: 0,
     gold_excluded_unsupported_mode: 36,
     gold_excluded_invalid_source: 0,
     human_total: 624,

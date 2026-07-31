@@ -539,7 +539,7 @@ test("CSV row order changes only raw provenance, not normalized decisions", asyn
   }
 });
 
-test("all 32 generated local READY assets are regular, in-tree, nonempty, and hash-matched", async () => {
+test("all 33 generated local READY assets are regular, in-tree, nonempty, and hash-matched", async () => {
   assert.equal(GENERATED_HUMAN_DECISION_RECORDS.length, 0);
   const localRecords = GENERATED_GOLD_DECISION_RECORDS.filter(
     (record) =>
@@ -551,7 +551,7 @@ test("all 32 generated local READY assets are regular, in-tree, nonempty, and ha
       record.state === "RESOLVED" &&
       record.output_path_or_url.startsWith("https://pics.dmm.co.jp/"),
   );
-  assert.equal(localRecords.length, 32);
+  assert.equal(localRecords.length, 33);
   assert.equal(externalRecords.length, 14);
 
   const publicDirectory = path.join(root, "public", "card-thumbnails");

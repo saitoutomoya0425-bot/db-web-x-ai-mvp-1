@@ -28,6 +28,18 @@ const validSample = {
 
 void validSample;
 
+const validModeApprovedFull = {
+  ...resolvedBase,
+  mode: "PACKAGE_FULL",
+  source_id: "dvd:full",
+  source_kind: "PACKAGE",
+  object_fit: "contain",
+  crop_spec: null,
+  approval_status: "MODE_APPROVED",
+} satisfies CanonicalThumbnailDecision;
+
+void validModeApprovedFull;
+
 // @ts-expect-error SAMPLE cannot use PACKAGE source metadata.
 const impossibleSamplePackage: CanonicalThumbnailDecision = {
   ...resolvedBase,
@@ -78,6 +90,17 @@ const impossibleGoldSceneCrop: CanonicalThumbnailDecision = {
   approval_status: "GOLD_APPROVED",
 };
 
+// @ts-expect-error SCENE_CROP cannot be MODE_APPROVED.
+const impossibleModeApprovedSceneCrop: CanonicalThumbnailDecision = {
+  ...resolvedBase,
+  mode: "SCENE_CROP",
+  source_id: "scene:1",
+  source_kind: "SCENE",
+  object_fit: "cover",
+  crop_spec: { unit: "ratio", x: 0, y: 0, width: 1, height: 1 },
+  approval_status: "MODE_APPROVED",
+};
+
 // @ts-expect-error a resolved decision cannot be render-pending.
 const impossibleReadyPending: CanonicalThumbnailDecision = {
   ...validSample,
@@ -89,4 +112,5 @@ void impossibleSourceMissing;
 void incompleteFallback;
 void impossibleHumanWithoutApprover;
 void impossibleGoldSceneCrop;
+void impossibleModeApprovedSceneCrop;
 void impossibleReadyPending;
