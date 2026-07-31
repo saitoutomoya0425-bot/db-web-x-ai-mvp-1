@@ -1,7 +1,10 @@
-import thumbnailLocalOverrides from "../../../data/thumbnail-local-overrides.json";
+import thumbnailLocalOverrides from "../../../data/thumbnail-local-overrides.json" with {
+  type: "json",
+};
+import { canonicalizeProductCodeValue } from "./normalize.ts";
+import { isTrustedThumbnailOutput } from "../thumbnail/contract.ts";
+import type { LegacyRuntimeThumbnailOverride } from "../thumbnail/types.ts";
 
-const IMAGE_HOSTS = new Set(["pics.dmm.co.jp"]);
-const LOCAL_CARD_THUMBNAIL_PREFIX = "/card-thumbnails/";
 const CARD_THUMBNAIL_OVERRIDES = thumbnailLocalOverrides as Record<string, {
   path: string;
   mode: string;
@@ -12,19 +15,20 @@ const CARD_THUMBNAIL_OVERRIDES = thumbnailLocalOverrides as Record<string, {
 export function officialFanzaImageUrl(value: unknown) {
   if (typeof value !== "string" || !value.trim()) return null;
   const trimmed = value.trim();
-  if (trimmed.startsWith(LOCAL_CARD_THUMBNAIL_PREFIX) && !trimmed.includes("..")) return trimmed;
-  try {
-    const url = new URL(trimmed);
-    return url.protocol === "https:" && IMAGE_HOSTS.has(url.hostname.toLowerCase())
-      ? url.toString()
-      : null;
-  } catch {
-    return null;
-  }
+  return isTrustedThumbnailOutput(trimmed) ? trimmed : null;
 }
 
-export function resolvedCardThumbnailUrl(productCode: unknown, value: unknown) {
-  const code = typeof productCode === "string" ? productCode.trim() : "";
-  const override = CARD_THUMBNAIL_OVERRIDES[code];
-  return officialFanzaImageUrl(override?.path ?? value);
+export function getLegacyRuntimeThumbnailOverride(
+  productCode: unknown,
+): LegacyRuntimeThumbnailOverride | null {
+  const normalized = canonicalizeProductCodeValue(productCode);
+  if (!normalized.canonical || normalized.rejected) return null;
+  const override = CARD_THUMBNAIL_OVERRIDES[normalized.canonical];
+  if (!override) return null;
+  return {
+    path: override.path,
+    mode: override.mode,
+    source_id: override.sourceId,
+    output_hash: override.sha256,
+  };
 }

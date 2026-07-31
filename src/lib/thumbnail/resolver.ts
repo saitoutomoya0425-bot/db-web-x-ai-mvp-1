@@ -1,5 +1,5 @@
 import { canonicalizeProductCodeValue } from "../fanza/normalize.ts";
-import { getProductionCanonicalThumbnailDecision } from "./canonical-decisions.ts";
+import { getProductionThumbnailDecision } from "./production-registry.ts";
 import {
   assertCanonicalThumbnailDecision,
   assertDecisionSourceApproval,
@@ -206,7 +206,7 @@ export function resolveCanonicalThumbnail(
     );
   }
   const requestedCode = normalizedCode.canonical;
-  const productionDecision = getProductionCanonicalThumbnailDecision(requestedCode);
+  const productionDecision = getProductionThumbnailDecision(requestedCode);
 
   for (const source of THUMBNAIL_DECISION_PRIORITY) {
     if (source === "production_canonical") {

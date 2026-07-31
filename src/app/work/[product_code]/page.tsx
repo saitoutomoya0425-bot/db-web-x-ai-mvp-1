@@ -4,13 +4,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, Clock3, ExternalLink, Factory, Film, ImageIcon, PlayCircle, Tags, UserRound } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { ResolvedThumbnail } from "@/components/resolved-thumbnail";
 import { VideoViewTracker } from "@/components/video-view-tracker";
 import { SampleVideoTrigger } from "@/components/sample-video-trigger";
 import { RecentlyViewedCarousel, RecentlyViewedRecorder } from "@/components/recently-viewed";
 import { WorkCarousel } from "@/components/work-carousel";
 import { getRelatedWorks, getWorkByCode } from "@/lib/queries/public-works";
-import { officialFanzaImageUrl } from "@/lib/fanza/media";
+import {
+  getLegacyRuntimeThumbnailOverride,
+  officialFanzaImageUrl,
+} from "@/lib/fanza/media";
 import { resolveSalesUrl } from "@/lib/fanza/sales-url";
+import {
+  resolveThumbnailPresentation,
+  resolvedThumbnailUrl,
+} from "@/lib/thumbnail/presentation";
+import { thumbnailStructuredDataImage } from "@/lib/thumbnail/structured-data";
 import type { WorkDetail } from "@/types/database";
 
 export async function generateMetadata({ params }: { params: Promise<{ product_code: string }> }): Promise<Metadata> {
@@ -45,7 +54,14 @@ export default async function WorkPage({ params }: { params: Promise<{ product_c
   if (!work) notFound();
   const { actressWorks, makerWorks, seriesWorks, relatedWorks } = await getRelatedWorks(work);
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const thumbnailUrl = officialFanzaImageUrl(work.thumbnail_url);
+  const thumbnail = resolveThumbnailPresentation({
+    code: work.product_code,
+    legacy_runtime_override: getLegacyRuntimeThumbnailOverride(work.product_code),
+    legacy_card_url: work.card_thumbnail_url,
+    legacy_thumbnail_url: work.thumbnail_url,
+  });
+  const thumbnailUrl = resolvedThumbnailUrl(thumbnail);
+  const structuredThumbnail = thumbnailStructuredDataImage(thumbnail, site);
   const samples = (work.sample_images ?? [])
     .map(officialFanzaImageUrl)
     .filter((url): url is string => Boolean(url && url !== thumbnailUrl))
@@ -59,7 +75,7 @@ export default async function WorkPage({ params }: { params: Promise<{ product_c
   const structuredData = {
     "@context": "https://schema.org", "@type": ["Movie", "VideoObject"], name: work.title,
     identifier: work.product_code, description: work.description || `${work.product_code} ${work.title}`,
-    thumbnailUrl: thumbnailUrl ? [thumbnailUrl] : undefined, image: thumbnailUrl ?? undefined,
+    ...structuredThumbnail,
     contentUrl: work.sample_url, uploadDate: work.release_date, dateCreated: work.release_date,
     duration: work.duration ? `PT${work.duration}M` : undefined, genre: work.genre,
     actor: actressList.length ? actressList.map((actress) => ({ "@type": "Person", name: actress.name })) : undefined,
@@ -70,16 +86,23 @@ export default async function WorkPage({ params }: { params: Promise<{ product_c
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <VideoViewTracker videoId={work.id} />
-      <RecentlyViewedRecorder item={{ product_code: work.product_code, title: work.title, card_thumbnail_url: work.card_thumbnail_url ?? null, thumbnail_url: thumbnailUrl, actress_name: actressList[0]?.name ?? null, maker_name: work.makers?.name ?? null }} />
+      <RecentlyViewedRecorder item={{ product_code: work.product_code, title: work.title, card_thumbnail_url: work.card_thumbnail_url ?? null, thumbnail_url: work.thumbnail_url, actress_name: actressList[0]?.name ?? null, maker_name: work.makers?.name ?? null }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
       <Breadcrumbs items={[{ name: "トップ", href: "/" }, ...(work.makers?.name ? [{ name: work.makers.name, href: `/maker/${encodeURIComponent(work.makers.name)}` }] : []), { name: work.product_code }]} />
 
       <article className="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,.7fr)] lg:gap-10">
         <div>
-          <div className="relative mx-auto aspect-[3/4] w-full max-w-[560px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.035] shadow-2xl shadow-black/25 lg:max-h-[72vh]">
-            {thumbnailUrl ? <Image src={thumbnailUrl} alt={`${work.title} ジャケット`} fill priority unoptimized sizes="(max-width: 1024px) min(100vw, 560px), 560px" className="object-contain opacity-0 animate-[okazuImageIn_.35s_ease-out_forwards]" /> : <div className="grid h-full place-items-center"><div className="text-center text-slate-600"><ImageIcon className="mx-auto size-14" /><p className="mt-3 text-sm">画像は掲載していません</p></div></div>}
+          <ResolvedThumbnail
+            resolution={thumbnail}
+            alt={`${work.title} ジャケット`}
+            sizes="(max-width: 1024px) min(100vw, 560px), 560px"
+            priority
+            className="relative mx-auto aspect-[3/4] w-full max-w-[560px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.035] shadow-2xl shadow-black/25 lg:max-h-[72vh]"
+            imageClassName="opacity-0 animate-[okazuImageIn_.35s_ease-out_forwards]"
+            placeholder={<div className="grid h-full place-items-center"><div className="text-center text-slate-600"><ImageIcon className="mx-auto size-14" /><p className="mt-3 text-sm">画像は掲載していません</p></div></div>}
+          >
             <SampleVideoTrigger url={work.sample_url} title={work.title} />
-          </div>
+          </ResolvedThumbnail>
           {samples.length > 0 && <section className="mt-6"><h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-300"><ImageIcon className="size-4 text-violet-300" />サンプル画像</h2><div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">{samples.map((url, index) => <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="relative aspect-[4/3] overflow-hidden rounded-xl border border-white/5 bg-white/[0.035] transition hover:border-white/15 active:scale-[0.985]"><Image src={url} alt={`${work.title} サンプル画像 ${index + 1}`} fill unoptimized sizes="(max-width: 640px) 33vw, 18vw" className="object-cover opacity-0 transition hover:scale-[1.025] animate-[okazuImageIn_.35s_ease-out_forwards]" /></a>)}</div></section>}
         </div>
 

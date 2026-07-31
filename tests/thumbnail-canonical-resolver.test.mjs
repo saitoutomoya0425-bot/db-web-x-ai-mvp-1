@@ -463,7 +463,11 @@ test("trusted thumbnail URLs reject credentials, nonstandard ports, and deceptiv
     "data:image/jpeg;base64,AAAA",
     "/card-thumbnails/../secret.jpg",
     "/card-thumbnails/%2e%2e/secret.jpg",
+    "/card-thumbnails/%252e%252e/secret.jpg",
+    "/card-thumbnails/%5csecret.jpg",
+    "/card-thumbnails/%255csecret.jpg",
     "/card-thumbnails/example.jpg?redirect=1",
+    "https://pics.dmm.co.jp/example.jpg?redirect=1",
   ]) {
     assert.equal(isTrustedThumbnailOutput(candidate), false, candidate);
   }

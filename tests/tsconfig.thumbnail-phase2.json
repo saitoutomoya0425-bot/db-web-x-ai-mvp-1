@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": [
+    "../next-env.d.ts",
+    "../src/lib/thumbnail/**/*.ts",
+    "../src/lib/fanza/media.ts",
+    "../src/lib/fanza/normalize.ts",
+    "../src/lib/queries/public-works.ts",
+    "../src/components/resolved-thumbnail.tsx",
+    "../src/components/public-work-card.tsx",
+    "../src/components/recently-viewed.tsx",
+    "../src/app/work/[product_code]/page.tsx",
+    "./thumbnail-canonical-types.test.ts",
+    "./thumbnail-presentation-types.test.ts"
+  ],
+  "exclude": [
+    "../node_modules",
+    "../.next"
+  ]
+}

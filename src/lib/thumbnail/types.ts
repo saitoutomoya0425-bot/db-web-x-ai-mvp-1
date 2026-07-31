@@ -302,3 +302,102 @@ export type ResolvedThumbnailDecision =
   | NonRenderableDecisionResolution
   | SourceMissingThumbnailResolution
   | InvalidCodeThumbnailResolution;
+
+export type LegacyThumbnailSourceKind =
+  | "LEGACY_RUNTIME_OVERRIDE"
+  | "LEGACY_DB_URL";
+
+export type LegacyRuntimeThumbnailOverride = {
+  readonly path: string;
+  readonly mode: string;
+  readonly source_id: string;
+  readonly output_hash: string | null;
+};
+
+type LegacyCompatibilityThumbnailBase = {
+  readonly kind: "RESOLVED";
+  readonly resolution_kind: "LEGACY_COMPAT";
+  readonly canonical_code: string;
+  readonly source_path_or_url: string;
+  readonly source_hash: null;
+  readonly output_path_or_url: string;
+  readonly resolved_url: string;
+  readonly object_fit: "contain";
+  readonly crop_spec: null;
+  readonly approval_status: "UNREVIEWED";
+  readonly render_status: "READY";
+  readonly decision_source: "legacy_compatibility";
+  readonly reason: string;
+  readonly canonical_decision: null;
+};
+
+export type LegacyCompatibilityThumbnailResolution =
+  | (LegacyCompatibilityThumbnailBase & {
+      readonly mode: ThumbnailMode | null;
+      readonly source_id: string;
+      readonly source_kind: "LEGACY_RUNTIME_OVERRIDE";
+      readonly output_hash: string | null;
+    })
+  | (LegacyCompatibilityThumbnailBase & {
+      readonly mode: null;
+      readonly source_id:
+        | "videos.card_thumbnail_url"
+        | "videos.thumbnail_url";
+      readonly source_kind: "LEGACY_DB_URL";
+      readonly output_hash: null;
+    });
+
+export type CanonicalThumbnailPresentationResolution =
+  | (RenderableThumbnailResolution & {
+      readonly resolution_kind: "CANONICAL";
+    })
+  | (NonRenderableDecisionResolution & {
+      readonly resolution_kind: "CANONICAL";
+    });
+
+export type NonRenderableThumbnailPresentationResolution =
+  | (SourceMissingThumbnailResolution & {
+      readonly resolution_kind: "NON_RENDERABLE";
+    })
+  | (InvalidCodeThumbnailResolution & {
+      readonly resolution_kind: "NON_RENDERABLE";
+    });
+
+export type ThumbnailPresentationResolution =
+  | CanonicalThumbnailPresentationResolution
+  | LegacyCompatibilityThumbnailResolution
+  | NonRenderableThumbnailPresentationResolution;
+
+export type ThumbnailPresentationInput = {
+  readonly code: unknown;
+  readonly human_decision?: CanonicalThumbnailDecision | null;
+  readonly gold_label?: CanonicalThumbnailDecision | null;
+  readonly local_generated_asset?: CanonicalThumbnailDecision | null;
+  readonly canonical_lookup_outcome?: {
+    readonly kind: "SOURCE_MISSING";
+    readonly reason: string;
+  } | null;
+  readonly legacy_runtime_override: LegacyRuntimeThumbnailOverride | null;
+  readonly legacy_card_url?: unknown;
+  readonly legacy_thumbnail_url?: unknown;
+};
+
+export type ThumbnailRenderAuditAttributes = {
+  readonly code: string | null;
+  readonly resolution_kind:
+    | "CANONICAL"
+    | "LEGACY_COMPAT"
+    | "NON_RENDERABLE";
+  readonly mode: ThumbnailMode | "LEGACY_UNCLASSIFIED" | null;
+  readonly source_id: string | null;
+  readonly approval_status: ThumbnailApprovalStatus | null;
+  readonly render_status: ThumbnailRenderStatus | null;
+};
+
+export type ThumbnailRenderContract = {
+  readonly src: string | null;
+  readonly object_fit: ThumbnailObjectFit | null;
+  readonly crop_spec: ThumbnailCropSpec | null;
+  readonly attributes: ThumbnailRenderAuditAttributes;
+  readonly reason: string;
+};

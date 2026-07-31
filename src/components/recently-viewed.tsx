@@ -4,17 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { HorizontalCarouselShell } from "@/components/horizontal-carousel-shell";
 import { PublicWorkCard } from "@/components/public-work-card";
-import { officialFanzaImageUrl } from "@/lib/fanza/media";
+import {
+  getLegacyRuntimeThumbnailOverride,
+  officialFanzaImageUrl,
+} from "@/lib/fanza/media";
+import {
+  resolveThumbnailPresentation,
+  toStoredThumbnailPresentationSnapshot,
+  type StoredThumbnailPresentationSnapshot,
+} from "@/lib/thumbnail/presentation";
 
 const STORAGE_KEY = "okazu:recently-viewed:v1";
 const MAX_ITEMS = 20;
 const EVENT_NAME = "okazu:recently-viewed-updated";
-const CARD_THUMBNAIL_OVERRIDES: Record<string, string> = {
-  RBB00339: "/card-thumbnails/RBB00339-full.jpg",
-  "1SBP00426": "/card-thumbnails/1SBP00426-rotated.jpg",
-  "1SBP00427": "/card-thumbnails/1SBP00427-rotated.jpg",
-  "1SBP00428": "/card-thumbnails/1SBP00428-rotated.jpg",
-};
 
 export type RecentlyViewedItem = {
   product_code: string;
@@ -23,8 +25,38 @@ export type RecentlyViewedItem = {
   thumbnail_url: string | null;
   actress_name: string | null;
   maker_name: string | null;
+  thumbnail_resolution?: StoredThumbnailPresentationSnapshot | null;
   viewed_at: string;
 };
+
+function storedSnapshot(value: unknown): StoredThumbnailPresentationSnapshot | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  if (
+    source.resolution_kind !== "CANONICAL" &&
+    source.resolution_kind !== "LEGACY_COMPAT" &&
+    source.resolution_kind !== "NON_RENDERABLE"
+  ) {
+    return null;
+  }
+  const resolvedUrl =
+    source.resolved_url === null ? null : officialFanzaImageUrl(source.resolved_url);
+  if (source.resolved_url !== null && !resolvedUrl) return null;
+  return {
+    resolution_kind: source.resolution_kind,
+    canonical_code:
+      typeof source.canonical_code === "string" ? source.canonical_code : null,
+    mode: typeof source.mode === "string"
+      ? source.mode as StoredThumbnailPresentationSnapshot["mode"]
+      : null,
+    source_id: typeof source.source_id === "string" ? source.source_id : null,
+    approval_status:
+      typeof source.approval_status === "string" ? source.approval_status : null,
+    render_status:
+      typeof source.render_status === "string" ? source.render_status : null,
+    resolved_url: resolvedUrl,
+  };
+}
 
 function readItems() {
   try {
@@ -41,10 +73,11 @@ function readItems() {
         return {
           product_code: productCode,
           title,
-          card_thumbnail_url: typeof source.card_thumbnail_url === "string" ? source.card_thumbnail_url : null,
-          thumbnail_url: typeof source.thumbnail_url === "string" ? source.thumbnail_url : null,
+          card_thumbnail_url: officialFanzaImageUrl(source.card_thumbnail_url),
+          thumbnail_url: officialFanzaImageUrl(source.thumbnail_url),
           actress_name: typeof source.actress_name === "string" ? source.actress_name.slice(0, 120) : null,
           maker_name: typeof source.maker_name === "string" ? source.maker_name.slice(0, 120) : null,
+          thumbnail_resolution: storedSnapshot(source.thumbnail_resolution),
           viewed_at: typeof source.viewed_at === "string" ? source.viewed_at : new Date(0).toISOString(),
         };
       })
@@ -65,25 +98,43 @@ function writeItems(items: RecentlyViewedItem[]) {
 }
 
 function needsCardThumbnailRefresh(item: RecentlyViewedItem) {
-  const url = item.card_thumbnail_url;
-  const safeUrl = officialFanzaImageUrl(url);
-  if (!safeUrl) return true;
-  if (CARD_THUMBNAIL_OVERRIDES[item.product_code] && safeUrl !== CARD_THUMBNAIL_OVERRIDES[item.product_code]) return true;
+  if (!item.thumbnail_resolution) return true;
+  const current = toStoredThumbnailPresentationSnapshot(
+    resolveThumbnailPresentation({
+      code: item.product_code,
+      legacy_runtime_override: getLegacyRuntimeThumbnailOverride(item.product_code),
+      legacy_card_url: item.card_thumbnail_url,
+      legacy_thumbnail_url: item.thumbnail_url,
+    }),
+  );
+  if (JSON.stringify(current) !== JSON.stringify(item.thumbnail_resolution)) {
+    return true;
+  }
   if (!item.maker_name) return true;
-  if (safeUrl.startsWith("/card-thumbnails/")) return !/(?:-v\d+|-rotated|-full)\.jpg$/i.test(safeUrl);
-  return true;
+  return false;
 }
 
 export function RecentlyViewedRecorder({ item }: { item: Omit<RecentlyViewedItem, "viewed_at"> }) {
   const key = `${item.product_code}:${item.title}`;
   useEffect(() => {
+    const cardThumbnailUrl = officialFanzaImageUrl(item.card_thumbnail_url);
+    const thumbnailUrl = officialFanzaImageUrl(item.thumbnail_url);
+    const thumbnailResolution = toStoredThumbnailPresentationSnapshot(
+      resolveThumbnailPresentation({
+        code: item.product_code,
+        legacy_runtime_override: getLegacyRuntimeThumbnailOverride(item.product_code),
+        legacy_card_url: cardThumbnailUrl,
+        legacy_thumbnail_url: thumbnailUrl,
+      }),
+    );
     const nextItem: RecentlyViewedItem = {
       product_code: item.product_code,
       title: item.title,
-      thumbnail_url: officialFanzaImageUrl(item.thumbnail_url) ?? null,
-      card_thumbnail_url: officialFanzaImageUrl(item.card_thumbnail_url) ?? null,
+      thumbnail_url: thumbnailUrl,
+      card_thumbnail_url: cardThumbnailUrl,
       actress_name: item.actress_name || null,
       maker_name: item.maker_name || null,
+      thumbnail_resolution: thumbnailResolution,
       viewed_at: new Date().toISOString(),
     };
     const current = readItems().filter((saved) => saved.product_code !== nextItem.product_code);
@@ -116,18 +167,46 @@ export function RecentlyViewedCarousel({ className = "" }: { className?: string 
         if (!response.ok) return null;
         const payload = await response.json() as { data?: { product_code?: string; card_thumbnail_url?: string | null; thumbnail_url?: string | null; makers?: { name?: string | null } | null } };
         const card = officialFanzaImageUrl(payload.data?.card_thumbnail_url);
-        if (!card) return null;
-        return { product_code: item.product_code, card_thumbnail_url: card, thumbnail_url: officialFanzaImageUrl(payload.data?.thumbnail_url), maker_name: payload.data?.makers?.name ?? null };
+        const thumbnail = officialFanzaImageUrl(payload.data?.thumbnail_url);
+        const resolution = toStoredThumbnailPresentationSnapshot(
+          resolveThumbnailPresentation({
+            code: payload.data?.product_code ?? item.product_code,
+            legacy_runtime_override: getLegacyRuntimeThumbnailOverride(
+              payload.data?.product_code ?? item.product_code,
+            ),
+            legacy_card_url: card,
+            legacy_thumbnail_url: thumbnail,
+          }),
+        );
+        return {
+          product_code: item.product_code,
+          card_thumbnail_url: card,
+          thumbnail_url: thumbnail,
+          maker_name: payload.data?.makers?.name ?? null,
+          thumbnail_resolution: resolution,
+        };
       } catch {
         return null;
       }
     })).then((results) => {
       if (cancelled) return;
-      const updates = new Map(results.filter((item): item is { product_code: string; card_thumbnail_url: string; thumbnail_url: string | null; maker_name: string | null } => Boolean(item)).map((item) => [item.product_code, item]));
+      const updates = new Map(results.filter((item): item is {
+        product_code: string;
+        card_thumbnail_url: string | null;
+        thumbnail_url: string | null;
+        maker_name: string | null;
+        thumbnail_resolution: StoredThumbnailPresentationSnapshot;
+      } => Boolean(item)).map((item) => [item.product_code, item]));
       if (!updates.size) return;
       const next = readItems().map((item) => {
         const update = updates.get(item.product_code);
-        return update ? { ...item, card_thumbnail_url: update.card_thumbnail_url, thumbnail_url: update.thumbnail_url ?? item.thumbnail_url, maker_name: update.maker_name ?? item.maker_name } : item;
+        return update ? {
+          ...item,
+          card_thumbnail_url: update.card_thumbnail_url,
+          thumbnail_url: update.thumbnail_url,
+          maker_name: update.maker_name ?? item.maker_name,
+          thumbnail_resolution: update.thumbnail_resolution,
+        } : item;
       });
       writeItems(next);
       setItems(next);
@@ -138,12 +217,19 @@ export function RecentlyViewedCarousel({ className = "" }: { className?: string 
   }, [items]);
 
   const safeItems = useMemo(
-    () => items.map((item) => ({
-      ...item,
-      card_thumbnail_url: officialFanzaImageUrl(item.card_thumbnail_url),
-      thumbnail_url: officialFanzaImageUrl(item.thumbnail_url),
-      maker_name: item.maker_name,
-    })).slice(0, MAX_ITEMS),
+    () => items.map((item) => {
+      const hasValidatedSnapshot = Boolean(item.thumbnail_resolution);
+      return {
+        ...item,
+        card_thumbnail_url: hasValidatedSnapshot
+          ? officialFanzaImageUrl(item.card_thumbnail_url)
+          : null,
+        thumbnail_url: hasValidatedSnapshot
+          ? officialFanzaImageUrl(item.thumbnail_url)
+          : null,
+        maker_name: item.maker_name,
+      };
+    }).slice(0, MAX_ITEMS),
     [items],
   );
 

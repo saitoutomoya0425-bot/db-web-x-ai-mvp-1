@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { officialFanzaImageUrl, resolvedCardThumbnailUrl } from "@/lib/fanza/media";
+import { officialFanzaImageUrl } from "@/lib/fanza/media";
 import type { Actress, PopularWork, WorkDetail } from "@/types/database";
 
 type WorkActress = Pick<Actress, "id" | "name" | "name_kana" | "profile_url">;
@@ -45,7 +45,7 @@ export function toWorkDetail(input: unknown): WorkDetail | null {
     actress_id: actressName,
     maker_id: makerName,
     release_date: text(video.release_date),
-    card_thumbnail_url: resolvedCardThumbnailUrl(productCode, video.card_thumbnail_url),
+    card_thumbnail_url: officialFanzaImageUrl(video.card_thumbnail_url),
     thumbnail_url: officialFanzaImageUrl(video.thumbnail_url),
     sample_url: imageUrl(video.video_url),
     official_url: imageUrl(video.official_url),

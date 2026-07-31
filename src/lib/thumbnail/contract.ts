@@ -44,7 +44,20 @@ function isSafeLocalThumbnailPath(candidate: string) {
     return false;
   }
   try {
-    const decoded = decodeURIComponent(candidate);
+    let decoded = candidate;
+    for (let index = 0; index < 8; index += 1) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+    if (
+      decoded.includes("%") ||
+      decoded.includes("\\") ||
+      decoded.includes("?") ||
+      decoded.includes("#")
+    ) {
+      return false;
+    }
     const segments = decoded.split("/");
     return (
       decoded.startsWith(LOCAL_CARD_THUMBNAIL_PREFIX) &&
@@ -67,7 +80,9 @@ export function isTrustedThumbnailOutput(value: unknown): value is string {
       url.username === "" &&
       url.password === "" &&
       (url.port === "" || url.port === "443") &&
-      TRUSTED_EXTERNAL_IMAGE_HOSTS.has(url.hostname.toLowerCase())
+      TRUSTED_EXTERNAL_IMAGE_HOSTS.has(url.hostname.toLowerCase()) &&
+      url.search === "" &&
+      url.hash === ""
     );
   } catch {
     return false;
