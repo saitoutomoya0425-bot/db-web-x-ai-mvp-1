@@ -312,8 +312,23 @@ export type ResolvedThumbnailDecision =
   | InvalidCodeThumbnailResolution;
 
 export type LegacyThumbnailSourceKind =
+  | "PHASE4B_EXPLICIT_LEGACY"
   | "LEGACY_RUNTIME_OVERRIDE"
   | "LEGACY_DB_URL";
+
+export type Phase4BLegacyThumbnailRecord = {
+  readonly code: string;
+  readonly mode:
+    | "SAMPLE"
+    | "PACKAGE_RIGHT"
+    | "PACKAGE_CENTER"
+    | "PACKAGE_FULL";
+  readonly source_id: string;
+  readonly resolved_url: string;
+  readonly render_strategy: "AUDIT_OUTPUT" | "CSS_PACKAGE_POSITION";
+  readonly object_fit: ThumbnailObjectFit;
+  readonly object_position: "center" | "right";
+};
 
 export type LegacyRuntimeThumbnailOverride = {
   readonly path: string;
@@ -330,7 +345,7 @@ type LegacyCompatibilityThumbnailBase = {
   readonly source_hash: null;
   readonly output_path_or_url: string;
   readonly resolved_url: string;
-  readonly object_fit: "contain";
+  readonly object_fit: ThumbnailObjectFit;
   readonly crop_spec: null;
   readonly approval_status: "UNREVIEWED";
   readonly render_status: "READY";
@@ -340,6 +355,13 @@ type LegacyCompatibilityThumbnailBase = {
 };
 
 export type LegacyCompatibilityThumbnailResolution =
+  | (LegacyCompatibilityThumbnailBase & {
+      readonly mode: Phase4BLegacyThumbnailRecord["mode"];
+      readonly source_id: string;
+      readonly source_kind: "PHASE4B_EXPLICIT_LEGACY";
+      readonly output_hash: null;
+      readonly object_position: "center" | "right";
+    })
   | (LegacyCompatibilityThumbnailBase & {
       readonly mode: ThumbnailMode | null;
       readonly source_id: string;
@@ -405,6 +427,7 @@ export type ThumbnailRenderAuditAttributes = {
 export type ThumbnailRenderContract = {
   readonly src: string | null;
   readonly object_fit: ThumbnailObjectFit | null;
+  readonly object_position: "center" | "right" | null;
   readonly crop_spec: ThumbnailCropSpec | null;
   readonly attributes: ThumbnailRenderAuditAttributes;
   readonly reason: string;

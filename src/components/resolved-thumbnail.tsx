@@ -63,6 +63,7 @@ export function ResolvedThumbnail({
           unoptimized
           sizes={sizes}
           onError={() => setFailed(true)}
+          style={{ objectPosition: contract.object_position ?? "center" }}
           className={`${fitClass} ${imageClassName}`}
         />
       ) : (

@@ -1,5 +1,6 @@
 import { canonicalizeProductCodeValue } from "../fanza/normalize.ts";
 import { getProductionThumbnailDecision } from "./production-registry.ts";
+import { getPhase4BLegacyThumbnailDecision } from "./phase4b-legacy-registry.ts";
 import {
   hasText,
   isTrustedThumbnailOutput,
@@ -12,6 +13,7 @@ import {
   THUMBNAIL_MODES,
   type LegacyCompatibilityThumbnailResolution,
   type LegacyRuntimeThumbnailOverride,
+  type Phase4BLegacyThumbnailRecord,
   type NonRenderableThumbnailPresentationResolution,
   type ThumbnailMode,
   type ThumbnailPresentationInput,
@@ -21,6 +23,7 @@ import {
 
 export const THUMBNAIL_PRESENTATION_PRIORITY = Object.freeze([
   "canonical_decision",
+  "phase4b_explicit_legacy",
   "legacy_runtime_override",
   "legacy_card_url",
   "legacy_thumbnail_url",
@@ -99,6 +102,7 @@ export function validateLegacyCompatibilityResolution(
   }
   if (
     candidate.source_kind !== "LEGACY_RUNTIME_OVERRIDE" &&
+    candidate.source_kind !== "PHASE4B_EXPLICIT_LEGACY" &&
     candidate.source_kind !== "LEGACY_DB_URL"
   ) {
     contractError("legacy compatibility has an invalid source_kind");
@@ -112,10 +116,9 @@ export function validateLegacyCompatibilityResolution(
   const normalizedSourceId = sourceId.trim();
   if (
     !hasText(candidate.reason) ||
-    candidate.object_fit !== "contain" ||
     candidate.crop_spec !== null
   ) {
-    contractError("legacy compatibility must render with contain and no crop");
+    contractError("legacy compatibility must have a reason and no crop");
   }
   if (
     !isTrustedThumbnailOutput(candidate.resolved_url) ||
@@ -144,6 +147,7 @@ export function validateLegacyCompatibilityResolution(
   if (candidate.source_kind === "LEGACY_DB_URL") {
     if (
       mode !== null ||
+      candidate.object_fit !== "contain" ||
       !Object.values(LEGACY_DB_SOURCE_IDS).includes(
         normalizedSourceId as (typeof LEGACY_DB_SOURCE_IDS)[keyof typeof LEGACY_DB_SOURCE_IDS],
       ) ||
@@ -153,11 +157,53 @@ export function validateLegacyCompatibilityResolution(
         "legacy DB URL must remain unclassified and cannot claim an output hash",
       );
     }
+  } else if (candidate.source_kind === "PHASE4B_EXPLICIT_LEGACY") {
+    if (
+      mode === null ||
+      mode === "SCENE_CROP" ||
+      mode === "SCENE_FULL" ||
+      candidate.object_fit !== modeContract(mode).object_fit ||
+      candidate.object_position !== (mode === "PACKAGE_RIGHT" ? "right" : "center") ||
+      candidate.output_hash !== null
+    ) {
+      contractError("Phase 4B legacy selection has an invalid render contract");
+    }
+    assertLegacyModeSourceId(mode, normalizedSourceId);
   } else {
+    if (candidate.object_fit !== "contain") {
+      contractError("legacy runtime override must render with contain");
+    }
     assertLegacyModeSourceId(mode, normalizedSourceId);
   }
 
   return resolution as LegacyCompatibilityThumbnailResolution;
+}
+
+function phase4BLegacyResolution(
+  code: string,
+  record: Phase4BLegacyThumbnailRecord,
+) {
+  return validateLegacyCompatibilityResolution({
+    kind: "RESOLVED",
+    resolution_kind: "LEGACY_COMPAT",
+    canonical_code: code,
+    mode: record.mode,
+    source_id: record.source_id,
+    source_kind: "PHASE4B_EXPLICIT_LEGACY",
+    source_path_or_url: record.resolved_url,
+    source_hash: null,
+    output_path_or_url: record.resolved_url,
+    output_hash: null,
+    resolved_url: record.resolved_url,
+    object_fit: record.object_fit,
+    object_position: record.object_position,
+    crop_spec: null,
+    approval_status: "UNREVIEWED",
+    render_status: "READY",
+    decision_source: "legacy_compatibility",
+    reason: "PHASE4B_AUDITED_EXPLICIT_LEGACY_COMPATIBILITY",
+    canonical_decision: null,
+  });
 }
 
 function legacyRuntimeResolution(
@@ -336,6 +382,11 @@ export function resolveThumbnailPresentation(
     );
   }
 
+  const phase4BDecision = getPhase4BLegacyThumbnailDecision(code);
+  if (phase4BDecision) {
+    return phase4BLegacyResolution(code, phase4BDecision);
+  }
+
   const runtimeOverride = input.legacy_runtime_override;
   if (runtimeOverride) {
     try {
@@ -394,6 +445,12 @@ export function buildThumbnailRenderContract(
   return {
     src: renderable ? validated.resolved_url : null,
     object_fit: renderable ? validated.object_fit : null,
+    object_position: renderable
+      ? validated.resolution_kind === "LEGACY_COMPAT" &&
+          validated.source_kind === "PHASE4B_EXPLICIT_LEGACY"
+        ? validated.object_position
+        : "center"
+      : null,
     crop_spec: renderable ? validated.crop_spec : null,
     attributes: {
       code: validated.canonical_code,

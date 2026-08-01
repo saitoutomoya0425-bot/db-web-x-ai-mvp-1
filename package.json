@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test:thumbnail-gold": "node scripts/validate-thumbnail-gold-labels.mjs",
+    "generate:thumbnail-phase4b": "node --no-warnings --experimental-strip-types scripts/generate-thumbnail-phase4b-legacy-registry.mjs",
+    "check:thumbnail-phase4b": "node --no-warnings --experimental-strip-types scripts/generate-thumbnail-phase4b-legacy-registry.mjs --check",
     "test:ai": "node --no-warnings --experimental-strip-types --test tests/ai-extraction.test.mjs",
     "check:supabase": "node --env-file=.env.local scripts/check-supabase.mjs",
     "configure:db": "node scripts/configure-db-url.mjs",

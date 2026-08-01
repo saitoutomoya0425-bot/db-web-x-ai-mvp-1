@@ -30,6 +30,7 @@ const resolveAcrossSurfaces = (input) => ({
 test("one presentation priority separates canonical decisions from legacy compatibility", () => {
   assert.deepEqual(THUMBNAIL_PRESENTATION_PRIORITY, [
     "canonical_decision",
+    "phase4b_explicit_legacy",
     "legacy_runtime_override",
     "legacy_card_url",
     "legacy_thumbnail_url",
@@ -156,7 +157,7 @@ test("two ordinary URL-only works use unclassified legacy compatibility", () => 
       sourceId: "videos.card_thumbnail_url",
     },
     {
-      code: "13DSVR01998",
+      code: "LEGACYTHUMB0001",
       legacy_card_url: null,
       legacy_thumbnail_url:
         "https://pics.dmm.co.jp/digital/video/13dsvr01998/13dsvr01998jp-1.jpg",
