@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   adaptGoldLabelRecord,
   adaptHumanApprovalRecord,
@@ -18,7 +19,24 @@ import {
   THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY,
 } from "../src/lib/thumbnail/production-registry.ts";
 import { resolveThumbnailPresentation } from "../src/lib/thumbnail/presentation.ts";
+import {
+  thumbnailStructuredDataImage,
+} from "../src/lib/thumbnail/structured-data.ts";
+import { parseCsv } from "../scripts/generate-thumbnail-production-registry.mjs";
 import { loadThumbnailGoldLabels } from "../scripts/lib/thumbnail-gold-acceptance.mjs";
+
+const sceneCropRows = parseCsv(
+  await readFile("data/thumbnail-scene-crop-allowlist.csv", "utf8"),
+);
+const KEEP_CURRENT_CODES = [
+  "1SBP00419",
+  "1SBP00421",
+  "AGEOM00035",
+  "H_491KDMN00050",
+  "H_491KDMN00051",
+  "HMN00870",
+  "MUDR00393",
+];
 
 const MODE_MAP = {
   sample: "SAMPLE",
@@ -44,7 +62,7 @@ test("production registry applies one explicit precedence without conflicts", ()
     "generated_gold",
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 50);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 79);
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -85,17 +103,155 @@ test("generated registry metadata proves conservative human approval selection",
     gold_excluded_unsupported_mode: 36,
     gold_excluded_invalid_source: 0,
     human_total: 624,
-    human_registry_adopted: 0,
+    human_registry_adopted: 29,
     human_covered_by_fixed: 1,
-    human_excluded_current_ok: 103,
-    human_excluded_pattern_or_cluster: 520,
+    human_covered_by_scene_crop_allowlist: 29,
+    human_excluded_current_ok: 77,
+    human_excluded_pattern_or_cluster: 517,
     human_excluded_source_or_provenance: 0,
     alias_rejected: 0,
     duplicate_canonical_codes: 0,
     fixed_shadowed: 5,
     conflicts: 0,
+    scene_crop_allowlist_total: 29,
+    scene_crop_registry_adopted: 29,
+    scene_crop_standard: 26,
+    scene_crop_revised: 2,
+    scene_crop_rotate_clockwise_b: 1,
   });
-  assert.equal(GENERATED_HUMAN_DECISION_RECORDS.length, 0);
+  assert.equal(GENERATED_HUMAN_DECISION_RECORDS.length, 29);
+});
+
+test("the explicit scene-crop allowlist is the only SCENE_CROP production source", () => {
+  assert.equal(sceneCropRows.length, 29);
+  const expectedCodes = sceneCropRows.map((row) => row.code).sort();
+  const generatedSceneCrops = GENERATED_HUMAN_DECISION_RECORDS.filter(
+    (record) => record.mode === "SCENE_CROP",
+  );
+  const productionSceneCrops = [...PRODUCTION_THUMBNAIL_DECISIONS.values()]
+    .filter((decision) => decision.mode === "SCENE_CROP");
+  assert.equal(generatedSceneCrops.length, 29);
+  assert.equal(productionSceneCrops.length, 29);
+  assert.deepEqual(
+    sceneCropRows.reduce(
+      (counts, row) => {
+        const kind = {
+          STANDARD: "normal",
+          REVISED: "revised",
+          ROTATE_CLOCKWISE_B: "rotated",
+        }[row.crop_variant];
+        assert.ok(kind, `${row.code}:${row.crop_variant}`);
+        counts[kind] += 1;
+        return counts;
+      },
+      { normal: 0, revised: 0, rotated: 0 },
+    ),
+    { normal: 26, revised: 2, rotated: 1 },
+  );
+  const rotatedRow = sceneCropRows.find((row) => row.code === "1SBP00424");
+  assert.ok(rotatedRow);
+  assert.equal(rotatedRow.crop_variant, "ROTATE_CLOCKWISE_B");
+  assert.deepEqual(JSON.parse(rotatedRow.crop_spec), {
+    unit: "pixel",
+    x: 0,
+    y: 0,
+    width: 385,
+    height: 550,
+    rotation_degrees: 90,
+  });
+  assert.equal(
+    rotatedRow.source_hash,
+    "644bf16443157666f9a8433e318eac87248339cc56150b51875cde7dfecf3540",
+  );
+  assert.equal(
+    rotatedRow.output_hash,
+    "160f809f1fee99f77fd9716050a12946289ec0534ee7f28727f88b3a0fa62984",
+  );
+  assert.deepEqual(
+    generatedSceneCrops.map((record) => record.code).sort(),
+    expectedCodes,
+  );
+  assert.deepEqual(
+    productionSceneCrops.map((decision) => decision.code).sort(),
+    expectedCodes,
+  );
+
+  for (const row of sceneCropRows) {
+    assert.match(
+      row.source_local_path,
+      new RegExp(
+        `^data/thumbnail-scene-crop-sources/${row.code}-scene-pl-${row.source_hash.slice(0, 16)}\\.jpg$`,
+      ),
+      row.code,
+    );
+    assert.equal(row.source_local_path.includes("tmp/"), false, row.code);
+    const decision = getProductionThumbnailDecision(row.code);
+    assert.ok(decision, row.code);
+    assert.equal(decision.kind, "RESOLVED", row.code);
+    assert.equal(decision.mode, "SCENE_CROP", row.code);
+    assert.equal(decision.source_id, row.source_id, row.code);
+    assert.equal(decision.source_kind, "SCENE", row.code);
+    assert.equal(decision.source_path_or_url, row.source_path_or_url, row.code);
+    assert.equal(decision.source_hash, row.source_hash, row.code);
+    assert.equal(decision.output_path_or_url, row.output_path_or_url, row.code);
+    assert.equal(decision.output_hash, row.output_hash, row.code);
+    assert.equal(decision.object_fit, "cover", row.code);
+    assert.deepEqual(decision.crop_spec, JSON.parse(row.crop_spec), row.code);
+    assert.equal(decision.approval_status, "HUMAN_APPROVED", row.code);
+    assert.equal(decision.render_status, "READY", row.code);
+    assert.equal(decision.approved_by, row.approved_by, row.code);
+    assert.equal(decision.approved_at, row.approved_at, row.code);
+    assert.equal(decision.reason, row.reason, row.code);
+    assert.equal(JSON.stringify(decision).includes("tmp/"), false, row.code);
+    const generatedRecord = GENERATED_HUMAN_DECISION_RECORDS.find(
+      (record) => record.code === row.code,
+    );
+    assert.ok(generatedRecord, row.code);
+    assert.equal(Object.hasOwn(generatedRecord, "source_local_path"), false, row.code);
+
+    const crop = JSON.parse(row.crop_spec);
+    if (row.crop_variant === "ROTATE_CLOCKWISE_B") {
+      assert.equal(row.code, "1SBP00424");
+      assert.equal(crop.rotation_degrees, 90);
+    } else {
+      assert.equal(crop.rotation_degrees ?? 0, 0, row.code);
+    }
+
+    const input = {
+      code: row.code,
+      legacy_card_url: "/card-thumbnails/stale.jpg",
+      legacy_thumbnail_url: "https://pics.dmm.co.jp/stale.jpg",
+    };
+    const surfaces = ["list", "detail", "related", "recently-viewed"].map(() =>
+      resolveThumbnailPresentation(input)
+    );
+    for (const resolution of surfaces) {
+      assert.equal(resolution.resolution_kind, "CANONICAL", row.code);
+      assert.equal(resolution.resolved_url, row.output_path_or_url, row.code);
+      assert.equal(resolution.mode, "SCENE_CROP", row.code);
+      assert.deepEqual(resolution.crop_spec, JSON.parse(row.crop_spec), row.code);
+    }
+    const structured = thumbnailStructuredDataImage(
+      surfaces[0],
+      new URL("https://example.test"),
+    );
+    assert.equal(
+      structured.image,
+      `https://example.test${row.output_path_or_url}`,
+      row.code,
+    );
+  }
+});
+
+test("keep-current approvals remain outside the canonical registry", () => {
+  for (const code of KEEP_CURRENT_CODES) {
+    assert.equal(getProductionThumbnailDecision(code), null, code);
+    const result = resolveThumbnailPresentation({
+      code,
+      legacy_card_url: `/card-thumbnails/${code}-legacy.jpg`,
+    });
+    assert.equal(result.resolution_kind, "LEGACY_COMPAT", code);
+  }
 });
 
 test("DSVR00064 uses only its approved high-resolution sample as canonical sample:1", () => {

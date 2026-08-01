@@ -620,7 +620,589 @@ export const GENERATED_GOLD_DECISION_RECORDS = Object.freeze(
 );
 
 export const GENERATED_HUMAN_DECISION_RECORDS = Object.freeze(
-  [] as const satisfies readonly CanonicalDecisionRecord[],
+  [
+  {
+    "code": "1SBP00395",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00395/1sbp00395pl.jpg",
+    "source_hash": "fbfcc07df212471cbfeca70b0079d9d2fab9714e13a706957274e8de9b4291e3",
+    "output_path_or_url": "/card-thumbnails/1SBP00395-scene-portrait-v4.jpg",
+    "output_hash": "023556f342d0357d80de37d87ab42372efc2cd0c0bb671219a4abc4c373bd88f",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 35,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait revised; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00396",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00396/1sbp00396pl.jpg",
+    "source_hash": "808d453caaaa032411e517af649e24e4f2469657b4abb81e35c3330f8e886a0d",
+    "output_path_or_url": "/card-thumbnails/1SBP00396-scene-portrait-v4.jpg",
+    "output_hash": "96a3e91835e02f3be6027ae8984169cca15a41d590ce362750d819a92577cf4a",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 100,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00397",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00397/1sbp00397pl.jpg",
+    "source_hash": "30dabdce7cb8f7ca75c3ed27e0453737f86520a97d4127fcec5c9e16cdca9798",
+    "output_path_or_url": "/card-thumbnails/1SBP00397-scene-portrait-v4.jpg",
+    "output_hash": "8fc963af48aa20f644e8370776e5cd851675ebeae819916c70b5a05de3a41a36",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 150,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00398",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00398/1sbp00398pl.jpg",
+    "source_hash": "960d19271fdbb54f8effa6da19877852b4d3227e65a8d7687108a7540fcef26a",
+    "output_path_or_url": "/card-thumbnails/1SBP00398-scene-portrait-v4.jpg",
+    "output_hash": "61be87e0bae307c67f03a98335adf5049d7c57f473c69521117f7c058881f73f",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 90,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00399",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00399/1sbp00399pl.jpg",
+    "source_hash": "5c0af6951cd06a0c409964032577180a9660d1f9c8affd1c8429608d59172a81",
+    "output_path_or_url": "/card-thumbnails/1SBP00399-scene-portrait-v4.jpg",
+    "output_hash": "778e7cf590192fdeffd1abfcf2f292c4ed0ac9ce2bf55ce29cea37202f92c4d8",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 15,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait revised; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00400",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00400/1sbp00400pl.jpg",
+    "source_hash": "4787f71aaaebf0974e3cac373283811197193e1be97fc019a5fe948641512d6d",
+    "output_path_or_url": "/card-thumbnails/1SBP00400-scene-portrait-v4.jpg",
+    "output_hash": "c4904a23e3bcde7f46f574d893457ae320266a93ae64b859666314dbd7ff4152",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 75,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00401",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00401/1sbp00401pl.jpg",
+    "source_hash": "05c78e9a5996fbdd25322cdaefe3c19140ce38b4fb4a2c7e478fbbc399b4e0dd",
+    "output_path_or_url": "/card-thumbnails/1SBP00401-scene-portrait-v4.jpg",
+    "output_hash": "29ac523596aa748491206bf1d07bdbfa77edbe0967dfb5d41af631bc54934a14",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 60,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00402",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00402/1sbp00402pl.jpg",
+    "source_hash": "a74df745fbf7262e7c49e2809370be53b4bb3e250de4085192880e531731bfc1",
+    "output_path_or_url": "/card-thumbnails/1SBP00402-scene-portrait-v4.jpg",
+    "output_hash": "cc32df1b54f18ade62c15e61ee482732e71a595a160451beca1ce2e56a3713b0",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 20,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00403",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00403/1sbp00403pl.jpg",
+    "source_hash": "fc9666c2da46d6718c1d5fb68a5fc827ed6e092677f7ea049ae5cfc0af9d4708",
+    "output_path_or_url": "/card-thumbnails/1SBP00403-scene-portrait-v4.jpg",
+    "output_hash": "ae656e36c6304dab1520f1d2b963b433a7069c04afe0d97de88e9af366322feb",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 50,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00404",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00404/1sbp00404pl.jpg",
+    "source_hash": "75ef8ce4b9ef90b87b234e68923d33bda18e08580a1a83a1fcc3a98be03f3818",
+    "output_path_or_url": "/card-thumbnails/1SBP00404-scene-portrait-v4.jpg",
+    "output_hash": "d986d9b12d79a6a6b80637979e6a266ba31aafbe3cbddad3a96efdb781c38d3e",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 0,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00405",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00405/1sbp00405pl.jpg",
+    "source_hash": "8536b3e4c721856939c387bb68cc6cfd2e0a2bc900727878c3a0e569665fb5b6",
+    "output_path_or_url": "/card-thumbnails/1SBP00405-scene-portrait-v4.jpg",
+    "output_hash": "12cde16548e37e9f957885c1fce5f4951ba4128e9aa4ad4826d0053a8f170087",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 0,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00406",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00406/1sbp00406pl.jpg",
+    "source_hash": "8aca740e264d10c8ca523bf7cc29674acb4c427b9a7490f7ec357ecf7b416ab1",
+    "output_path_or_url": "/card-thumbnails/1SBP00406-scene-portrait-v4.jpg",
+    "output_hash": "df1a807e44426514f81992ebe856c5bac7c7e84c47dfe7f313aae28f087ee93c",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 115,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00407",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00407/1sbp00407pl.jpg",
+    "source_hash": "3fd1f21c5cd0619068d92b364c0fc0ba6f1fb2dfe3e00f7cd0410f9379590408",
+    "output_path_or_url": "/card-thumbnails/1SBP00407-scene-portrait-v4.jpg",
+    "output_hash": "eac227184ce5e6a9a93200ae07ac599d935d8d0c07522143920679510f3a9263",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 0,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00408",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00408/1sbp00408pl.jpg",
+    "source_hash": "44519d19a3d26c0a565eea5721487d30238856b971efbb538a84cd97a76b03af",
+    "output_path_or_url": "/card-thumbnails/1SBP00408-scene-portrait-v4.jpg",
+    "output_hash": "5ca8edc027172ba19ae168091a56ba592597bbc096f3dfb4338ed3deb8f89d18",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 0,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00409",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00409/1sbp00409pl.jpg",
+    "source_hash": "e9cecb426401bd94a67dca826e7b0b2c916dc2459d3ef958e787f0fd894af66b",
+    "output_path_or_url": "/card-thumbnails/1SBP00409-scene-portrait-v4.jpg",
+    "output_hash": "0486a44fe2eccff423a85736707a164c855e1a52e286aee3c76f494298a1b8bf",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 90,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00410",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00410/1sbp00410pl.jpg",
+    "source_hash": "c28c40f70c9b7b51451b05add273d51fad0e4967e6719bbbbd25b1f6013286e6",
+    "output_path_or_url": "/card-thumbnails/1SBP00410-scene-portrait-v4.jpg",
+    "output_hash": "91489bb490539d03e9037bb08f0072167ab605b95a4bc4aa64ddfd8512504af0",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 30,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00411",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00411/1sbp00411pl.jpg",
+    "source_hash": "ee073f69d63476cc59062669ce99999f29525aaf87a3a5de9b44c7a6b9fc2fc4",
+    "output_path_or_url": "/card-thumbnails/1SBP00411-scene-portrait-v4.jpg",
+    "output_hash": "33455810cb756565d06878838dde108f93fdb2b234b7263d2158c23a893ec78a",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 80,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00412",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00412/1sbp00412pl.jpg",
+    "source_hash": "e8c7a142b5a97b05764f6749a3bf6120cfe7fcce87c414d73a2cd13e823d6f55",
+    "output_path_or_url": "/card-thumbnails/1SBP00412-scene-portrait-v4.jpg",
+    "output_hash": "829682a561182cc43819d015b20b4636ec2725f7f4bcae9e00a4dfbb7a489e96",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 90,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00413",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00413/1sbp00413pl.jpg",
+    "source_hash": "d573d5bd01267396e880e86f5dd141d3b2969ac25de2d090df721cf94b035301",
+    "output_path_or_url": "/card-thumbnails/1SBP00413-scene-portrait-v4.jpg",
+    "output_hash": "1defbfaecd91bde8850e982786b07fc288268d8b24ba36f98853cf88a562006f",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 80,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00414",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00414/1sbp00414pl.jpg",
+    "source_hash": "4bb7e13d8a8b8e1b946d2662b405101ac1796c28c3d3ee8f7891a8c88833659d",
+    "output_path_or_url": "/card-thumbnails/1SBP00414-scene-portrait-v4.jpg",
+    "output_hash": "879c3a5cbb797e88a0c5c72d5580eaf0408d33ba4b5598c98728bbe447aa19d6",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 75,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00415",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00415/1sbp00415pl.jpg",
+    "source_hash": "c5f13a96af811d15216cfffabdd8c59693d7fc1338c38d9a23ea5d5f0c9bb345",
+    "output_path_or_url": "/card-thumbnails/1SBP00415-scene-portrait-v4.jpg",
+    "output_hash": "2b7f150f210b56ae7ff84b7e973e518b7aae7fae62383d9ecb8110bf1da3a077",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 110,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00416",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00416/1sbp00416pl.jpg",
+    "source_hash": "043752fc67576a8a3ad6299eb71e16eaa07c8ed8d8ad474eb9b20c929ea39326",
+    "output_path_or_url": "/card-thumbnails/1SBP00416-scene-portrait-v4.jpg",
+    "output_hash": "6a3598824bb0474b673e49360fec5af8aa17ab5c3cb01cb2a468d322c65bec71",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 40,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00417",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00417/1sbp00417pl.jpg",
+    "source_hash": "6f8069ea8bd94445eb0b2262bad1d6c9cf5a50bce553cfe3a3e5addda9f0bd65",
+    "output_path_or_url": "/card-thumbnails/1SBP00417-scene-portrait-v4.jpg",
+    "output_hash": "f4fd1c5056a81e46d413afb12420bb65e8ae8ff49b128ee811a12a1b2aec5b27",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 70,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00418",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00418/1sbp00418pl.jpg",
+    "source_hash": "fe49ca77d016d17b7b14839a92fdecc90fa932af3148a677b073210b1d191345",
+    "output_path_or_url": "/card-thumbnails/1SBP00418-scene-portrait-v4.jpg",
+    "output_hash": "8eb82525484bdbfc5bdbf29b88533608ddbe44a6028836d880fe4dde1aeb35ee",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 70,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00420",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00420/1sbp00420pl.jpg",
+    "source_hash": "59f0ce6e7b898f91ce1cc0c016658495675d39ad2c35a374cacd31f3a4cb2324",
+    "output_path_or_url": "/card-thumbnails/1SBP00420-scene-portrait-v4.jpg",
+    "output_hash": "6e7e22e8766dc493677243a5a46f3a4959db9f197d98ff01ec8a31d1764417cc",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 240,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00422",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00422/1sbp00422pl.jpg",
+    "source_hash": "0816c60d9899bbd1e9ebf88a4209978849afdede7dadd4aedeb0cf36f97bcc96",
+    "output_path_or_url": "/card-thumbnails/1SBP00422-scene-portrait-v4.jpg",
+    "output_hash": "c4e96fd3b5d882f4dd42e7d6988f3c5888c20ec5e794fc94f6378e327099b31a",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 260,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00424",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00424/1sbp00424pl.jpg",
+    "source_hash": "644bf16443157666f9a8433e318eac87248339cc56150b51875cde7dfecf3540",
+    "output_path_or_url": "/card-thumbnails/1SBP00424-scene-portrait-v4.jpg",
+    "output_hash": "160f809f1fee99f77fd9716050a12946289ec0534ee7f28727f88b3a0fa62984",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 0,
+      "y": 0,
+      "width": 385,
+      "height": 550,
+      "rotation_degrees": 90
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-28",
+    "reason": "User-approved scene portrait clockwise-rotation-candidate-b; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "1SBP00425",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sbp00425/1sbp00425pl.jpg",
+    "source_hash": "c6dd75efe8b30074e79ad40921f291613a6d225d863e42ae42d7cf94be1b4cd9",
+    "output_path_or_url": "/card-thumbnails/1SBP00425-scene-portrait-v4.jpg",
+    "output_hash": "943683fd5ade41daa78db7c57d7c22ef8fe285255a9f31669a6402a5089e0383",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 400,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  },
+  {
+    "code": "H_283PMFT00435",
+    "mode": "SCENE_CROP",
+    "state": "RESOLVED",
+    "source_id": "scene:pl",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_283pmft00435/h_283pmft00435pl.jpg",
+    "source_hash": "4eb12bd1ec3671e861ce3f6349645081936224e978d52cae0773e479ab499a04",
+    "output_path_or_url": "/card-thumbnails/H_283PMFT00435-scene-portrait-v4.jpg",
+    "output_hash": "f6c49433d01527ec3cbe11b9e0c6b7697e1550a6180626f1f2016e48719bb892",
+    "crop_spec": {
+      "unit": "pixel",
+      "x": 310,
+      "y": 0,
+      "width": 315,
+      "height": 450
+    },
+    "approved_by": "USER_HANDOFF",
+    "approved_at": "2026-07-29",
+    "reason": "User-approved scene portrait normal; existing source crop and output preserved without regeneration"
+  }
+] as const satisfies readonly CanonicalDecisionRecord[],
 );
 
 export const GENERATED_APPROVED_REGISTRY_STATS = Object.freeze(
@@ -631,15 +1213,21 @@ export const GENERATED_APPROVED_REGISTRY_STATS = Object.freeze(
   "gold_excluded_unsupported_mode": 36,
   "gold_excluded_invalid_source": 0,
   "human_total": 624,
-  "human_registry_adopted": 0,
+  "human_registry_adopted": 29,
   "human_covered_by_fixed": 1,
-  "human_excluded_current_ok": 103,
-  "human_excluded_pattern_or_cluster": 520,
+  "human_covered_by_scene_crop_allowlist": 29,
+  "human_excluded_current_ok": 77,
+  "human_excluded_pattern_or_cluster": 517,
   "human_excluded_source_or_provenance": 0,
   "alias_rejected": 0,
   "duplicate_canonical_codes": 0,
   "fixed_shadowed": 5,
-  "conflicts": 0
+  "conflicts": 0,
+  "scene_crop_allowlist_total": 29,
+  "scene_crop_registry_adopted": 29,
+  "scene_crop_standard": 26,
+  "scene_crop_revised": 2,
+  "scene_crop_rotate_clockwise_b": 1
 } as const,
 );
 
@@ -647,6 +1235,7 @@ export const GENERATED_APPROVED_REGISTRY_INPUTS = Object.freeze(
   {
   "gold_sha256": "31c5e2443a3c27f5105a62075b68cb7376a84bc8a6fd5d3f6beb6dbfc5196ddc",
   "human_sha256": "473b65bd2c3d85917d90bb0a6249faeb961fe618d7e6e2d0c8a3fbc0c4f99bb1",
-  "overrides_sha256": "4005d04bb4a0cec19ed0e17c17e7e530fe03914b37961830ba96d6ed291b85b1"
+  "overrides_sha256": "4005d04bb4a0cec19ed0e17c17e7e530fe03914b37961830ba96d6ed291b85b1",
+  "scene_crop_allowlist_sha256": "9f60cce561a225da87053136e8ce875fbac5378bd41c3b668a36e31c3bc4edc0"
 } as const,
 );

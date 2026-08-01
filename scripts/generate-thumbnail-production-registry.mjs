@@ -3,7 +3,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalizeProductCodeValue } from "../src/lib/fanza/normalize.ts";
-import { adaptGoldLabelRecord } from "../src/lib/thumbnail/adapters.ts";
+import {
+  adaptGoldLabelRecord,
+  adaptHumanApprovalRecord,
+} from "../src/lib/thumbnail/adapters.ts";
 import { PRODUCTION_CANONICAL_THUMBNAIL_DECISIONS } from "../src/lib/thumbnail/canonical-decisions.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,7 +20,39 @@ const generatedPath = path.join(
 const goldPath = path.join(root, "data", "thumbnail-gold-labels.csv");
 const humanPath = path.join(root, "data", "thumbnail-human-approvals.csv");
 const overridesPath = path.join(root, "data", "thumbnail-local-overrides.json");
+const sceneCropPath = path.join(
+  root,
+  "data",
+  "thumbnail-scene-crop-allowlist.csv",
+);
 const publicDir = path.join(root, "public", "card-thumbnails");
+const EXPECTED_SCENE_CROP_ALLOWLIST_COUNT = 29;
+const SCENE_CROP_SOURCE_DIRECTORY = "data/thumbnail-scene-crop-sources";
+const SCENE_CROP_OUTPUT_WIDTH = 315;
+const SCENE_CROP_OUTPUT_HEIGHT = 450;
+// Bound untrusted JPEG headers before dimensions can influence crop validation.
+const MAX_JPEG_DIMENSION = 16_384;
+const MAX_JPEG_PIXELS = 100_000_000;
+const SCENE_CROP_VARIANTS = new Set([
+  "STANDARD",
+  "REVISED",
+  "ROTATE_CLOCKWISE_B",
+]);
+const JPEG_SOF_MARKERS = new Set([
+  0xc0,
+  0xc1,
+  0xc2,
+  0xc3,
+  0xc5,
+  0xc6,
+  0xc7,
+  0xc9,
+  0xca,
+  0xcb,
+  0xcd,
+  0xce,
+  0xcf,
+]);
 
 const MODE_MAP = Object.freeze({
   sample: "SAMPLE",
@@ -43,6 +78,14 @@ const EXPLICIT_HUMAN_DECISIONS = new Set([
   "SCENE_CROP",
 ]);
 const SHA256 = /^[a-f0-9]{64}$/i;
+const SCENE_CROP_KEYS = new Set([
+  "unit",
+  "x",
+  "y",
+  "width",
+  "height",
+  "rotation_degrees",
+]);
 
 export function compareAscii(left, right) {
   if (left < right) return -1;
@@ -168,7 +211,7 @@ function localApprovedFile(output, publicDirectory) {
   return { directory, file };
 }
 
-async function fileDigestForOutput(
+async function readLocalApprovedOutput(
   output,
   { publicDirectory = publicDir, context = "APPROVED_OUTPUT" } = {},
 ) {
@@ -190,7 +233,18 @@ async function fileDigestForOutput(
   }
   const buffer = await fs.readFile(local.file);
   if (!buffer.length) throw new Error(`${context}:EMPTY_APPROVED_OUTPUT:${output}`);
-  return crypto.createHash("sha256").update(buffer).digest("hex");
+  return {
+    buffer,
+    digest: crypto.createHash("sha256").update(buffer).digest("hex"),
+  };
+}
+
+async function fileDigestForOutput(
+  output,
+  options = {},
+) {
+  const result = await readLocalApprovedOutput(output, options);
+  return result?.digest ?? null;
 }
 
 function assertedHash(value, context) {
@@ -199,6 +253,402 @@ function assertedHash(value, context) {
     throw new Error(`${context}:INVALID_SHA256`);
   }
   return normalized.toLowerCase();
+}
+
+function requiredText(value, context) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) throw new Error(`${context}:MISSING_VALUE`);
+  return normalized;
+}
+
+function repositoryFileFromRelative(value, repositoryDirectory, context) {
+  const normalized = requiredText(value, context).replaceAll("\\", "/");
+  if (
+    normalized.includes("\u0000") ||
+    path.posix.isAbsolute(normalized) ||
+    path.posix.normalize(normalized) !== normalized ||
+    normalized.split("/").includes("..")
+  ) {
+    throw new Error(`${context}:INVALID_REPOSITORY_PATH`);
+  }
+  const directory = path.resolve(repositoryDirectory);
+  const file = path.resolve(directory, ...normalized.split("/"));
+  if (!file.startsWith(`${directory}${path.sep}`)) {
+    throw new Error(`${context}:REPOSITORY_PATH_ESCAPE`);
+  }
+  return { directory, file, relative: normalized };
+}
+
+async function verifyRepositoryFile(
+  relativePath,
+  expectedHash,
+  { repositoryDirectory = root, context },
+) {
+  const local = repositoryFileFromRelative(
+    relativePath,
+    repositoryDirectory,
+    context,
+  );
+  let info;
+  try {
+    info = await fs.lstat(local.file);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(`${context}:MISSING_LOCAL_SOURCE`);
+    }
+    throw error;
+  }
+  if (info.isSymbolicLink()) {
+    throw new Error(`${context}:SYMLINK_LOCAL_SOURCE`);
+  }
+  if (!info.isFile()) {
+    throw new Error(`${context}:NON_REGULAR_LOCAL_SOURCE`);
+  }
+  const [realDirectory, realFile] = await Promise.all([
+    fs.realpath(local.directory),
+    fs.realpath(local.file),
+  ]);
+  if (!realFile.startsWith(`${realDirectory}${path.sep}`)) {
+    throw new Error(`${context}:LOCAL_SOURCE_REALPATH_ESCAPE`);
+  }
+  const buffer = await fs.readFile(local.file);
+  if (!buffer.length) throw new Error(`${context}:EMPTY_LOCAL_SOURCE`);
+  const actualHash = crypto.createHash("sha256").update(buffer).digest("hex");
+  if (actualHash !== expectedHash) {
+    throw new Error(`${context}:LOCAL_SOURCE_HASH_MISMATCH`);
+  }
+  return {
+    ...local,
+    buffer,
+    dimensions: readJpegDimensions(buffer, context),
+  };
+}
+
+export function readJpegDimensions(buffer, context = "JPEG") {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 4) {
+    throw new Error(`${context}:INVALID_JPEG`);
+  }
+  if (buffer[0] !== 0xff || buffer[1] !== 0xd8) {
+    throw new Error(`${context}:INVALID_JPEG`);
+  }
+
+  let offset = 2;
+  let dimensions = null;
+  let frameComponentIds = null;
+  let inScan = false;
+  let currentScanHasEntropyData = false;
+  const sawSOI = true;
+  let sawSOF = false;
+  let sawSOS = false;
+  let sawEntropyData = false;
+  let sawEOI = false;
+  let markers = 0;
+
+  while (offset < buffer.length) {
+    markers += 1;
+    if (markers > buffer.length) {
+      throw new Error(`${context}:INVALID_JPEG`);
+    }
+
+    let marker;
+    if (inScan) {
+      if (buffer[offset] !== 0xff) {
+        currentScanHasEntropyData = true;
+        sawEntropyData = true;
+        offset += 1;
+        continue;
+      }
+      offset += 1;
+      while (offset < buffer.length && buffer[offset] === 0xff) offset += 1;
+      if (offset >= buffer.length) break;
+      marker = buffer[offset];
+      offset += 1;
+      if (marker === 0x00) {
+        currentScanHasEntropyData = true;
+        sawEntropyData = true;
+        continue;
+      }
+      if (marker >= 0xd0 && marker <= 0xd7) continue;
+      if (!currentScanHasEntropyData) {
+        throw new Error(`${context}:EMPTY_JPEG_SCAN`);
+      }
+      inScan = false;
+    } else {
+      if (buffer[offset] !== 0xff) {
+        throw new Error(`${context}:INVALID_JPEG`);
+      }
+      while (offset < buffer.length && buffer[offset] === 0xff) offset += 1;
+      if (offset >= buffer.length) break;
+      marker = buffer[offset];
+      offset += 1;
+    }
+
+    if (marker === 0xd9) {
+      sawEOI = true;
+      if (!sawSOI || !sawSOF || !dimensions) {
+        throw new Error(`${context}:JPEG_DIMENSIONS_MISSING`);
+      }
+      if (!sawSOS) throw new Error(`${context}:JPEG_SCAN_MISSING`);
+      if (!sawEntropyData) throw new Error(`${context}:EMPTY_JPEG_SCAN`);
+      break;
+    }
+    if (marker === 0xd8) {
+      throw new Error(`${context}:DUPLICATE_JPEG_SOI`);
+    }
+    if (marker === 0x01) {
+      continue;
+    }
+    if (
+      marker === 0x00 ||
+      (marker >= 0x02 && marker < 0xc0) ||
+      (marker >= 0xd0 && marker <= 0xd7) ||
+      marker === 0xff
+    ) {
+      throw new Error(`${context}:INVALID_JPEG_MARKER`);
+    }
+    if (offset + 2 > buffer.length) throw new Error(`${context}:INVALID_JPEG`);
+    const segmentLength = buffer.readUInt16BE(offset);
+    if (segmentLength < 2 || offset + segmentLength > buffer.length) {
+      throw new Error(`${context}:INVALID_JPEG`);
+    }
+    if (JPEG_SOF_MARKERS.has(marker)) {
+      if (sawSOF) throw new Error(`${context}:DUPLICATE_JPEG_SOF`);
+      if (segmentLength < 11) throw new Error(`${context}:INVALID_JPEG_SOF`);
+      const componentCount = buffer[offset + 7];
+      if (
+        componentCount === 0 ||
+        segmentLength !== 8 + 3 * componentCount
+      ) {
+        throw new Error(`${context}:INVALID_JPEG_SOF`);
+      }
+      const height = buffer.readUInt16BE(offset + 3);
+      const width = buffer.readUInt16BE(offset + 5);
+      if (width <= 0 || height <= 0) {
+        throw new Error(`${context}:INVALID_JPEG_DIMENSIONS`);
+      }
+      const pixels = width * height;
+      if (
+        !Number.isSafeInteger(width) ||
+        !Number.isSafeInteger(height) ||
+        !Number.isSafeInteger(pixels) ||
+        width > MAX_JPEG_DIMENSION ||
+        height > MAX_JPEG_DIMENSION ||
+        pixels > MAX_JPEG_PIXELS
+      ) {
+        throw new Error(`${context}:JPEG_DIMENSIONS_LIMIT_EXCEEDED`);
+      }
+      frameComponentIds = new Set();
+      for (let index = 0; index < componentCount; index += 1) {
+        const componentId = buffer[offset + 8 + 3 * index];
+        if (frameComponentIds.has(componentId)) {
+          throw new Error(`${context}:INVALID_JPEG_SOF`);
+        }
+        frameComponentIds.add(componentId);
+      }
+      dimensions = { width, height };
+      sawSOF = true;
+    } else if (marker === 0xda) {
+      if (!sawSOF || !frameComponentIds) {
+        throw new Error(`${context}:JPEG_SOS_BEFORE_SOF`);
+      }
+      if (segmentLength < 8) throw new Error(`${context}:INVALID_JPEG_SOS`);
+      const componentCount = buffer[offset + 2];
+      if (
+        componentCount === 0 ||
+        segmentLength !== 6 + 2 * componentCount
+      ) {
+        throw new Error(`${context}:INVALID_JPEG_SOS`);
+      }
+      const scanComponentIds = new Set();
+      for (let index = 0; index < componentCount; index += 1) {
+        const componentId = buffer[offset + 3 + 2 * index];
+        if (
+          !frameComponentIds.has(componentId) ||
+          scanComponentIds.has(componentId)
+        ) {
+          throw new Error(`${context}:INVALID_JPEG_SOS`);
+        }
+        scanComponentIds.add(componentId);
+      }
+      sawSOS = true;
+    }
+    const segmentEnd = offset + segmentLength;
+    offset = segmentEnd;
+    if (marker === 0xda) {
+      inScan = true;
+      currentScanHasEntropyData = false;
+    }
+  }
+
+  if (!sawEOI) throw new Error(`${context}:TRUNCATED_JPEG`);
+  return dimensions;
+}
+
+function parseSceneCropSpec(value, context) {
+  let crop;
+  try {
+    crop = JSON.parse(requiredText(value, `${context}:CROP_SPEC`));
+  } catch (error) {
+    throw new Error(`${context}:INVALID_CROP_SPEC_JSON`, { cause: error });
+  }
+  if (!crop || typeof crop !== "object" || Array.isArray(crop)) {
+    throw new Error(`${context}:INVALID_CROP_SPEC`);
+  }
+  const keys = Object.keys(crop);
+  if (keys.some((key) => !SCENE_CROP_KEYS.has(key))) {
+    throw new Error(`${context}:UNSUPPORTED_CROP_SPEC_FIELD`);
+  }
+  const values = [crop.x, crop.y, crop.width, crop.height];
+  if (
+    crop.unit !== "pixel" ||
+    !values.every(Number.isSafeInteger) ||
+    crop.x < 0 ||
+    crop.y < 0 ||
+    crop.width <= 0 ||
+    crop.height <= 0
+  ) {
+    throw new Error(`${context}:INVALID_CROP_SPEC`);
+  }
+  if (
+    crop.rotation_degrees !== undefined &&
+    ![0, 90, 180, 270].includes(crop.rotation_degrees)
+  ) {
+    throw new Error(`${context}:INVALID_CROP_ROTATION`);
+  }
+  return crop;
+}
+
+function validateSceneCropBounds(crop, dimensions, context) {
+  const rotation = crop.rotation_degrees ?? 0;
+  const rotated = rotation === 90 || rotation === 270;
+  const width = rotated ? dimensions.height : dimensions.width;
+  const height = rotated ? dimensions.width : dimensions.height;
+  const right = crop.x + crop.width;
+  const bottom = crop.y + crop.height;
+  if (!Number.isSafeInteger(right) || !Number.isSafeInteger(bottom)) {
+    throw new Error(`${context}:CROP_COORDINATE_OVERFLOW`);
+  }
+  if (right > width || bottom > height) {
+    throw new Error(
+      `${context}:CROP_OUT_OF_BOUNDS:${crop.x},${crop.y},${crop.width},${crop.height}:${width}x${height}`,
+    );
+  }
+}
+
+function expectedScenePlUrl(code) {
+  const slug = code.toLowerCase();
+  return `https://pics.dmm.co.jp/digital/video/${slug}/${slug}pl.jpg`;
+}
+
+async function materializeSceneCropRecord({
+  row,
+  human,
+  publicDirectory,
+  repositoryDirectory,
+}) {
+  const code = canonicalCode(row.code, "SCENE_CROP");
+  const context = `SCENE_CROP:${code}`;
+  if (
+    row.mode !== "SCENE_CROP" ||
+    row.source_id !== "scene:pl" ||
+    row.source_kind !== "SCENE" ||
+    row.object_fit !== "cover" ||
+    row.approval_status !== "HUMAN_APPROVED" ||
+    row.render_status !== "READY"
+  ) {
+    throw new Error(`${context}:INVALID_FIXED_CONTRACT`);
+  }
+  const sourcePath = requiredText(row.source_path_or_url, `${context}:SOURCE_URL`);
+  if (sourcePath !== expectedScenePlUrl(code)) {
+    throw new Error(`${context}:UNCONFIRMED_SCENE_PL_SOURCE`);
+  }
+  const sourceHash = assertedHash(row.source_hash, `${context}:SOURCE_HASH`);
+  const expectedSourcePath = `${SCENE_CROP_SOURCE_DIRECTORY}/${code}-scene-pl-${sourceHash.slice(0, 16)}.jpg`;
+  if (row.source_local_path !== expectedSourcePath) {
+    throw new Error(`${context}:SOURCE_BUNDLE_PATH_MISMATCH`);
+  }
+  const outputHash = assertedHash(row.output_hash, `${context}:OUTPUT_HASH`);
+  const output = requiredText(row.output_path_or_url, `${context}:OUTPUT`);
+  if (output !== `/card-thumbnails/${code}-scene-portrait-v4.jpg`) {
+    throw new Error(`${context}:UNEXPECTED_APPROVED_OUTPUT`);
+  }
+  const approvedBy = requiredText(row.approved_by, `${context}:APPROVED_BY`);
+  const approvedAt = requiredText(row.approved_at, `${context}:APPROVED_AT`);
+  const reason = requiredText(row.reason, `${context}:REASON`);
+  const cropSpec = parseSceneCropSpec(row.crop_spec, context);
+  const cropVariant = requiredText(row.crop_variant, `${context}:CROP_VARIANT`);
+  if (!SCENE_CROP_VARIANTS.has(cropVariant)) {
+    throw new Error(`${context}:INVALID_CROP_VARIANT`);
+  }
+  const rotation = cropSpec.rotation_degrees ?? 0;
+  if (cropVariant === "ROTATE_CLOCKWISE_B") {
+    if (code !== "1SBP00424" || rotation !== 90) {
+      throw new Error(`${context}:ROTATION_VARIANT_MISMATCH`);
+    }
+  } else if (rotation !== 0) {
+    throw new Error(`${context}:UNEXPECTED_CROP_ROTATION`);
+  }
+
+  if (!human) throw new Error(`${context}:MISSING_HUMAN_APPROVAL`);
+  const acceptedSourceId = String(human.accepted_source_id ?? "").trim();
+  if (
+    !new Set(["CURRENT_OK", "APPROVE_CLUSTER_CURRENT"]).has(
+      String(human.decision ?? "").trim(),
+    ) ||
+    String(human.accepted_mode ?? "").trim() !== "scene_portrait" ||
+    !new Set([
+      "scene_portrait",
+      "scene_portrait:revised",
+      "scene_portrait:rotate_clockwise_b",
+    ]).has(acceptedSourceId) ||
+    publicOutputFromPath(human.accepted_image_path) !== output ||
+    assertedHash(human.accepted_image_hash, `${context}:HUMAN_OUTPUT_HASH`) !==
+      outputHash ||
+    String(human.approved_at ?? "").trim() !== approvedAt
+  ) {
+    throw new Error(`${context}:HUMAN_APPROVAL_MISMATCH`);
+  }
+
+  const sourceFile = await verifyRepositoryFile(row.source_local_path, sourceHash, {
+    repositoryDirectory,
+    context,
+  });
+  validateSceneCropBounds(cropSpec, sourceFile.dimensions, context);
+  const approvedOutput = await verifyLocalApprovedOutput(
+    output,
+    outputHash,
+    context,
+    publicDirectory,
+  );
+  const outputDimensions = readJpegDimensions(
+    approvedOutput.buffer,
+    `${context}:APPROVED_OUTPUT`,
+  );
+  if (
+    outputDimensions.width !== SCENE_CROP_OUTPUT_WIDTH ||
+    outputDimensions.height !== SCENE_CROP_OUTPUT_HEIGHT
+  ) {
+    throw new Error(
+      `${context}:APPROVED_OUTPUT_DIMENSIONS_MISMATCH:${outputDimensions.width}x${outputDimensions.height}`,
+    );
+  }
+
+  const record = {
+    code,
+    mode: "SCENE_CROP",
+    state: "RESOLVED",
+    source_id: "scene:pl",
+    source_path_or_url: sourcePath,
+    source_hash: sourceHash,
+    output_path_or_url: output,
+    output_hash: outputHash,
+    crop_spec: cropSpec,
+    approved_by: approvedBy,
+    approved_at: approvedAt,
+    reason,
+  };
+  adaptHumanApprovalRecord(record);
+  return record;
 }
 
 function goldReason(row, rawSourceId, sourceId) {
@@ -219,14 +669,15 @@ async function verifyLocalApprovedOutput(
   context,
   publicDirectory,
 ) {
-  if (!output.startsWith("/card-thumbnails/")) return;
-  const actualHash = await fileDigestForOutput(output, {
+  if (!output.startsWith("/card-thumbnails/")) return null;
+  const approvedOutput = await readLocalApprovedOutput(output, {
     publicDirectory,
     context,
   });
-  if (actualHash !== expectedHash) {
+  if (approvedOutput.digest !== expectedHash) {
     throw new Error(`${context}:APPROVED_OUTPUT_HASH_MISMATCH`);
   }
+  return approvedOutput;
 }
 
 async function materializeGoldRecord({
@@ -371,16 +822,27 @@ export async function generateSource({
   goldFilePath = goldPath,
   humanFilePath = humanPath,
   overridesFilePath = overridesPath,
+  sceneCropFilePath = sceneCropPath,
   publicDirectory = publicDir,
+  repositoryDirectory = root,
+  expectedSceneCropCount = EXPECTED_SCENE_CROP_ALLOWLIST_COUNT,
   fixedDecisions = PRODUCTION_CANONICAL_THUMBNAIL_DECISIONS,
 } = {}) {
   const goldText = await fs.readFile(goldFilePath, "utf8");
   const humanText = await fs.readFile(humanFilePath, "utf8");
   const overridesText = await fs.readFile(overridesFilePath, "utf8");
+  const sceneCropText = await fs.readFile(sceneCropFilePath, "utf8");
   const goldRows = parseCsv(goldText);
   const humanRows = parseCsv(humanText);
+  const sceneCropRows = parseCsv(sceneCropText);
   const overrides = JSON.parse(overridesText);
   const { humanByCode } = buildCanonicalHumanMap(humanRows);
+
+  if (sceneCropRows.length !== expectedSceneCropCount) {
+    throw new Error(
+      `SCENE_CROP_ALLOWLIST_COUNT_MISMATCH:${sceneCropRows.length}:${expectedSceneCropCount}`,
+    );
+  }
 
   const stats = {
     gold_total: goldRows.length,
@@ -391,6 +853,7 @@ export async function generateSource({
     human_total: humanRows.length,
     human_registry_adopted: 0,
     human_covered_by_fixed: 0,
+    human_covered_by_scene_crop_allowlist: 0,
     human_excluded_current_ok: 0,
     human_excluded_pattern_or_cluster: 0,
     human_excluded_source_or_provenance: 0,
@@ -398,6 +861,11 @@ export async function generateSource({
     duplicate_canonical_codes: 0,
     fixed_shadowed: 0,
     conflicts: 0,
+    scene_crop_allowlist_total: sceneCropRows.length,
+    scene_crop_registry_adopted: 0,
+    scene_crop_standard: 0,
+    scene_crop_revised: 0,
+    scene_crop_rotate_clockwise_b: 0,
   };
   const goldRecords = [];
   const goldCodes = new Set();
@@ -447,7 +915,40 @@ export async function generateSource({
   stats.gold_registry_adopted = goldRecords.length;
 
   const humanRecords = [];
+  const sceneCropCodes = new Set();
+  for (const row of sceneCropRows) {
+    const code = canonicalCode(row.code, "SCENE_CROP");
+    if (sceneCropCodes.has(code)) {
+      stats.duplicate_canonical_codes += 1;
+      throw new Error(`SCENE_CROP_CANONICAL_DUPLICATE:${code}`);
+    }
+    if (fixedDecisions.has(code) || goldCodes.has(code)) {
+      stats.conflicts += 1;
+      throw new Error(`SCENE_CROP_CANONICAL_CONFLICT:${code}`);
+    }
+    sceneCropCodes.add(code);
+    if (row.crop_variant === "STANDARD") stats.scene_crop_standard += 1;
+    if (row.crop_variant === "REVISED") stats.scene_crop_revised += 1;
+    if (row.crop_variant === "ROTATE_CLOCKWISE_B") {
+      stats.scene_crop_rotate_clockwise_b += 1;
+    }
+    humanRecords.push(
+      await materializeSceneCropRecord({
+        row,
+        human: humanByCode.get(code)?.row ?? null,
+        publicDirectory,
+        repositoryDirectory,
+      }),
+    );
+  }
+  stats.scene_crop_registry_adopted = humanRecords.length;
+
   for (const row of humanRows) {
+    const normalized = canonicalizeProductCodeValue(row.code);
+    if (normalized.canonical && sceneCropCodes.has(normalized.canonical)) {
+      stats.human_covered_by_scene_crop_allowlist += 1;
+      continue;
+    }
     const decision = String(row.decision ?? "").trim().toUpperCase();
     if (decision === "CURRENT_OK") {
       stats.human_excluded_current_ok += 1;
@@ -457,7 +958,6 @@ export async function generateSource({
       stats.human_excluded_pattern_or_cluster += 1;
       continue;
     }
-    const normalized = canonicalizeProductCodeValue(row.code);
     if (!normalized.canonical || normalized.rejected) {
       stats.alias_rejected += 1;
       continue;
@@ -486,6 +986,10 @@ export async function generateSource({
     gold_sha256: crypto.createHash("sha256").update(goldText).digest("hex"),
     human_sha256: crypto.createHash("sha256").update(humanText).digest("hex"),
     overrides_sha256: crypto.createHash("sha256").update(overridesText).digest("hex"),
+    scene_crop_allowlist_sha256: crypto
+      .createHash("sha256")
+      .update(sceneCropText)
+      .digest("hex"),
   };
   return {
     source: stableGeneratedSource({
