@@ -23,6 +23,7 @@ export type CanonicalDecisionRecord = {
   crop_spec?: ThumbnailCropSpec | null;
   approved_by?: unknown;
   approved_at?: unknown;
+  approval_batch?: unknown;
   reason: unknown;
 };
 
@@ -102,6 +103,7 @@ function adaptRecord(
   const cropSpec = record.crop_spec ?? null;
   const approvedBy = optionalText(record.approved_by);
   const approvedAt = optionalText(record.approved_at);
+  const approvalBatch = optionalText(record.approval_batch);
   const base = {
     code,
     mode,
@@ -110,6 +112,7 @@ function adaptRecord(
     crop_spec: cropSpec,
     approved_by: approvedBy,
     approved_at: approvedAt,
+    ...(approvalBatch ? { approval_batch: approvalBatch } : {}),
     reason,
   } as const;
 

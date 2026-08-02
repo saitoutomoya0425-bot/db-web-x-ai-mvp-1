@@ -7,6 +7,9 @@ import {
   GENERATED_PHASE4B_LEGACY_STATS,
 } from "../src/lib/thumbnail/generated-phase4b-legacy-registry.ts";
 import {
+  GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS,
+} from "../src/lib/thumbnail/generated-phase4d-reviewed-decisions.ts";
+import {
   getPhase4BLegacyThumbnailDecision,
   PHASE4B_LEGACY_THUMBNAIL_DECISIONS,
 } from "../src/lib/thumbnail/phase4b-legacy-registry.ts";
@@ -31,6 +34,7 @@ const canonicalDigest = () => sha256(JSON.stringify(
 ));
 const allowlistRows = parseCsv(await readFile("data/thumbnail-phase4b-legacy-allowlist.csv", "utf8"));
 const exclusionRows = parseCsv(await readFile("data/thumbnail-phase4b-human-review-exclusions.csv", "utf8"));
+const phase4DCodes = new Set(GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS.map((record) => record.code));
 
 test("Phase 4B registry contains exactly the 796 audited selections", () => {
   assert.equal(PHASE4B_LEGACY_THUMBNAIL_DECISIONS.size, 796);
@@ -61,7 +65,7 @@ test("Phase 4B registry contains exactly the 796 audited selections", () => {
 
 test("baseline canonical 79 decisions and their complete registry SHA remain unchanged", async () => {
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 94);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
   assert.equal(canonicalDigest(), EXPECTED_CANONICAL_SHA256);
   assert.equal(GENERATED_PHASE4B_LEGACY_STATS.canonical_registry_sha256, EXPECTED_CANONICAL_SHA256);
   const expectedFiles = {
@@ -75,7 +79,11 @@ test("baseline canonical 79 decisions and their complete registry SHA remain unc
     assert.equal(sha256(await readFile(file)), expected, file);
   }
   for (const code of PHASE4B_LEGACY_THUMBNAIL_DECISIONS.keys()) {
-    assert.equal(getProductionThumbnailDecision(code), null, code);
+    if (phase4DCodes.has(code)) {
+      assert.ok(getProductionThumbnailDecision(code), code);
+    } else {
+      assert.equal(getProductionThumbnailDecision(code), null, code);
+    }
   }
 });
 
@@ -107,11 +115,17 @@ test("Phase 4B records cannot claim SCENE_CROP or canonical human/gold approval"
       legacy_runtime_override: null,
       legacy_card_url: "/card-thumbnails/stale.jpg",
     });
-    assert.equal(resolved.resolution_kind, "LEGACY_COMPAT", record.code);
-    assert.equal(resolved.source_kind, "PHASE4B_EXPLICIT_LEGACY", record.code);
-    assert.equal(resolved.approval_status, "UNREVIEWED", record.code);
+    if (phase4DCodes.has(record.code)) {
+      assert.equal(resolved.resolution_kind, "CANONICAL", record.code);
+      assert.equal(resolved.approval_status, "HUMAN_APPROVED", record.code);
+      assert.ok(resolved.canonical_decision, record.code);
+    } else {
+      assert.equal(resolved.resolution_kind, "LEGACY_COMPAT", record.code);
+      assert.equal(resolved.source_kind, "PHASE4B_EXPLICIT_LEGACY", record.code);
+      assert.equal(resolved.approval_status, "UNREVIEWED", record.code);
+      assert.equal(resolved.canonical_decision, null, record.code);
+    }
     assert.equal(resolved.crop_spec, null, record.code);
-    assert.equal(resolved.canonical_decision, null, record.code);
   }
 });
 
@@ -151,7 +165,7 @@ test("one resolution priority keeps canonical first and Phase 4B ahead of older 
 
 test("audit modes keep their exact fit, source ID, null crop, and deterministic CSS package positioning", () => {
   const cases = [
-    ["YMDS00301", "SAMPLE", "sample:1", "cover", "center", "AUDIT_OUTPUT"],
+    ["13DSVR01992", "SAMPLE", "sample:1", "cover", "center", "AUDIT_OUTPUT"],
     ["125UMD01010", "PACKAGE_RIGHT", "dvd:right", "cover", "right", "AUDIT_OUTPUT"],
     ["125UMD01013", "PACKAGE_CENTER", "dvd:center", "cover", "center", "CSS_PACKAGE_POSITION"],
     ["172RECA00042AI", "PACKAGE_FULL", "dvd:full", "contain", "center", "AUDIT_OUTPUT"],
@@ -174,7 +188,7 @@ test("audit modes keep their exact fit, source ID, null crop, and deterministic 
 });
 
 test("list, search, ranking, newest, related, detail, Recently Viewed, and JSON-LD share the same Phase 4B resolution", () => {
-  for (const code of ["125UMD01010", "125UMD01013", "YMDS00301", "172RECA00042AI"]) {
+  for (const code of ["125UMD01010", "125UMD01013", "13DSVR01992", "172RECA00042AI"]) {
     const input = {
       code,
       legacy_runtime_override: null,

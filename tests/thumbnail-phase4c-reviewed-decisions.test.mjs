@@ -41,6 +41,12 @@ const DECISIONS = Object.freeze({
   UMSO00650: ["SAMPLE", "sample:9"],
   VRKM01857: ["SAMPLE", "sample:1"],
 });
+const PHASE4D_SUPERSESSIONS = Object.freeze({
+  KIWVR00907: ["SAMPLE", "sample:4"],
+  KSBJ00438: ["SAMPLE", "sample:6"],
+  LUCY00029: ["SAMPLE", "sample:6"],
+  UMSO00650: ["SAMPLE", "sample:18"],
+});
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const dataBytes = await readFile(DATA_PATH);
 const rows = parseCsv(dataBytes.toString("utf8"));
@@ -109,8 +115,9 @@ test("Phase 4C fixes mode source URL and both provenance hashes atomically", asy
   }
 });
 
-test("all 15 Phase 4C works resolve identically on every public surface and structured data", () => {
+test("all 15 Phase 4C works resolve consistently with four documented Phase 4D supersessions", () => {
   for (const [code, [mode, sourceId]] of Object.entries(DECISIONS)) {
+    const [expectedMode, expectedSourceId] = PHASE4D_SUPERSESSIONS[code] ?? [mode, sourceId];
     const input = {
       code,
       legacy_runtime_override: {
@@ -130,8 +137,8 @@ test("all 15 Phase 4C works resolve identically on every public surface and stru
     const decision = getProductionThumbnailDecision(code);
     assert.ok(decision, code);
     assert.equal(resolution.resolution_kind, "CANONICAL", code);
-    assert.equal(resolution.mode, mode, code);
-    assert.equal(resolution.source_id, sourceId, code);
+    assert.equal(resolution.mode, expectedMode, code);
+    assert.equal(resolution.source_id, expectedSourceId, code);
     assert.equal(resolution.resolved_url, decision.output_path_or_url, code);
     assert.equal(resolution.approval_status, "HUMAN_APPROVED", code);
     assert.equal(resolution.render_status, "READY", code);
@@ -150,10 +157,10 @@ test("all 15 Phase 4C works resolve identically on every public surface and stru
   }
 });
 
-test("Phase 4C adds 15 canonical decisions without mutating Phase 4B 796 or baseline canonical 79", () => {
+test("Phase 4C audit history remains while the combined reviewed registry has 104 unique works", () => {
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
   assert.equal(PHASE4B_LEGACY_THUMBNAIL_DECISIONS.size, 796);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 94);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
   for (const code of Object.keys(DECISIONS)) {
     assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.has(code), false, code);
     assert.equal(getPhase4BLegacyThumbnailDecision(code), null, code);

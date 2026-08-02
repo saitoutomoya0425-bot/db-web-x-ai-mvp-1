@@ -86,12 +86,16 @@ type CanonicalDecisionIdentity = {
   readonly reason: string;
 };
 
-type OptionalApprovalMetadata = {
+type ApprovalBatchMetadata = {
+  readonly approval_batch?: string | null;
+};
+
+type OptionalApprovalMetadata = ApprovalBatchMetadata & {
   readonly approved_by: string | null;
   readonly approved_at: string | null;
 };
 
-type RequiredApprovalMetadata = {
+type RequiredApprovalMetadata = ApprovalBatchMetadata & {
   readonly approved_by: string;
   readonly approved_at: string;
 };

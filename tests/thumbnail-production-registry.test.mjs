@@ -17,6 +17,10 @@ import {
   GENERATED_PHASE4C_REVIEWED_STATS,
 } from "../src/lib/thumbnail/generated-phase4c-reviewed-decisions.ts";
 import {
+  GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS,
+  GENERATED_PHASE4D_REVIEWED_STATS,
+} from "../src/lib/thumbnail/generated-phase4d-reviewed-decisions.ts";
+import {
   getProductionThumbnailDecision,
   PRODUCTION_BASELINE_THUMBNAIL_DECISIONS,
   PRODUCTION_THUMBNAIL_DECISIONS,
@@ -63,13 +67,14 @@ const productionSourceId = (code, sourceId) =>
 test("production registry applies one explicit precedence without conflicts", () => {
   assert.deepEqual(THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY, [
     "fixed_canonical",
+    "phase4d_reviewed",
     "phase4c_reviewed",
     "generated_human",
     "generated_gold",
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 94);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -80,6 +85,9 @@ test("all generated records pass the canonical runtime validator", () => {
     assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
   }
   for (const record of GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS) {
+    assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
+  }
+  for (const record of GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS) {
     assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
   }
 });
@@ -134,6 +142,13 @@ test("generated registry metadata proves conservative human approval selection",
     total: 15,
     SAMPLE: 9,
     PACKAGE_RIGHT: 6,
+  });
+  assert.deepEqual(GENERATED_PHASE4D_REVIEWED_STATS, {
+    total: 14,
+    SAMPLE: 4,
+    PACKAGE_RIGHT: 8,
+    PACKAGE_FULL: 2,
+    auto_applied: 0,
   });
 });
 
