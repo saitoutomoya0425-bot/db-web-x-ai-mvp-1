@@ -11,6 +11,7 @@ import {
   PHASE4B_LEGACY_THUMBNAIL_DECISIONS,
 } from "../src/lib/thumbnail/phase4b-legacy-registry.ts";
 import {
+  PRODUCTION_BASELINE_THUMBNAIL_DECISIONS,
   PRODUCTION_THUMBNAIL_DECISIONS,
   getProductionThumbnailDecision,
 } from "../src/lib/thumbnail/production-registry.ts";
@@ -26,7 +27,7 @@ const EXPECTED_CANONICAL_SHA256 = "2f906c24c1deefb7c955b73cfaeadde85ef95092c303a
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const compareAscii = (left, right) => left < right ? -1 : left > right ? 1 : 0;
 const canonicalDigest = () => sha256(JSON.stringify(
-  [...PRODUCTION_THUMBNAIL_DECISIONS.entries()].sort(([left], [right]) => compareAscii(left, right)),
+  [...PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.entries()].sort(([left], [right]) => compareAscii(left, right)),
 ));
 const allowlistRows = parseCsv(await readFile("data/thumbnail-phase4b-legacy-allowlist.csv", "utf8"));
 const exclusionRows = parseCsv(await readFile("data/thumbnail-phase4b-human-review-exclusions.csv", "utf8"));
@@ -58,8 +59,9 @@ test("Phase 4B registry contains exactly the 796 audited selections", () => {
   );
 });
 
-test("canonical 79 decisions and their complete registry SHA remain unchanged", async () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 79);
+test("baseline canonical 79 decisions and their complete registry SHA remain unchanged", async () => {
+  assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 94);
   assert.equal(canonicalDigest(), EXPECTED_CANONICAL_SHA256);
   assert.equal(GENERATED_PHASE4B_LEGACY_STATS.canonical_registry_sha256, EXPECTED_CANONICAL_SHA256);
   const expectedFiles = {
@@ -77,7 +79,7 @@ test("canonical 79 decisions and their complete registry SHA remain unchanged", 
   }
 });
 
-test("all 125 human-review items remain excluded, including 110 non-renderable and 15 sample close-margin items", () => {
+test("the Phase 4B exclusion source remains 125 rows while only 15 reviewed items enter canonical production", () => {
   assert.equal(exclusionRows.length, 125);
   const counts = exclusionRows.reduce((result, row) => {
     result[row.review_category] = (result[row.review_category] ?? 0) + 1;
@@ -86,6 +88,11 @@ test("all 125 human-review items remain excluded, including 110 non-renderable a
   assert.deepEqual(counts, { NON_RENDERABLE: 110, SAMPLE_CLOSE_MARGIN: 15 });
   for (const row of exclusionRows) {
     assert.equal(getPhase4BLegacyThumbnailDecision(row.code), null, row.code);
+    if (row.review_category === "SAMPLE_CLOSE_MARGIN") {
+      assert.ok(getProductionThumbnailDecision(row.code), row.code);
+    } else {
+      assert.equal(getProductionThumbnailDecision(row.code), null, row.code);
+    }
   }
 });
 

@@ -8,10 +8,14 @@ import {
   GENERATED_GOLD_DECISION_RECORDS,
   GENERATED_HUMAN_DECISION_RECORDS,
 } from "./generated-approved-decisions.ts";
+import {
+  GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS,
+} from "./generated-phase4c-reviewed-decisions.ts";
 import type { CanonicalThumbnailDecision } from "./types.ts";
 
 export const THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY = Object.freeze([
   "fixed_canonical",
+  "phase4c_reviewed",
   "generated_human",
   "generated_gold",
 ] as const);
@@ -31,9 +35,30 @@ type RegistryConflict = {
 const generatedHumanDecisions = GENERATED_HUMAN_DECISION_RECORDS.map((record) =>
   adaptHumanApprovalRecord(record)
 );
+const phase4CReviewedDecisions = GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS.map(
+  (record) => adaptHumanApprovalRecord(record),
+);
 const generatedGoldDecisions = GENERATED_GOLD_DECISION_RECORDS.map((record) =>
   adaptGoldLabelRecord(record)
 );
+
+const baseline = new Map<string, CanonicalThumbnailDecision>();
+for (const decisions of [
+  PRODUCTION_CANONICAL_THUMBNAIL_DECISIONS.values(),
+  generatedHumanDecisions,
+  generatedGoldDecisions,
+]) {
+  for (const decision of decisions) {
+    if (!baseline.has(decision.code)) {
+      baseline.set(decision.code, Object.freeze(decision));
+    }
+  }
+}
+
+export const PRODUCTION_BASELINE_THUMBNAIL_DECISIONS: ReadonlyMap<
+  string,
+  CanonicalThumbnailDecision
+> = baseline;
 
 const combined = new Map<string, CanonicalThumbnailDecision>();
 const sources = new Map<string, RegistrySource>();
@@ -69,6 +94,9 @@ function mergeDecision(
 
 for (const decision of PRODUCTION_CANONICAL_THUMBNAIL_DECISIONS.values()) {
   mergeDecision(decision, "fixed_canonical");
+}
+for (const decision of phase4CReviewedDecisions) {
+  mergeDecision(decision, "phase4c_reviewed");
 }
 for (const decision of generatedHumanDecisions) {
   mergeDecision(decision, "generated_human");

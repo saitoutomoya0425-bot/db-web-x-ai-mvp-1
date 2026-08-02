@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalizeProductCodeValue } from "../src/lib/fanza/normalize.ts";
-import { PRODUCTION_THUMBNAIL_DECISIONS } from "../src/lib/thumbnail/production-registry.ts";
+import { PRODUCTION_BASELINE_THUMBNAIL_DECISIONS } from "../src/lib/thumbnail/production-registry.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const allowlistPath = path.join(root, "data", "thumbnail-phase4b-legacy-allowlist.csv");
@@ -132,7 +132,7 @@ function trustedUrl(value, context) {
 }
 
 function canonicalRegistryDigest() {
-  const entries = [...PRODUCTION_THUMBNAIL_DECISIONS.entries()].sort(([left], [right]) => compareAscii(left, right));
+  const entries = [...PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.entries()].sort(([left], [right]) => compareAscii(left, right));
   return { count: entries.length, digest: sha256(JSON.stringify(entries)), codes: new Set(entries.map(([code]) => code)) };
 }
 

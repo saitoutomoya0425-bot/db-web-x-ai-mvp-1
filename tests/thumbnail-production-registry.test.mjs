@@ -13,7 +13,12 @@ import {
   GENERATED_HUMAN_DECISION_RECORDS,
 } from "../src/lib/thumbnail/generated-approved-decisions.ts";
 import {
+  GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS,
+  GENERATED_PHASE4C_REVIEWED_STATS,
+} from "../src/lib/thumbnail/generated-phase4c-reviewed-decisions.ts";
+import {
   getProductionThumbnailDecision,
+  PRODUCTION_BASELINE_THUMBNAIL_DECISIONS,
   PRODUCTION_THUMBNAIL_DECISIONS,
   PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS,
   THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY,
@@ -58,11 +63,13 @@ const productionSourceId = (code, sourceId) =>
 test("production registry applies one explicit precedence without conflicts", () => {
   assert.deepEqual(THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY, [
     "fixed_canonical",
+    "phase4c_reviewed",
     "generated_human",
     "generated_gold",
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 79);
+  assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 94);
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -70,6 +77,9 @@ test("all generated records pass the canonical runtime validator", () => {
     assert.equal(assertCanonicalThumbnailDecision(adaptGoldLabelRecord(record)).code, record.code);
   }
   for (const record of GENERATED_HUMAN_DECISION_RECORDS) {
+    assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
+  }
+  for (const record of GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS) {
     assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
   }
 });
@@ -120,6 +130,11 @@ test("generated registry metadata proves conservative human approval selection",
     scene_crop_rotate_clockwise_b: 1,
   });
   assert.equal(GENERATED_HUMAN_DECISION_RECORDS.length, 29);
+  assert.deepEqual(GENERATED_PHASE4C_REVIEWED_STATS, {
+    total: 15,
+    SAMPLE: 9,
+    PACKAGE_RIGHT: 6,
+  });
 });
 
 test("the explicit scene-crop allowlist is the only SCENE_CROP production source", () => {
