@@ -84,31 +84,31 @@ export const GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS = Object.freeze(
     "code": "KIWVR00907",
     "mode": "SAMPLE",
     "state": "RESOLVED",
-    "source_id": "sample:4",
-    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kiwvr00907/kiwvr00907jp-4.jpg",
-    "source_hash": "a3307814435dc400aa014fc44d226e1d82da0bea6501e36984388972ecf24daa",
-    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/kiwvr00907/kiwvr00907jp-4.jpg",
-    "output_hash": "a3307814435dc400aa014fc44d226e1d82da0bea6501e36984388972ecf24daa",
+    "source_id": "sample:2",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kiwvr00907/kiwvr00907jp-2.jpg",
+    "source_hash": "2d0eace3387a6de20d2654683590e1be959496d6fb28c463084d4b6ed6813869",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/kiwvr00907/kiwvr00907jp-2.jpg",
+    "output_hash": "2d0eace3387a6de20d2654683590e1be959496d6fb28c463084d4b6ed6813869",
     "crop_spec": null,
     "approved_by": "USER_HANDOFF",
     "approved_at": "2026-08-02",
     "approval_batch": "PHASE_4D_USER_REVIEW",
-    "reason": "User Preview approval replaced the earlier Phase 4D-R2 PACKAGE_RIGHT recommendation with SAMPLE sample:4; no image transformation"
+    "reason": "Preview verification found the Phase 4D sample mapping did not match the approved image; restored the Phase 4C SAMPLE sample:2 provenance without image transformation"
   },
   {
     "code": "KSBJ00438",
     "mode": "SAMPLE",
     "state": "RESOLVED",
-    "source_id": "sample:6",
-    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ksbj00438/ksbj00438jp-6.jpg",
-    "source_hash": "63aa5773e9d9517e3211a18afa84695cd5803d781760f971eb0df80713b557bd",
-    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/ksbj00438/ksbj00438jp-6.jpg",
-    "output_hash": "63aa5773e9d9517e3211a18afa84695cd5803d781760f971eb0df80713b557bd",
+    "source_id": "sample:5",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ksbj00438/ksbj00438jp-5.jpg",
+    "source_hash": "58fce856873d542811ead2c4c9c95c4cf214da02625473c9481e84c64d2e72f2",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/ksbj00438/ksbj00438jp-5.jpg",
+    "output_hash": "58fce856873d542811ead2c4c9c95c4cf214da02625473c9481e84c64d2e72f2",
     "crop_spec": null,
     "approved_by": "USER_HANDOFF",
     "approved_at": "2026-08-02",
     "approval_batch": "PHASE_4D_USER_REVIEW",
-    "reason": "User Preview approval replaced the earlier Phase 4D-R2 PACKAGE_RIGHT recommendation with SAMPLE sample:6; no image transformation"
+    "reason": "Preview verification found the Phase 4D sample mapping did not match the approved image; restored the Phase 4C SAMPLE sample:5 provenance without image transformation"
   },
   {
     "code": "KYMI00056",
@@ -129,16 +129,16 @@ export const GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS = Object.freeze(
     "code": "LUCY00029",
     "mode": "SAMPLE",
     "state": "RESOLVED",
-    "source_id": "sample:6",
-    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/lucy00029/lucy00029jp-6.jpg",
-    "source_hash": "02bef264908f0a0935a0e569de6d25313863aefc5181642fd90ae42cefb877dd",
-    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/lucy00029/lucy00029jp-6.jpg",
-    "output_hash": "02bef264908f0a0935a0e569de6d25313863aefc5181642fd90ae42cefb877dd",
+    "source_id": "sample:3",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/lucy00029/lucy00029jp-3.jpg",
+    "source_hash": "d19655be001fc5d0d2ff9ab88f8b198f6feb4c46c19059f6361382f353fc08a5",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/lucy00029/lucy00029jp-3.jpg",
+    "output_hash": "d19655be001fc5d0d2ff9ab88f8b198f6feb4c46c19059f6361382f353fc08a5",
     "crop_spec": null,
     "approved_by": "USER_HANDOFF",
     "approved_at": "2026-08-02",
     "approval_batch": "PHASE_4D_USER_REVIEW",
-    "reason": "User Preview approval replaced the earlier Phase 4D-R2 PACKAGE_RIGHT recommendation with SAMPLE sample:6; no image transformation"
+    "reason": "Preview verification found the Phase 4D sample mapping did not match the approved image; restored the Phase 4C SAMPLE sample:3 provenance without image transformation"
   },
   {
     "code": "MKMP00739",
@@ -174,16 +174,16 @@ export const GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS = Object.freeze(
     "code": "UMSO00650",
     "mode": "SAMPLE",
     "state": "RESOLVED",
-    "source_id": "sample:18",
-    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00650/umso00650jp-18.jpg",
-    "source_hash": "106a35b08cdf3913b7668617143ec8f3359461e85fe3e6424259553c5db4ee0c",
-    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00650/umso00650jp-18.jpg",
-    "output_hash": "106a35b08cdf3913b7668617143ec8f3359461e85fe3e6424259553c5db4ee0c",
+    "source_id": "sample:9",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00650/umso00650jp-9.jpg",
+    "source_hash": "19c75d65de6ce4bf05e0fc5d8f90530cfa3dace934184ca6ed155dd252c08afc",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00650/umso00650jp-9.jpg",
+    "output_hash": "19c75d65de6ce4bf05e0fc5d8f90530cfa3dace934184ca6ed155dd252c08afc",
     "crop_spec": null,
     "approved_by": "USER_HANDOFF",
     "approved_at": "2026-08-02",
     "approval_batch": "PHASE_4D_USER_REVIEW",
-    "reason": "User Preview approval replaced the earlier Phase 4D-R2 PACKAGE_RIGHT recommendation with SAMPLE sample:18; no image transformation"
+    "reason": "Preview verification found the Phase 4D sample mapping did not match the approved image; restored the Phase 4C SAMPLE sample:9 provenance without image transformation"
   },
   {
     "code": "YMDS00298",
@@ -228,4 +228,4 @@ export const GENERATED_PHASE4D_REVIEWED_STATS = Object.freeze(
 } as const,
 );
 
-export const GENERATED_PHASE4D_REVIEWED_INPUT_SHA256 = "b45741cf2bf157f7fb650816127a7da01fe313dc495dcc320ee1f79c94d3cd56";
+export const GENERATED_PHASE4D_REVIEWED_INPUT_SHA256 = "99a7e3f84613d2bbce8a84630595ea5b27e0129ee5ff3268b889f2e9af50bfcc";

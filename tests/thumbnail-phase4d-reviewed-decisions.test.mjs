@@ -37,10 +37,10 @@ const recordsByCode = new Map(
   GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS.map((record) => [record.code, record]),
 );
 const OVERRIDES = Object.freeze({
-  KIWVR00907: "sample:4",
-  KSBJ00438: "sample:6",
-  LUCY00029: "sample:6",
-  UMSO00650: "sample:18",
+  KIWVR00907: "sample:2",
+  KSBJ00438: "sample:5",
+  LUCY00029: "sample:3",
+  UMSO00650: "sample:9",
 });
 
 test("Phase 4D records only 14 image-changing user decisions and zero automatic decisions", () => {
@@ -91,7 +91,7 @@ test("the formal fixture contains R2 final decisions and R1 teacher decisions wi
   }
 });
 
-test("the four Preview overrides supersede Phase 4C and all lower-priority URL inputs", () => {
+test("the four Preview corrections restore Phase 4C provenance and override lower-priority URL inputs", () => {
   const oldPhase4C = new Map(
     GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS.map((record) => [record.code, record]),
   );
@@ -99,7 +99,7 @@ test("the four Preview overrides supersede Phase 4C and all lower-priority URL i
     const previous = oldPhase4C.get(code);
     assert.ok(previous, code);
     assert.equal(previous.mode, "SAMPLE", code);
-    assert.notEqual(previous.source_id, sourceId, code);
+    assert.equal(previous.source_id, sourceId, code);
 
     const decision = getProductionThumbnailDecision(code);
     assert.ok(decision, code);
@@ -110,7 +110,11 @@ test("the four Preview overrides supersede Phase 4C and all lower-priority URL i
     assert.equal(decision.approved_by, "USER_HANDOFF", code);
     assert.equal(decision.approved_at, "2026-08-02", code);
     assert.equal(decision.approval_batch, "PHASE_4D_USER_REVIEW", code);
-    assert.match(decision.reason, /replaced the earlier Phase 4D-R2 PACKAGE_RIGHT/, code);
+    assert.equal(decision.source_path_or_url, previous.source_path_or_url, code);
+    assert.equal(decision.source_hash, previous.source_hash, code);
+    assert.equal(decision.output_path_or_url, previous.output_path_or_url, code);
+    assert.equal(decision.output_hash, previous.output_hash, code);
+    assert.match(decision.reason, /restored the Phase 4C SAMPLE/, code);
 
     const input = {
       code,

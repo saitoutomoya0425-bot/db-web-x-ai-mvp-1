@@ -41,12 +41,6 @@ const DECISIONS = Object.freeze({
   UMSO00650: ["SAMPLE", "sample:9"],
   VRKM01857: ["SAMPLE", "sample:1"],
 });
-const PHASE4D_SUPERSESSIONS = Object.freeze({
-  KIWVR00907: ["SAMPLE", "sample:4"],
-  KSBJ00438: ["SAMPLE", "sample:6"],
-  LUCY00029: ["SAMPLE", "sample:6"],
-  UMSO00650: ["SAMPLE", "sample:18"],
-});
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const dataBytes = await readFile(DATA_PATH);
 const rows = parseCsv(dataBytes.toString("utf8"));
@@ -115,9 +109,8 @@ test("Phase 4C fixes mode source URL and both provenance hashes atomically", asy
   }
 });
 
-test("all 15 Phase 4C works resolve consistently with four documented Phase 4D supersessions", () => {
+test("all 15 Phase 4C works retain their approved production resolution", () => {
   for (const [code, [mode, sourceId]] of Object.entries(DECISIONS)) {
-    const [expectedMode, expectedSourceId] = PHASE4D_SUPERSESSIONS[code] ?? [mode, sourceId];
     const input = {
       code,
       legacy_runtime_override: {
@@ -137,8 +130,8 @@ test("all 15 Phase 4C works resolve consistently with four documented Phase 4D s
     const decision = getProductionThumbnailDecision(code);
     assert.ok(decision, code);
     assert.equal(resolution.resolution_kind, "CANONICAL", code);
-    assert.equal(resolution.mode, expectedMode, code);
-    assert.equal(resolution.source_id, expectedSourceId, code);
+    assert.equal(resolution.mode, mode, code);
+    assert.equal(resolution.source_id, sourceId, code);
     assert.equal(resolution.resolved_url, decision.output_path_or_url, code);
     assert.equal(resolution.approval_status, "HUMAN_APPROVED", code);
     assert.equal(resolution.render_status, "READY", code);
