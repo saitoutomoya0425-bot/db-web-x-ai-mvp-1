@@ -8,6 +8,9 @@ import {
   GENERATED_PHASE4C_REVIEWED_STATS,
 } from "../src/lib/thumbnail/generated-phase4c-reviewed-decisions.ts";
 import {
+  GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS,
+} from "../src/lib/thumbnail/generated-phase4e-reviewed-decisions.ts";
+import {
   getProductionThumbnailDecision,
   PRODUCTION_BASELINE_THUMBNAIL_DECISIONS,
   PRODUCTION_THUMBNAIL_DECISIONS,
@@ -41,6 +44,9 @@ const DECISIONS = Object.freeze({
   UMSO00650: ["SAMPLE", "sample:9"],
   VRKM01857: ["SAMPLE", "sample:1"],
 });
+const phase4EByCode = new Map(
+  GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS.map((record) => [record.code, record]),
+);
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const dataBytes = await readFile(DATA_PATH);
 const rows = parseCsv(dataBytes.toString("utf8"));
@@ -109,7 +115,7 @@ test("Phase 4C fixes mode source URL and both provenance hashes atomically", asy
   }
 });
 
-test("all 15 Phase 4C works retain their approved production resolution", () => {
+test("all 15 Phase 4C works retain history while four use the later Phase 4E resolution", () => {
   for (const [code, [mode, sourceId]] of Object.entries(DECISIONS)) {
     const input = {
       code,
@@ -129,9 +135,12 @@ test("all 15 Phase 4C works retain their approved production resolution", () => 
     const resolution = surfaces[0];
     const decision = getProductionThumbnailDecision(code);
     assert.ok(decision, code);
+    const latest = phase4EByCode.get(code);
+    const expectedMode = latest?.mode ?? mode;
+    const expectedSourceId = latest?.source_id ?? sourceId;
     assert.equal(resolution.resolution_kind, "CANONICAL", code);
-    assert.equal(resolution.mode, mode, code);
-    assert.equal(resolution.source_id, sourceId, code);
+    assert.equal(resolution.mode, expectedMode, code);
+    assert.equal(resolution.source_id, expectedSourceId, code);
     assert.equal(resolution.resolved_url, decision.output_path_or_url, code);
     assert.equal(resolution.approval_status, "HUMAN_APPROVED", code);
     assert.equal(resolution.render_status, "READY", code);

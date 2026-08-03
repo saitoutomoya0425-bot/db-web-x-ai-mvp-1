@@ -14,10 +14,14 @@ import {
 import {
   GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS,
 } from "./generated-phase4d-reviewed-decisions.ts";
+import {
+  GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS,
+} from "./generated-phase4e-reviewed-decisions.ts";
 import type { CanonicalThumbnailDecision } from "./types.ts";
 
 export const THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY = Object.freeze([
   "fixed_canonical",
+  "phase4e_reviewed",
   "phase4d_reviewed",
   "phase4c_reviewed",
   "generated_human",
@@ -43,6 +47,9 @@ const phase4CReviewedDecisions = GENERATED_PHASE4C_REVIEWED_DECISION_RECORDS.map
   (record) => adaptHumanApprovalRecord(record),
 );
 const phase4DReviewedDecisions = GENERATED_PHASE4D_REVIEWED_DECISION_RECORDS.map(
+  (record) => adaptHumanApprovalRecord(record),
+);
+const phase4EReviewedDecisions = GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS.map(
   (record) => adaptHumanApprovalRecord(record),
 );
 const generatedGoldDecisions = GENERATED_GOLD_DECISION_RECORDS.map((record) =>
@@ -82,11 +89,18 @@ function mergeDecision(
     return;
   }
   if (
+    sources.get(decision.code) === "phase4e_reviewed" &&
+    (source === "phase4d_reviewed" || source === "phase4c_reviewed")
+  ) {
+    // Phase 4E is the explicit latest user review. Keep the Phase 4C/4D rows as
+    // immutable audit history while treating Phase 4E as their supersession.
+    return;
+  }
+  if (
     sources.get(decision.code) === "phase4d_reviewed" &&
     source === "phase4c_reviewed"
   ) {
-    // Phase 4D is an explicit, later user review. Keep the Phase 4C record as
-    // audit history while treating the newer reviewed layer as a supersession.
+    // Phase 4D remains the later review for works without a Phase 4E decision.
     return;
   }
   if (
@@ -109,6 +123,9 @@ function mergeDecision(
 
 for (const decision of PRODUCTION_CANONICAL_THUMBNAIL_DECISIONS.values()) {
   mergeDecision(decision, "fixed_canonical");
+}
+for (const decision of phase4EReviewedDecisions) {
+  mergeDecision(decision, "phase4e_reviewed");
 }
 for (const decision of phase4DReviewedDecisions) {
   mergeDecision(decision, "phase4d_reviewed");
