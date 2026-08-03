@@ -7180,7 +7180,7 @@ export const GENERATED_PHASE4B_LEGACY_STATS = Object.freeze({
   "human_review_excluded": 125,
   "css_package_position": 150,
   "canonical_count_unchanged": 79,
-  "canonical_registry_sha256": "8a79b1fd70be58fcd170c00693673b6400508f3b3841f7d04b1fcc146eb61d87",
+  "canonical_registry_sha256": "745eb67573820f3919080bf16d74f61d0d6960c54ef6830e5ca051327b1cabfa",
   "allowlist_sha256": "c09ce6ee77c451ee8f65a9f1b8c64a35834b95e5de8cc5417966a52ff9213494",
   "exclusions_sha256": "7cd6aea122945b68f7dd8461fc4852105c6dfb5dee0d1347e4b502cd75ed9e89",
   "phase4a_audit_sha256": "89a4375b35c1e43e58a1b16aa7a273755fbd872dc90e88651193db419b9c73bd",

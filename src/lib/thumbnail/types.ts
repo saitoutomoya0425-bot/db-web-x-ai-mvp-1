@@ -16,7 +16,7 @@ export const THUMBNAIL_MODE_CONTRACTS = Object.freeze({
   PACKAGE_CENTER: frozenModeContract("PACKAGE", "cover", "^dvd:center$", "none"),
   SAMPLE: frozenModeContract("SAMPLE", "scale-down", "^sample:[1-9]\\d*$", "none"),
   SCENE_FULL: frozenModeContract("SCENE", "contain", "^(?:scene|file):.+$", "none"),
-  SCENE_CROP: frozenModeContract("SCENE", "cover", "^(?:scene|file):.+$", "required"),
+  SCENE_CROP: frozenModeContract("SCENE", "scale-down", "^(?:scene|file):.+$", "required"),
 });
 
 export type ThumbnailMode = keyof typeof THUMBNAIL_MODE_CONTRACTS;

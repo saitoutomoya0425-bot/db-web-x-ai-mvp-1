@@ -552,7 +552,7 @@ async function materializeSceneCropRecord({
     row.mode !== "SCENE_CROP" ||
     row.source_id !== "scene:pl" ||
     row.source_kind !== "SCENE" ||
-    row.object_fit !== "cover" ||
+    row.object_fit !== "scale-down" ||
     row.approval_status !== "HUMAN_APPROVED" ||
     row.render_status !== "READY"
   ) {

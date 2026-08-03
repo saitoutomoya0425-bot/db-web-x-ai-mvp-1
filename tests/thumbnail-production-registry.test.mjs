@@ -31,7 +31,10 @@ import {
   PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS,
   THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY,
 } from "../src/lib/thumbnail/production-registry.ts";
-import { resolveThumbnailPresentation } from "../src/lib/thumbnail/presentation.ts";
+import {
+  buildThumbnailRenderContract,
+  resolveThumbnailPresentation,
+} from "../src/lib/thumbnail/presentation.ts";
 import {
   thumbnailStructuredDataImage,
 } from "../src/lib/thumbnail/structured-data.ts";
@@ -238,7 +241,8 @@ test("the explicit scene-crop allowlist is the only SCENE_CROP production source
     assert.equal(decision.source_hash, row.source_hash, row.code);
     assert.equal(decision.output_path_or_url, row.output_path_or_url, row.code);
     assert.equal(decision.output_hash, row.output_hash, row.code);
-    assert.equal(decision.object_fit, "cover", row.code);
+    assert.equal(row.object_fit, "scale-down", row.code);
+    assert.equal(decision.object_fit, "scale-down", row.code);
     assert.deepEqual(decision.crop_spec, JSON.parse(row.crop_spec), row.code);
     assert.equal(decision.approval_status, "HUMAN_APPROVED", row.code);
     assert.equal(decision.render_status, "READY", row.code);
@@ -272,7 +276,12 @@ test("the explicit scene-crop allowlist is the only SCENE_CROP production source
       assert.equal(resolution.resolution_kind, "CANONICAL", row.code);
       assert.equal(resolution.resolved_url, row.output_path_or_url, row.code);
       assert.equal(resolution.mode, "SCENE_CROP", row.code);
+      assert.equal(resolution.object_fit, "scale-down", row.code);
       assert.deepEqual(resolution.crop_spec, JSON.parse(row.crop_spec), row.code);
+      const contract = buildThumbnailRenderContract(resolution);
+      assert.equal(contract.object_fit, "scale-down", row.code);
+      assert.equal(contract.object_position, "center", row.code);
+      assert.deepEqual(contract.crop_spec, JSON.parse(row.crop_spec), row.code);
     }
     const structured = thumbnailStructuredDataImage(
       surfaces[0],
@@ -284,6 +293,26 @@ test("the explicit scene-crop allowlist is the only SCENE_CROP production source
       row.code,
     );
   }
+});
+
+test("READY decisions use one mode-level object-fit contract", () => {
+  const counts = [...PRODUCTION_THUMBNAIL_DECISIONS.values()].reduce(
+    (result, decision) => {
+      if (decision.render_status !== "READY") return result;
+      const key = `${decision.mode}|${decision.object_fit}`;
+      result[key] = (result[key] ?? 0) + 1;
+      return result;
+    },
+    {},
+  );
+  assert.deepEqual(counts, {
+    "SAMPLE|scale-down": 27,
+    "PACKAGE_RIGHT|cover": 33,
+    "PACKAGE_FULL|contain": 9,
+    "SCENE_FULL|contain": 1,
+    "SCENE_CROP|scale-down": 29,
+    "PACKAGE_CENTER|cover": 5,
+  });
 });
 
 test("keep-current approvals remain outside the canonical registry", () => {

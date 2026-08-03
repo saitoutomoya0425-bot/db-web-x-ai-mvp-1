@@ -213,9 +213,61 @@ test("approved SCENE_CROP exposes the exact crop contract", () => {
   });
   const html = render(resolution);
   assert.match(html, /data-thumbnail-mode="SCENE_CROP"/);
-  assert.match(html, /class="object-cover /);
+  assert.match(html, /class="object-scale-down /);
+  assert.doesNotMatch(html, /object-cover/);
+  assert.match(html, /object-position:center/);
   assert.match(
     html,
     /data-thumbnail-crop-spec="\{&quot;unit&quot;:&quot;pixel&quot;,&quot;x&quot;:30,&quot;y&quot;:0,&quot;width&quot;:315,&quot;height&quot;:450\}"/,
   );
+});
+
+test("approved SCENE_CROP outputs share one scale-down contract across public surfaces", () => {
+  const cases = [
+    "1SBP00416",
+    "1SBP00396",
+    "1SBP00395",
+    "1SBP00424",
+    "H_283PMFT00435",
+  ];
+  const surfaces = ["list", "search", "detail", "related", "recently-viewed"];
+
+  for (const code of cases) {
+    const resolution = resolve(code);
+    assert.equal(resolution.resolution_kind, "CANONICAL", code);
+    assert.equal(resolution.mode, "SCENE_CROP", code);
+    assert.equal(resolution.source_id, "scene:pl", code);
+    assert.equal(resolution.object_fit, "scale-down", code);
+    assert.ok(resolution.crop_spec, code);
+
+    for (const surface of surfaces) {
+      const html = renderToStaticMarkup(
+        createElement(
+          "div",
+          { "data-surface": surface },
+          createElement(ResolvedThumbnail, {
+            resolution,
+            alt: `${code} ${surface}`,
+            sizes: surface === "detail" ? "560px" : "50vw",
+            className: "relative aspect-[7/10] overflow-hidden",
+          }),
+        ),
+      );
+      assert.match(html, /data-thumbnail-resolution-kind="CANONICAL"/, `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-mode="SCENE_CROP"/, `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-source-id="scene:pl"/, `${code}:${surface}`);
+      assert.match(html, /class="object-scale-down /, `${code}:${surface}`);
+      assert.doesNotMatch(html, /object-cover/, `${code}:${surface}`);
+      assert.match(html, /object-position:center/, `${code}:${surface}`);
+      assert.ok(
+        html.includes(`src="${resolution.resolved_url}"`),
+        `${code}:${surface}`,
+      );
+      assert.doesNotMatch(
+        html,
+        /source_hash|output_hash|source_path_or_url|data\/thumbnail-scene-crop-sources/,
+        `${code}:${surface}`,
+      );
+    }
+  }
 });

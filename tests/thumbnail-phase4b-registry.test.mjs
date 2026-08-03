@@ -26,7 +26,7 @@ import {
 import { thumbnailStructuredDataImage } from "../src/lib/thumbnail/structured-data.ts";
 import { parseCsv } from "../scripts/generate-thumbnail-phase4b-legacy-registry.mjs";
 
-const EXPECTED_CANONICAL_SHA256 = "8a79b1fd70be58fcd170c00693673b6400508f3b3841f7d04b1fcc146eb61d87";
+const EXPECTED_CANONICAL_SHA256 = "745eb67573820f3919080bf16d74f61d0d6960c54ef6830e5ca051327b1cabfa";
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const compareAscii = (left, right) => left < right ? -1 : left > right ? 1 : 0;
 const canonicalDigest = () => sha256(JSON.stringify(
@@ -63,17 +63,17 @@ test("Phase 4B registry contains exactly the 796 audited selections", () => {
   );
 });
 
-test("baseline canonical 79 decisions and their complete registry SHA remain unchanged", async () => {
+test("baseline canonical 79 decisions retain membership after the SCENE_CROP fit contract update", async () => {
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
   assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
   assert.equal(canonicalDigest(), EXPECTED_CANONICAL_SHA256);
   assert.equal(GENERATED_PHASE4B_LEGACY_STATS.canonical_registry_sha256, EXPECTED_CANONICAL_SHA256);
   const expectedFiles = {
     "src/lib/thumbnail/canonical-decisions.ts": "380391029864875ce2b26585e9f36934b832820d11813a91d95b962764fab82a",
-    "src/lib/thumbnail/generated-approved-decisions.ts": "bfe00b325c9b4c353370413cd2689f769c589c6beea78479152725e696d449c3",
+    "src/lib/thumbnail/generated-approved-decisions.ts": "6d6a4bd101158c4702cfa8330be9400e6c4dafe96046c32764730708cb82ea5c",
     "data/thumbnail-gold-labels.csv": "31c5e2443a3c27f5105a62075b68cb7376a84bc8a6fd5d3f6beb6dbfc5196ddc",
     "data/thumbnail-human-approvals.csv": "473b65bd2c3d85917d90bb0a6249faeb961fe618d7e6e2d0c8a3fbc0c4f99bb1",
-    "data/thumbnail-scene-crop-allowlist.csv": "9f60cce561a225da87053136e8ce875fbac5378bd41c3b668a36e31c3bc4edc0",
+    "data/thumbnail-scene-crop-allowlist.csv": "55700128700d3acb5de60a9029adcd9ec31feae5c9a974c1f942963bfab8e939",
   };
   for (const [file, expected] of Object.entries(expectedFiles)) {
     assert.equal(sha256(await readFile(file)), expected, file);

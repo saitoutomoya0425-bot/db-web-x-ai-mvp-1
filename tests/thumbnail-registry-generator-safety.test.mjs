@@ -197,7 +197,7 @@ async function createSceneCropFixture({
     sourceUrl,
     sourceRelativePath,
     `/card-thumbnails/${code}-scene-portrait-v4.jpg`,
-    "cover",
+    "scale-down",
     JSON.stringify(crop),
     cropVariant,
     "HUMAN_APPROVED",

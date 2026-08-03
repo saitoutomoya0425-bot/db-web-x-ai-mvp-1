@@ -1236,6 +1236,6 @@ export const GENERATED_APPROVED_REGISTRY_INPUTS = Object.freeze(
   "gold_sha256": "31c5e2443a3c27f5105a62075b68cb7376a84bc8a6fd5d3f6beb6dbfc5196ddc",
   "human_sha256": "473b65bd2c3d85917d90bb0a6249faeb961fe618d7e6e2d0c8a3fbc0c4f99bb1",
   "overrides_sha256": "4005d04bb4a0cec19ed0e17c17e7e530fe03914b37961830ba96d6ed291b85b1",
-  "scene_crop_allowlist_sha256": "9f60cce561a225da87053136e8ce875fbac5378bd41c3b668a36e31c3bc4edc0"
+  "scene_crop_allowlist_sha256": "55700128700d3acb5de60a9029adcd9ec31feae5c9a974c1f942963bfab8e939"
 } as const,
 );

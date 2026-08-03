@@ -272,11 +272,23 @@ test("SCENE_CROP requires a resolved human decision and crop_spec", () => {
     mode: "SCENE_CROP",
     source_id: "scene:2",
     source_kind: "SCENE",
+    object_fit: "scale-down",
     crop_spec: crop,
   });
-  assert.equal(
-    resolveCanonicalThumbnail({ code: "SCENE00002", human_decision: valid }).kind,
-    "RESOLVED",
+  const result = resolveCanonicalThumbnail({
+    code: "SCENE00002",
+    human_decision: valid,
+  });
+  assert.equal(result.kind, "RESOLVED");
+  assert.equal(result.object_fit, "scale-down");
+  assert.deepEqual(result.crop_spec, crop);
+  assert.throws(
+    () =>
+      resolveCanonicalThumbnail({
+        code: "SCENE00002",
+        human_decision: { ...valid, object_fit: "cover" },
+      }),
+    ThumbnailDecisionContractError,
   );
   assert.throws(
     () =>

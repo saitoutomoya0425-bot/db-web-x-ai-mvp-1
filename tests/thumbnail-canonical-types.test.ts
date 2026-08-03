@@ -85,7 +85,7 @@ const impossibleGoldSceneCrop: CanonicalThumbnailDecision = {
   mode: "SCENE_CROP",
   source_id: "scene:1",
   source_kind: "SCENE",
-  object_fit: "cover",
+  object_fit: "scale-down",
   crop_spec: { unit: "ratio", x: 0, y: 0, width: 1, height: 1 },
   approval_status: "GOLD_APPROVED",
 };
@@ -96,7 +96,7 @@ const impossibleModeApprovedSceneCrop: CanonicalThumbnailDecision = {
   mode: "SCENE_CROP",
   source_id: "scene:1",
   source_kind: "SCENE",
-  object_fit: "cover",
+  object_fit: "scale-down",
   crop_spec: { unit: "ratio", x: 0, y: 0, width: 1, height: 1 },
   approval_status: "MODE_APPROVED",
 };
