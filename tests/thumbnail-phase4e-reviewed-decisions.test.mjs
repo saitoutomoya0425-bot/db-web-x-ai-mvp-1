@@ -90,7 +90,7 @@ test("Phase 4E records exactly four explicit sample:1 user decisions", async () 
     assert.equal(row.output_hash, hash, row.code);
     assert.equal(Number(row.source_width), width, row.code);
     assert.equal(Number(row.source_height), height, row.code);
-    assert.equal(row.object_fit, "cover", row.code);
+    assert.equal(row.object_fit, "scale-down", row.code);
     assert.equal(row.crop_spec, "null", row.code);
     assert.equal(row.approval_status, "HUMAN_APPROVED", row.code);
     assert.equal(row.render_status, "READY", row.code);
@@ -152,7 +152,7 @@ test("all public surfaces and structured data use one Phase 4E URL", () => {
     assert.equal(decision.output_path_or_url, url, code);
     assert.equal(decision.source_hash, hash, code);
     assert.equal(decision.output_hash, hash, code);
-    assert.equal(decision.object_fit, "cover", code);
+    assert.equal(decision.object_fit, "scale-down", code);
     assert.equal(decision.crop_spec, null, code);
     assert.equal(decision.approval_status, "HUMAN_APPROVED", code);
     assert.equal(decision.render_status, "READY", code);
@@ -180,14 +180,14 @@ test("all public surfaces and structured data use one Phase 4E URL", () => {
       assert.equal(resolution.mode, "SAMPLE", code);
       assert.equal(resolution.source_id, "sample:1", code);
       assert.equal(resolution.resolved_url, url, code);
-      assert.equal(resolution.object_fit, "cover", code);
+      assert.equal(resolution.object_fit, "scale-down", code);
       for (const rejected of negativeSources[code]) {
         assert.notEqual(resolution.source_id, rejected, code);
       }
     }
     const contract = buildThumbnailRenderContract(surfaces[0]);
     assert.equal(contract.src, url, code);
-    assert.equal(contract.object_fit, "cover", code);
+    assert.equal(contract.object_fit, "scale-down", code);
     assert.equal(contract.object_position, "center", code);
     assert.equal(thumbnailStructuredDataImage(surfaces[0], "https://preview.example.test").image, url, code);
   }

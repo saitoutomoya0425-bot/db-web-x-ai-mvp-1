@@ -187,7 +187,7 @@ async function materializeRecord(row) {
     row.mode !== "SAMPLE" ||
     sourceId !== "sample:1" ||
     row.source_kind !== "SAMPLE" ||
-    row.object_fit !== "cover" ||
+    row.object_fit !== "scale-down" ||
     row.crop_spec !== "null" ||
     row.approval_status !== "HUMAN_APPROVED" ||
     row.render_status !== "READY"

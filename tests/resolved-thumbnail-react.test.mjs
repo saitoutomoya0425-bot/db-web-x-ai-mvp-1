@@ -60,7 +60,8 @@ test("CANONICAL READY renders actual image markup and audit attributes", () => {
   assert.match(html, /data-thumbnail-source-id="sample:1"/);
   assert.match(html, /data-thumbnail-approval-status="HUMAN_APPROVED"/);
   assert.match(html, /data-thumbnail-render-status="READY"/);
-  assert.match(html, /class="object-cover /);
+  assert.match(html, /class="object-scale-down /);
+  assert.doesNotMatch(html, /object-cover/);
   assert.doesNotMatch(html, /data-thumbnail-crop-spec=/);
 });
 
@@ -112,7 +113,7 @@ test("Phase 3A READY decisions render approved sources without provenance leakag
       "SAMPLE",
       "data-thumbnail-source-id=\"sample:1\"|auto-right|b7f305ea|85b6fe7a",
       "sample:12",
-      "object-cover",
+      "object-scale-down",
     ],
     [
       "1SBP00423",

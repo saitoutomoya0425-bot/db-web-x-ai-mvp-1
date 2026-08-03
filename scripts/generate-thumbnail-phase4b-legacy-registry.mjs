@@ -14,7 +14,7 @@ const generatedPath = path.join(root, "src", "lib", "thumbnail", "generated-phas
 const EXPECTED_AUDIT_SHA256 = "89a4375b35c1e43e58a1b16aa7a273755fbd872dc90e88651193db419b9c73bd";
 const EXPECTED_HUMAN_REVIEW_SHA256 = "5c4bcb19be41912f927e492a85e08389138943b782b59f98bfdbe07350772c9f";
 const EXPECTED_CANONICAL_COUNT = 79;
-const EXPECTED_CANONICAL_SHA256 = "2f906c24c1deefb7c955b73cfaeadde85ef95092c303aef58a5fe2cafdd34401";
+const EXPECTED_CANONICAL_SHA256 = "8a79b1fd70be58fcd170c00693673b6400508f3b3841f7d04b1fcc146eb61d87";
 const EXPECTED_COUNTS = Object.freeze({
   SAMPLE: 129,
   PACKAGE_RIGHT: 410,
@@ -28,7 +28,7 @@ const EXPECTED_REVIEW_COUNTS = Object.freeze({
   SAMPLE_CLOSE_MARGIN: 15,
 });
 const MODE_CONTRACTS = Object.freeze({
-  SAMPLE: { source: /^sample:[1-9]\d*$/, object_fit: "cover" },
+  SAMPLE: { source: /^sample:[1-9]\d*$/, object_fit: "scale-down" },
   PACKAGE_RIGHT: { source: /^dvd:right$/, object_fit: "cover" },
   PACKAGE_CENTER: { source: /^dvd:center$/, object_fit: "cover" },
   PACKAGE_FULL: { source: /^dvd:full$/, object_fit: "contain" },
@@ -260,7 +260,14 @@ async function loadAndValidateInputs() {
     const contract = MODE_CONTRACTS[row.mode];
     if (!contract || row.mode === "SCENE_CROP") throw new Error(`${code}:INVALID_MODE`);
     if (!contract.source.test(row.source_id)) throw new Error(`${code}:INVALID_SOURCE_ID`);
-    if (row.object_fit !== contract.object_fit || row.crop_spec !== "null" || row.approval_status !== "UNREVIEWED") throw new Error(`${code}:INVALID_RENDER_OR_APPROVAL_CONTRACT`);
+    const acceptedAuditFits = row.mode === "SAMPLE"
+      ? new Set(["cover", contract.object_fit])
+      : new Set([contract.object_fit]);
+    if (
+      !acceptedAuditFits.has(row.object_fit) ||
+      row.crop_spec !== "null" ||
+      row.approval_status !== "UNREVIEWED"
+    ) throw new Error(`${code}:INVALID_RENDER_OR_APPROVAL_CONTRACT`);
     if (row.object_position !== (row.mode === "PACKAGE_RIGHT" ? "right" : "center")) throw new Error(`${code}:INVALID_OBJECT_POSITION`);
     trustedUrl(row.audit_recommended_url, `${code}:AUDIT_RECOMMENDED_URL`);
     trustedUrl(row.resolved_url, `${code}:RESOLVED_URL`);
@@ -287,7 +294,9 @@ function generatedSource({ allowlist, exclusions, allowlistText, exclusionsText 
     source_id: row.source_id,
     resolved_url: row.resolved_url,
     render_strategy: row.render_strategy,
-    object_fit: row.object_fit,
+    // Preserve the audited image choice while applying the current shared
+    // presentation contract. The Phase 4B CSV retains its historical fit.
+    object_fit: MODE_CONTRACTS[row.mode].object_fit,
     object_position: row.object_position,
   }));
   const cssCount = records.filter((record) => record.render_strategy === "CSS_PACKAGE_POSITION").length;

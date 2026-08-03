@@ -54,7 +54,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/13dsvr01992/13dsvr01992jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -63,7 +63,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/13dsvr01998/13dsvr01998jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -72,7 +72,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/13dsvr01999/13dsvr01999jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -81,7 +81,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/13dsvr02003/13dsvr02003jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -234,7 +234,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1drpt00114/1drpt00114jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -243,7 +243,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1drpt00118/1drpt00118jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -369,7 +369,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1fthtd00200/1fthtd00200jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -423,7 +423,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1hnamh00025/1hnamh00025jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -522,7 +522,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1namh00069/1namh00069jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -531,7 +531,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1nhvr00226/1nhvr00226jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -729,7 +729,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:7",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1sdab00352/1sdab00352jp-7.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -738,7 +738,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1sdjs00378/1sdjs00378jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -747,7 +747,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1sdjs00378v/1sdjs00378vjp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -756,7 +756,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1seven00036/1seven00036jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -765,7 +765,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1sgki00093b/1sgki00093bjp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -810,7 +810,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1start00570/1start00570jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -819,7 +819,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1start00591/1start00591jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -846,7 +846,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1start00605/1start00605jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -864,7 +864,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1start00608/1start00608jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -918,7 +918,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/1tldc00056/1tldc00056jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1188,7 +1188,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/55tmavr00285/55tmavr00285jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1440,7 +1440,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ajvr00321/ajvr00321jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1584,7 +1584,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:15",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/aquco00184/aquco00184jp-15.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1602,7 +1602,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:19",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/aquma00150/aquma00150jp-19.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1620,7 +1620,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:14",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/aqumam00039/aqumam00039jp-14.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1827,7 +1827,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/bbtu00117/bbtu00117jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1845,7 +1845,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/bibivr00170/bibivr00170jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -1872,7 +1872,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/bibivr00175/bibivr00175jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2115,7 +2115,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:13",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/cjod00534/cjod00534jp-13.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2196,7 +2196,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/crvr00418/crvr00418jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2457,7 +2457,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/dsuvr00003/dsuvr00003jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2493,7 +2493,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/dvmm00420/dvmm00420jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2502,7 +2502,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/dvmm00421/dvmm00421jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2511,7 +2511,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:7",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/dvrt07701/dvrt07701jp-7.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2520,7 +2520,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:7",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/dvrt07702/dvrt07702jp-7.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2565,7 +2565,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ebwh00345/ebwh00345jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2709,7 +2709,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/fstu00031/fstu00031jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -2943,7 +2943,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:4",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/hmn00885/hmn00885jp-4.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3033,7 +3033,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/hsoda00124/hsoda00124jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3042,7 +3042,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/hsoda00125/hsoda00125jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3132,7 +3132,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086hone00297/h_086hone00297jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3141,7 +3141,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086jrze00307/h_086jrze00307jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3150,7 +3150,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086jrze00308/h_086jrze00308jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3159,7 +3159,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086jrze00309/h_086jrze00309jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3186,7 +3186,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086jura00204/h_086jura00204jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3204,7 +3204,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086xmom00117/h_086xmom00117jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3222,7 +3222,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_086yoch00033/h_086yoch00033jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3447,7 +3447,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_1711doac00001/h_1711doac00001jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3465,7 +3465,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_1711mfdz00006/h_1711mfdz00006jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3474,7 +3474,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_1711mfoz00003/h_1711mfoz00003jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3483,7 +3483,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_1711sioz00003/h_1711sioz00003jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3645,7 +3645,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_237hdka00334/h_237hdka00334jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3654,7 +3654,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_237nact00154/h_237nact00154jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3663,7 +3663,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_237nact00156/h_237nact00156jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3672,7 +3672,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_237nact00160/h_237nact00160jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3681,7 +3681,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_237nact00161/h_237nact00161jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3690,7 +3690,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/h_237zmar00164/h_237zmar00164jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -3942,7 +3942,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:6",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ipzz00903/ipzz00903jp-6.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -4311,7 +4311,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:3",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/jur00813/jur00813jp-3.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -4392,7 +4392,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/kavr00499/kavr00499jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -4437,7 +4437,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/kiwvr00888/kiwvr00888jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -4455,7 +4455,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ksbj00437/ksbj00437jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -4500,7 +4500,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:5",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/madb00004/madb00004jp-5.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -4950,7 +4950,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mird00284/mird00284jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5022,7 +5022,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mkmp00742/mkmp00742jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5040,7 +5040,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:3",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mkon00144/mkon00144jp-3.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5049,7 +5049,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:2",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mkon00145/mkon00145jp-2.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5121,7 +5121,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mrec00006/mrec00006jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5130,7 +5130,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mrec00007/mrec00007jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5139,7 +5139,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:3",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mrss00189/mrss00189jp-3.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5319,7 +5319,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/mvsd00702/mvsd00702jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5400,7 +5400,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/nkwmr00026/nkwmr00026jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5553,7 +5553,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:3",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ofje00653/ofje00653jp-3.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5697,7 +5697,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pred00880/pred00880jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5733,7 +5733,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvr00457/pxvr00457jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5742,7 +5742,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvr00458/pxvr00458jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5751,7 +5751,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvr00459/pxvr00459jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5760,7 +5760,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvr00460/pxvr00460jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5778,7 +5778,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvr00462/pxvr00462jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5787,7 +5787,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvr00463/pxvr00463jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5796,7 +5796,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/pxvrw00007/pxvrw00007jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5841,7 +5841,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:5",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/rki00751/rki00751jp-5.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -5904,7 +5904,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/rmer00057/rmer00057jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6066,7 +6066,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:4",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/royd00335/royd00335jp-4.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6120,7 +6120,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01091/savr01091jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6138,7 +6138,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01117/savr01117jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6156,7 +6156,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01120/savr01120jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6165,7 +6165,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01121/savr01121jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6174,7 +6174,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01125/savr01125jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6183,7 +6183,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01127/savr01127jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6192,7 +6192,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01128/savr01128jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6201,7 +6201,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01129/savr01129jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6210,7 +6210,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01131/savr01131jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6219,7 +6219,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01135/savr01135jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6228,7 +6228,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01136/savr01136jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6246,7 +6246,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/savr01138/savr01138jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6282,7 +6282,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/sivr00493/sivr00493jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6309,7 +6309,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:4",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/snos00183/snos00183jp-4.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6318,7 +6318,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:8",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/snos00209/snos00209jp-8.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6336,7 +6336,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:7",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/snos00245/snos00245jp-7.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6381,7 +6381,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:9",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/snos00261/snos00261jp-9.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6489,7 +6489,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/snos00295/snos00295jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6597,7 +6597,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:9",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/snos00326/snos00326jp-9.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6858,7 +6858,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/umso00651/umso00651jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6876,7 +6876,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/urvrsp00581/urvrsp00581jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6894,7 +6894,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/urvrsp00593/urvrsp00593jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6903,7 +6903,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/urvrsp00594/urvrsp00594jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6921,7 +6921,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/uzu00039/uzu00039jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6966,7 +6966,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01829/vrkm01829jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6975,7 +6975,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01830/vrkm01830jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6984,7 +6984,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01831/vrkm01831jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -6993,7 +6993,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01833/vrkm01833jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7002,7 +7002,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01834/vrkm01834jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7011,7 +7011,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01835/vrkm01835jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7020,7 +7020,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01837/vrkm01837jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7038,7 +7038,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01840/vrkm01840jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7047,7 +7047,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01841/vrkm01841jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7056,7 +7056,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01845/vrkm01845jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7065,7 +7065,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01846/vrkm01846jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7074,7 +7074,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01847/vrkm01847jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7083,7 +7083,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01852/vrkm01852jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7092,7 +7092,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01862/vrkm01862jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7101,7 +7101,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01867/vrkm01867jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7110,7 +7110,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrkm01868/vrkm01868jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7119,7 +7119,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:15",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrprd00193/vrprd00193jp-15.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7128,7 +7128,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrprd00194/vrprd00194jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7137,7 +7137,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/vrprd00198/vrprd00198jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7146,7 +7146,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ymds00298/ymds00298jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   },
   {
@@ -7164,7 +7164,7 @@ export const GENERATED_PHASE4B_LEGACY_RECORDS = Object.freeze(
     "source_id": "sample:1",
     "resolved_url": "https://pics.dmm.co.jp/digital/video/ymds00301/ymds00301jp-1.jpg",
     "render_strategy": "AUDIT_OUTPUT",
-    "object_fit": "cover",
+    "object_fit": "scale-down",
     "object_position": "center"
   }
 ],
@@ -7180,7 +7180,7 @@ export const GENERATED_PHASE4B_LEGACY_STATS = Object.freeze({
   "human_review_excluded": 125,
   "css_package_position": 150,
   "canonical_count_unchanged": 79,
-  "canonical_registry_sha256": "2f906c24c1deefb7c955b73cfaeadde85ef95092c303aef58a5fe2cafdd34401",
+  "canonical_registry_sha256": "8a79b1fd70be58fcd170c00693673b6400508f3b3841f7d04b1fcc146eb61d87",
   "allowlist_sha256": "c09ce6ee77c451ee8f65a9f1b8c64a35834b95e5de8cc5417966a52ff9213494",
   "exclusions_sha256": "7cd6aea122945b68f7dd8461fc4852105c6dfb5dee0d1347e4b502cd75ed9e89",
   "phase4a_audit_sha256": "89a4375b35c1e43e58a1b16aa7a273755fbd872dc90e88651193db419b9c73bd",

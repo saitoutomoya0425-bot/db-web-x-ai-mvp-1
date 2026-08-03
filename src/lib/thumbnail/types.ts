@@ -1,6 +1,6 @@
 const frozenModeContract = <
   SourceKind extends "PACKAGE" | "SAMPLE" | "SCENE",
-  ObjectFit extends "cover" | "contain",
+  ObjectFit extends "cover" | "contain" | "scale-down",
   SourceIdPattern extends string,
   Crop extends "none" | "required",
 >(
@@ -14,7 +14,7 @@ export const THUMBNAIL_MODE_CONTRACTS = Object.freeze({
   PACKAGE_FULL: frozenModeContract("PACKAGE", "contain", "^dvd:full$", "none"),
   PACKAGE_RIGHT: frozenModeContract("PACKAGE", "cover", "^dvd:right$", "none"),
   PACKAGE_CENTER: frozenModeContract("PACKAGE", "cover", "^dvd:center$", "none"),
-  SAMPLE: frozenModeContract("SAMPLE", "cover", "^sample:[1-9]\\d*$", "none"),
+  SAMPLE: frozenModeContract("SAMPLE", "scale-down", "^sample:[1-9]\\d*$", "none"),
   SCENE_FULL: frozenModeContract("SCENE", "contain", "^(?:scene|file):.+$", "none"),
   SCENE_CROP: frozenModeContract("SCENE", "cover", "^(?:scene|file):.+$", "required"),
 });

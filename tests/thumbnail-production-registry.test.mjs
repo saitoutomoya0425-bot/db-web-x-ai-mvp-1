@@ -318,7 +318,7 @@ test("DSVR00064 uses only its approved high-resolution sample as canonical sampl
   assert.equal(decision.output_hash, decision.source_hash);
   assert.equal(decision.approval_status, "GOLD_APPROVED");
   assert.equal(decision.render_status, "READY");
-  assert.equal(decision.object_fit, "cover");
+  assert.equal(decision.object_fit, "scale-down");
   assert.equal(decision.crop_spec, null);
   assert.match(decision.reason, /raw_source_id=sample:1_high_resolution/);
 

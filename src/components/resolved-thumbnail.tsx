@@ -39,7 +39,11 @@ export function ResolvedThumbnail({
 
   const showImage = Boolean(contract.src && !failed);
   const fitClass =
-    contract.object_fit === "cover" ? "object-cover" : "object-contain";
+    contract.object_fit === "cover"
+      ? "object-cover"
+      : contract.object_fit === "scale-down"
+        ? "object-scale-down"
+        : "object-contain";
 
   return (
     <div

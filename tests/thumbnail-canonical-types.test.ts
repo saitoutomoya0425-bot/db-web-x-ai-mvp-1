@@ -22,7 +22,7 @@ const validSample = {
   mode: "SAMPLE",
   source_id: "sample:1",
   source_kind: "SAMPLE",
-  object_fit: "cover",
+  object_fit: "scale-down",
   crop_spec: null,
 } satisfies CanonicalThumbnailDecision;
 
@@ -46,7 +46,7 @@ const impossibleSamplePackage: CanonicalThumbnailDecision = {
   mode: "SAMPLE",
   source_id: "dvd:right",
   source_kind: "PACKAGE",
-  object_fit: "cover",
+  object_fit: "scale-down",
   crop_spec: null,
 };
 

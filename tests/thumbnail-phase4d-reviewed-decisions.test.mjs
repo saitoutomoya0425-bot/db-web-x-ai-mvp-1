@@ -149,7 +149,7 @@ test("the four Phase 4D Preview corrections remain as history under the Phase 4E
       assert.equal(resolution.mode, "SAMPLE", code);
       assert.equal(resolution.source_id, "sample:1", code);
       assert.equal(resolution.resolved_url, decision.output_path_or_url, code);
-      assert.equal(resolution.object_fit, "cover", code);
+      assert.equal(resolution.object_fit, "scale-down", code);
     }
     const contract = buildThumbnailRenderContract(surfaces[0]);
     assert.equal(contract.src, decision.output_path_or_url, code);
@@ -171,7 +171,11 @@ test("all 14 changed decisions resolve identically on list detail related recent
     assert.equal(decision.output_path_or_url, latest.output_path_or_url, record.code);
     assert.equal(decision.output_hash, latest.output_hash, record.code);
     assert.equal(decision.crop_spec, null, record.code);
-    const expectedFit = latest.mode === "PACKAGE_FULL" ? "contain" : "cover";
+    const expectedFit = latest.mode === "PACKAGE_FULL"
+      ? "contain"
+      : latest.mode === "SAMPLE"
+        ? "scale-down"
+        : "cover";
     assert.equal(decision.object_fit, expectedFit, record.code);
 
     const surfaces = ["list", "detail", "related", "recently-viewed"].map(() =>

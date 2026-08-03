@@ -127,6 +127,35 @@ test("runtime validation rejects impossible mode, source kind, and source ID com
   );
 });
 
+test("SAMPLE requires scale-down and rejects forged cover or contain fits", () => {
+  const valid = resolvedHumanDecision({
+    code: "SAMPLEFIT0001",
+    mode: "SAMPLE",
+    source_kind: "SAMPLE",
+    source_id: "sample:1",
+    object_fit: "scale-down",
+  });
+  const result = resolveCanonicalThumbnail({
+    code: "SAMPLEFIT0001",
+    human_decision: valid,
+  });
+  assert.equal(result.kind, "RESOLVED");
+  assert.equal(result.object_fit, "scale-down");
+  assert.equal(result.crop_spec, null);
+
+  for (const objectFit of ["cover", "contain"]) {
+    assert.throws(
+      () =>
+        resolveCanonicalThumbnail({
+          code: "SAMPLEFIT0001",
+          human_decision: { ...valid, object_fit: objectFit },
+        }),
+      ThumbnailDecisionContractError,
+      objectFit,
+    );
+  }
+});
+
 test("SOURCE_MISSING cannot be supplied as a normal canonical decision", () => {
   assert.throws(
     () =>
@@ -453,7 +482,7 @@ test("Phase 3A fixes exact source and output provenance for all four works", () 
       "https://pics.dmm.co.jp/digital/video/aqugl00004/aqugl00004jp-12.jpg",
       "/card-thumbnails/AQUGL00004-gold-sample-12.jpg",
       "fdb6ab1bdbfb7005b46a626ca06e3a7af31452096b16b270d3b238e91bc68ca3",
-      "cover",
+      "scale-down",
     ],
     [
       "1SBP00423",
@@ -639,7 +668,7 @@ test("mode contracts are frozen and cannot be mutated by callers", () => {
   assert.throws(() => {
     sample.object_fit = "contain";
   }, TypeError);
-  assert.equal(modeContract("SAMPLE").object_fit, "cover");
+  assert.equal(modeContract("SAMPLE").object_fit, "scale-down");
   assert.equal(modeContract("SAMPLE").source_kind, "SAMPLE");
 });
 

@@ -26,7 +26,7 @@ import {
 import { thumbnailStructuredDataImage } from "../src/lib/thumbnail/structured-data.ts";
 import { parseCsv } from "../scripts/generate-thumbnail-phase4b-legacy-registry.mjs";
 
-const EXPECTED_CANONICAL_SHA256 = "2f906c24c1deefb7c955b73cfaeadde85ef95092c303aef58a5fe2cafdd34401";
+const EXPECTED_CANONICAL_SHA256 = "8a79b1fd70be58fcd170c00693673b6400508f3b3841f7d04b1fcc146eb61d87";
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const compareAscii = (left, right) => left < right ? -1 : left > right ? 1 : 0;
 const canonicalDigest = () => sha256(JSON.stringify(
@@ -165,7 +165,7 @@ test("one resolution priority keeps canonical first and Phase 4B ahead of older 
 
 test("audit modes keep their exact fit, source ID, null crop, and deterministic CSS package positioning", () => {
   const cases = [
-    ["13DSVR01992", "SAMPLE", "sample:1", "cover", "center", "AUDIT_OUTPUT"],
+    ["13DSVR01992", "SAMPLE", "sample:1", "scale-down", "center", "AUDIT_OUTPUT"],
     ["125UMD01010", "PACKAGE_RIGHT", "dvd:right", "cover", "right", "AUDIT_OUTPUT"],
     ["125UMD01013", "PACKAGE_CENTER", "dvd:center", "cover", "center", "CSS_PACKAGE_POSITION"],
     ["172RECA00042AI", "PACKAGE_FULL", "dvd:full", "contain", "center", "AUDIT_OUTPUT"],

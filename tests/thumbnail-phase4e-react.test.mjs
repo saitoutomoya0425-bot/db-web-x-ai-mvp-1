@@ -26,40 +26,58 @@ const rejected = Object.freeze({
   UMSO00650: [9, 18],
 });
 
-test("Phase 4E PublicWorkCard SSR uses the approved 7:10 sample:1 contract", () => {
+test("Phase 4E card and detail SSR use the approved uncropped sample:1 contract", () => {
   const cardSource = readFileSync(
     new URL("../src/components/public-work-card.tsx", import.meta.url),
     "utf8",
   );
+  const detailSource = readFileSync(
+    new URL("../src/app/work/[product_code]/page.tsx", import.meta.url),
+    "utf8",
+  );
   assert.match(cardSource, /aspect-\[7\/10\]/);
   assert.match(cardSource, /<ResolvedThumbnail/);
+  assert.match(detailSource, /resolveThumbnailPresentation/);
+  assert.match(detailSource, /<ResolvedThumbnail/);
   for (const [code, url] of Object.entries(expected)) {
     const resolution = resolveThumbnailPresentation({
       code,
       legacy_card_url: `/card-thumbnails/${code}-auto-right.jpg`,
       legacy_thumbnail_url: `https://pics.dmm.co.jp/digital/video/${code.toLowerCase()}/${code.toLowerCase()}jp-99.jpg`,
     });
-    const html = renderToStaticMarkup(createElement("div", {
-      className: "relative aspect-[7/10] overflow-hidden",
-    }, createElement(ResolvedThumbnail, {
-      resolution,
-      alt: `${code} Phase 4E SSR`,
-      sizes: "50vw",
-      className: "relative aspect-[7/10] overflow-hidden",
-      imageClassName: "object-center",
-    })));
-    assert.match(html, /aspect-\[7\/10\]/, code);
-    assert.match(html, new RegExp(`src="${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), code);
-    assert.match(html, /data-thumbnail-resolution-kind="CANONICAL"/, code);
-    assert.match(html, /data-thumbnail-mode="SAMPLE"/, code);
-    assert.match(html, /data-thumbnail-source-id="sample:1"/, code);
-    assert.match(html, /data-thumbnail-approval-status="HUMAN_APPROVED"/, code);
-    assert.match(html, /data-thumbnail-render-status="READY"/, code);
-    assert.match(html, /class="object-cover /, code);
-    assert.match(html, /object-position:center/, code);
-    for (const sample of rejected[code]) {
-      assert.doesNotMatch(html, new RegExp(`jp-${sample}\\.jpg`), `${code}:sample:${sample}`);
+    const surfaces = [
+      ["card", "relative aspect-[7/10] overflow-hidden", "50vw"],
+      ["detail", "relative aspect-[3/4] overflow-hidden", "560px"],
+    ];
+    const rendered = surfaces.map(([surface, className, sizes]) => {
+      const html = renderToStaticMarkup(createElement("div", {
+        "data-surface": surface,
+        className,
+      }, createElement(ResolvedThumbnail, {
+        resolution,
+        alt: `${code} Phase 4E ${surface} SSR`,
+        sizes,
+        className,
+        imageClassName: "object-center",
+      })));
+      assert.match(html, new RegExp(`src="${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-resolution-kind="CANONICAL"/, `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-mode="SAMPLE"/, `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-source-id="sample:1"/, `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-approval-status="HUMAN_APPROVED"/, `${code}:${surface}`);
+      assert.match(html, /data-thumbnail-render-status="READY"/, `${code}:${surface}`);
+      assert.match(html, /class="object-scale-down /, `${code}:${surface}`);
+      assert.doesNotMatch(html, /object-cover/, `${code}:${surface}`);
+      assert.match(html, /object-position:center/, `${code}:${surface}`);
+      assert.doesNotMatch(html, /data-thumbnail-crop-spec=/, `${code}:${surface}`);
+      for (const sample of rejected[code]) {
+        assert.doesNotMatch(html, new RegExp(`jp-${sample}\\.jpg`), `${code}:${surface}:sample:${sample}`);
+      }
+      assert.doesNotMatch(html, /auto-right/, `${code}:${surface}`);
+      return html;
+    });
+    for (const html of rendered) {
+      assert.equal((html.match(/<img\b/g) ?? []).length, 1, code);
     }
-    assert.doesNotMatch(html, /auto-right/, code);
   }
 });
