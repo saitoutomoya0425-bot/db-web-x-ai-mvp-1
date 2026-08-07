@@ -120,7 +120,7 @@ test("invalid audit-only code cannot render through legacy compatibility", () =>
   assert.equal(buildThumbnailRenderContract(result).src, null);
 });
 
-test("explicit runtime overrides retain informational mode but render contain without crop", () => {
+test("explicit runtime overrides retain informational mode but render scale-down without crop", () => {
   const result = resolveThumbnailPresentation({
     code: "LEGACY00001",
     legacy_runtime_override: legacyRight,
@@ -130,7 +130,7 @@ test("explicit runtime overrides retain informational mode but render contain wi
   assert.equal(result.source_id, "dvd:right");
   assert.match(result.resolved_url, /misleading-center-name/);
   assert.equal(result.source_kind, "LEGACY_RUNTIME_OVERRIDE");
-  assert.equal(result.object_fit, "contain");
+  assert.equal(result.object_fit, "scale-down");
   assert.equal(result.crop_spec, null);
   assert.equal(result.approval_status, "UNREVIEWED");
   assert.equal(result.render_status, "READY");
@@ -175,7 +175,7 @@ test("two ordinary URL-only works use unclassified legacy compatibility", () => 
     assert.equal(result.mode, null, fixture.code);
     assert.equal(result.source_id, fixture.sourceId, fixture.code);
     assert.equal(result.resolved_url, fixture.expected, fixture.code);
-    assert.equal(result.object_fit, "contain", fixture.code);
+    assert.equal(result.object_fit, "scale-down", fixture.code);
     assert.equal(result.crop_spec, null, fixture.code);
   }
 });
@@ -221,6 +221,9 @@ test("render contracts expose audit metadata without hashes or filesystem source
   assert.equal("source_hash" in contract.attributes, false);
   assert.equal("output_hash" in contract.attributes, false);
   assert.equal("source_path_or_url" in contract.attributes, false);
+  assert.equal(contract.crop_intent, "NONE");
+  assert.equal(contract.upscale_policy, "DENY");
+  assert.equal(contract.fallback_when_upscale_required, "scale-down");
 });
 
 test("all five public surfaces receive the same fixed canonical result", () => {

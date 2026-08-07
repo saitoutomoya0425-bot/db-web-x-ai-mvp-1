@@ -150,7 +150,11 @@ test("all 15 Phase 4C works retain history while four use the later Phase 4E res
     const contract = buildThumbnailRenderContract(resolution);
     assert.equal(contract.src, decision.output_path_or_url, code);
     assert.equal(contract.object_fit, expectedMode === "SAMPLE" ? "scale-down" : "cover", code);
-    assert.equal(contract.object_position, "center", code);
+    assert.equal(
+      contract.object_position,
+      expectedMode === "PACKAGE_RIGHT" ? "right" : "center",
+      code,
+    );
     const structured = thumbnailStructuredDataImage(resolution, "https://preview.example.test");
     const expected = decision.output_path_or_url.startsWith("https://")
       ? decision.output_path_or_url

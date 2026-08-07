@@ -28,6 +28,15 @@ export type ThumbnailObjectFit =
 export type ThumbnailSourceKind =
   (typeof THUMBNAIL_MODE_CONTRACTS)[ThumbnailMode]["source_kind"];
 
+export type ThumbnailObjectPosition = "center" | "right";
+export type ThumbnailCropIntent =
+  | "NONE"
+  | "ALIGN_RIGHT"
+  | "ALIGN_CENTER"
+  | "PREPROCESSED_CROP";
+export type ThumbnailUpscalePolicy = "DENY";
+export type ThumbnailUpscaleFallback = "scale-down";
+
 export type ThumbnailApprovalStatus =
   | "HUMAN_APPROVED"
   | "MODE_APPROVED"
@@ -431,7 +440,10 @@ export type ThumbnailRenderAuditAttributes = {
 export type ThumbnailRenderContract = {
   readonly src: string | null;
   readonly object_fit: ThumbnailObjectFit | null;
-  readonly object_position: "center" | "right" | null;
+  readonly object_position: ThumbnailObjectPosition | null;
+  readonly crop_intent: ThumbnailCropIntent | null;
+  readonly upscale_policy: ThumbnailUpscalePolicy | null;
+  readonly fallback_when_upscale_required: ThumbnailUpscaleFallback | null;
   readonly crop_spec: ThumbnailCropSpec | null;
   readonly attributes: ThumbnailRenderAuditAttributes;
   readonly reason: string;

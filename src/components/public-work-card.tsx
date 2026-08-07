@@ -42,7 +42,7 @@ export function PublicWorkCard({ work, rank, count, relatedTracking }: { work: P
         alt={work.title}
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 18vw"
         className="relative aspect-[7/10] overflow-hidden bg-slate-900/80 sm:aspect-[3/4]"
-        imageClassName="object-center opacity-0 transition duration-500 group-hover:scale-[1.025] animate-[okazuImageIn_.35s_ease-out_forwards]"
+        imageClassName="opacity-0 transition duration-500 animate-[okazuImageIn_.35s_ease-out_forwards]"
       >
         {rank && <span className="absolute left-2 top-2 grid size-5 place-items-center rounded-full bg-white/90 text-[9px] font-bold text-slate-950 shadow-lg">#{rank}</span>}
       </ResolvedThumbnail>

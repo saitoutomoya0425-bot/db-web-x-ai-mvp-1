@@ -15,6 +15,7 @@ import {
   type LegacyRuntimeThumbnailOverride,
   type Phase4BLegacyThumbnailRecord,
   type NonRenderableThumbnailPresentationResolution,
+  type ThumbnailCropIntent,
   type ThumbnailMode,
   type ThumbnailPresentationInput,
   type ThumbnailPresentationResolution,
@@ -147,7 +148,7 @@ export function validateLegacyCompatibilityResolution(
   if (candidate.source_kind === "LEGACY_DB_URL") {
     if (
       mode !== null ||
-      candidate.object_fit !== "contain" ||
+      candidate.object_fit !== "scale-down" ||
       !Object.values(LEGACY_DB_SOURCE_IDS).includes(
         normalizedSourceId as (typeof LEGACY_DB_SOURCE_IDS)[keyof typeof LEGACY_DB_SOURCE_IDS],
       ) ||
@@ -170,8 +171,8 @@ export function validateLegacyCompatibilityResolution(
     }
     assertLegacyModeSourceId(mode, normalizedSourceId);
   } else {
-    if (candidate.object_fit !== "contain") {
-      contractError("legacy runtime override must render with contain");
+    if (candidate.object_fit !== "scale-down") {
+      contractError("legacy runtime override must render with scale-down");
     }
     assertLegacyModeSourceId(mode, normalizedSourceId);
   }
@@ -233,7 +234,7 @@ function legacyRuntimeResolution(
     output_path_or_url: override.path.trim(),
     output_hash: override.output_hash,
     resolved_url: override.path.trim(),
-    object_fit: "contain",
+    object_fit: "scale-down",
     crop_spec: null,
     approval_status: "UNREVIEWED",
     render_status: "READY",
@@ -265,7 +266,7 @@ function legacyDatabaseResolution(
     output_path_or_url: resolvedUrl,
     output_hash: null,
     resolved_url: resolvedUrl,
-    object_fit: "contain",
+    object_fit: "scale-down",
     crop_spec: null,
     approval_status: "UNREVIEWED",
     render_status: "READY",
@@ -442,15 +443,36 @@ export function buildThumbnailRenderContract(
     validated.kind === "RESOLVED" &&
     validated.render_status === "READY" &&
     isTrustedThumbnailOutput(validated.resolved_url);
+  const explicitRenderMode =
+    validated.resolution_kind !== "LEGACY_COMPAT"
+      ? validated.mode
+      : validated.source_kind === "PHASE4B_EXPLICIT_LEGACY"
+        ? validated.mode
+        : null;
+  const cropIntent: ThumbnailCropIntent | null = !renderable
+    ? null
+    : explicitRenderMode === "PACKAGE_RIGHT"
+      ? "ALIGN_RIGHT"
+      : explicitRenderMode === "PACKAGE_CENTER"
+        ? "ALIGN_CENTER"
+        : explicitRenderMode === "SCENE_CROP"
+          ? "PREPROCESSED_CROP"
+          : "NONE";
   return {
     src: renderable ? validated.resolved_url : null,
     object_fit: renderable ? validated.object_fit : null,
     object_position: renderable
-      ? validated.resolution_kind === "LEGACY_COMPAT" &&
-          validated.source_kind === "PHASE4B_EXPLICIT_LEGACY"
-        ? validated.object_position
-        : "center"
+      ? validated.resolution_kind === "LEGACY_COMPAT"
+        ? validated.source_kind === "PHASE4B_EXPLICIT_LEGACY"
+          ? validated.object_position
+          : "center"
+        : validated.mode === "PACKAGE_RIGHT"
+          ? "right"
+          : "center"
       : null,
+    crop_intent: cropIntent,
+    upscale_policy: renderable ? "DENY" : null,
+    fallback_when_upscale_required: renderable ? "scale-down" : null,
     crop_spec: renderable ? validated.crop_spec : null,
     attributes: {
       code: validated.canonical_code,
