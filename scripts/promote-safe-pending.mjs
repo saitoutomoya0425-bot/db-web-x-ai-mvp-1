@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { normalizeTargetBaseUrl, prepareProductionAccess } from "./lib/production-access-guard.mjs";
+import { fanzaSafetyReviewReasons } from "../src/lib/fanza/pipeline.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -59,12 +60,7 @@ const { data: candidates, error: candidateError } = await admin.from("source_pro
 if (candidateError) throw new Error("CANDIDATE_LOOKUP_FAILED");
 
 const safe = (candidates ?? []).filter(({ normalized_data: item }) =>
-  item?.externalProductId
-  && item?.productCode
-  && item?.normalizedProductCode
-  && item?.title
-  && item?.actressNames?.length
-  && item?.officialUrl,
+  item && fanzaSafetyReviewReasons(item).length === 0,
 );
 if (safe.length !== (candidates ?? []).length) throw new Error("UNSAFE_NEW_CANDIDATE_DETECTED");
 

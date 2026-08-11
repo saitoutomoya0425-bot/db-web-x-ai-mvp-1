@@ -3,7 +3,7 @@ import { normalizeFanzaItem } from "../src/lib/fanza/normalize.ts";
 import { stageFanzaItems } from "../src/lib/fanza/pipeline.ts";
 
 const TOTAL = Math.min(1_000, Math.max(1, Number(process.argv[2] ?? 100)));
-const PAGE_SIZE = TOTAL > 100 ? 100 : 10;
+const PAGE_SIZE = TOTAL > 100 ? 100 : Math.min(10, TOTAL);
 const MAX_RETRIES = 3;
 const startedAt = performance.now();
 const memoryBefore = process.memoryUsage().heapUsed;
@@ -32,21 +32,33 @@ const isOfficialHost = (host) => Boolean(host && ["dmm.co.jp", "fanza.co.jp"]
   .some((domain) => host === domain || host.endsWith(`.${domain}`)));
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function databaseSnapshot() {
-  const [videos] = await sql`
+async function inReadOnlyTransaction(operation) {
+  return sql.begin("read only", async (transaction) => {
+    const [session] = await transaction`
+      select current_setting('transaction_read_only') as transaction_read_only
+    `;
+    if (session.transaction_read_only !== "on") {
+      throw new Error("DATABASE_READ_ONLY_GUARD_FAILED");
+    }
+    return operation(transaction);
+  });
+}
+
+async function databaseSnapshot(database) {
+  const [videos] = await database`
     select count(*)::integer as count,
       count(*) filter (where is_published)::integer as published,
       count(*) filter (where not is_published)::integer as unpublished,
       md5(coalesce(jsonb_agg(to_jsonb(v) order by id)::text, '[]')) as digest
     from public.videos v
   `;
-  const [sources] = await sql`
+  const [sources] = await database`
     select count(*)::integer as count,
       md5(coalesce(jsonb_agg(to_jsonb(s) order by id)::text, '[]')) as digest
     from public.source_products s
   `;
-  const [jobs] = await sql`select count(*)::integer as count from public.fanza_import_jobs`;
-  const [errors] = await sql`select count(*)::integer as count from public.fanza_import_errors`;
+  const [jobs] = await database`select count(*)::integer as count from public.fanza_import_jobs`;
+  const [errors] = await database`select count(*)::integer as count from public.fanza_import_errors`;
   return { videos, sources, jobs: jobs.count, errors: errors.count };
 }
 
@@ -94,7 +106,7 @@ async function fetchPage(offset) {
   throw new Error("FANZA_API_NO_RESPONSE");
 }
 
-const before = await databaseSnapshot();
+const before = await inReadOnlyTransaction(databaseSnapshot);
 try {
   const rawItems = [];
   const pages = [];
@@ -114,16 +126,18 @@ try {
     if (fetched.items.length < requested) break;
   }
 
-  const videos = await sql`
-    select id, product_code, title, actress_name, maker_name, series_name, genre,
-      external_product_id
-    from public.videos
-  `;
-  const sources = await sql`
-    select id, external_product_id, normalized_product_code, normalized_data,
-      review_status, preview_status, attempt_count, promoted_video_id, duplicate_video_id
-    from public.source_products
-  `;
+  const [videos, sources] = await inReadOnlyTransaction(async (database) => Promise.all([
+    database`
+      select id, product_code, title, actress_name, maker_name, series_name, genre,
+        external_product_id
+      from public.videos
+    `,
+    database`
+      select id, external_product_id, normalized_product_code, normalized_data,
+        review_status, preview_status, attempt_count, promoted_video_id, duplicate_video_id
+      from public.source_products
+    `,
+  ]));
   const videoRows = videos.map((row) => ({
     id: row.id,
     kind: "video",
@@ -190,7 +204,7 @@ try {
     hostOf(item.thumbnailUrl),
     ...item.sampleImages.map(hostOf),
   ]).filter(Boolean);
-  const after = await databaseSnapshot();
+  const after = await inReadOnlyTransaction(databaseSnapshot);
   const unchanged = {
     videos: before.videos.count === after.videos.count && before.videos.digest === after.videos.digest,
     source_products: before.sources.count === after.sources.count
@@ -202,6 +216,7 @@ try {
   };
   const report = {
     dry_run: true,
+    database_session_read_only: true,
     api_authenticated: true,
     api_received: rawItems.length,
     normalization_succeeded: normalized.filter((item) =>
@@ -275,6 +290,7 @@ try {
   console.log(serialized);
 
   const success = rawItems.length === TOTAL
+    && report.database_session_read_only
     && report.normalization_succeeded + report.errors === TOTAL
     && Object.values(unchanged).every(Boolean)
     && report.domains.all_official

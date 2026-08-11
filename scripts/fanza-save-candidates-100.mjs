@@ -191,7 +191,7 @@ try {
         preview_status: state.previewStatus,
         review_status: state.reviewStatus,
         duplicate_video_id: product.duplicateVideoId,
-        error_message: null,
+        error_message: product.reviewReasons.length ? product.reviewReasons.join(",") : null,
         attempt_count: state.attemptCount,
         last_attempt_at: now,
         next_retry_at: null,

@@ -42,8 +42,8 @@ test("stages new, duplicate/update and review candidates without publishing", as
   ]));
   assert.equal(result.processed, 5);
   assert.equal(result.staged, 4);
-  assert.equal(result.counts.new, 2);
-  assert.equal(result.counts.needs_review, 2);
+  assert.equal(result.counts.new, 0);
+  assert.equal(result.counts.needs_review, 4);
   assert.equal(result.products[0].normalized.sampleImages.length, 1);
   assert.equal(result.products[1].normalized.thumbnailUrl, null);
   assert.ok(result.products.every((item) => item.payloadHash.length === 64));
@@ -94,6 +94,8 @@ test("identical external id repeated in one batch stages only one source product
     product_id: "SAME-001",
     title: "同一候補",
     URL: "https://video.dmm.co.jp/item/same-id",
+    affiliateURL: "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp",
+    imageURL: { large: "https://pics.dmm.co.jp/mono/movie/adult/same001/same001pl.jpg" },
     iteminfo: { actress: [{ name: "架空女優" }] },
   };
   const result = await stageFanzaItems([raw, structuredClone(raw)], lookup());
@@ -231,6 +233,77 @@ test("safety gate rejects missing identifiers and non-official domains", () => {
     "image_url_not_allowed",
     "affiliate_url_not_allowed",
   ]);
+});
+
+test("safety gate requires an image and affiliate URL before automatic promotion", () => {
+  const base = {
+    externalProductId: "safe001",
+    originalProductCode: "safe-001",
+    productCode: "SAFE-001",
+    normalizedProductCode: "SAFE001",
+    productCodeRejectionCode: null,
+    productCodeRejectionReason: null,
+    title: "安全確認作品",
+    actressNames: ["架空女優"],
+    makerName: "架空メーカー",
+    seriesName: null,
+    labelName: null,
+    genres: [],
+    releaseDate: null,
+    description: null,
+    cardThumbnailUrl: null,
+    thumbnailUrl: null,
+    sampleImages: [],
+    sampleVideoUrl: null,
+    officialUrl: "https://video.dmm.co.jp/item/safe001",
+    affiliateUrl: null,
+    price: null,
+    currency: "JPY",
+    availabilityStatus: "available",
+  };
+  assert.deepEqual(fanzaSafetyReviewReasons(base), ["image_missing", "affiliate_url_missing"]);
+  assert.deepEqual(fanzaSafetyReviewReasons({
+    ...base,
+    thumbnailUrl: "https://pics.dmm.co.jp/safe.jpg",
+    affiliateUrl: "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp",
+  }), []);
+});
+
+test("safety gate rejects insecure, credentialed, and non-standard-port FANZA URLs", () => {
+  const base = {
+    externalProductId: "safe002",
+    originalProductCode: "safe-002",
+    productCode: "SAFE-002",
+    normalizedProductCode: "SAFE002",
+    productCodeRejectionCode: null,
+    productCodeRejectionReason: null,
+    title: "URL安全確認作品",
+    actressNames: ["架空女優"],
+    makerName: null,
+    seriesName: null,
+    labelName: null,
+    genres: [],
+    releaseDate: null,
+    description: null,
+    cardThumbnailUrl: "https://pics.dmm.co.jp/safe.jpg",
+    thumbnailUrl: "https://pics.dmm.co.jp/safe.jpg",
+    sampleImages: [],
+    sampleVideoUrl: null,
+    officialUrl: "http://video.dmm.co.jp/item/safe002",
+    affiliateUrl: "https://user:pass@al.fanza.co.jp/affiliate",
+    price: null,
+    currency: "JPY",
+    availabilityStatus: "available",
+  };
+  assert.deepEqual(fanzaSafetyReviewReasons(base), [
+    "official_url_not_allowed",
+    "affiliate_url_not_allowed",
+  ]);
+  assert.deepEqual(fanzaSafetyReviewReasons({
+    ...base,
+    officialUrl: "https://video.dmm.co.jp:8443/item/safe002",
+    affiliateUrl: "https://al.fanza.co.jp/affiliate",
+  }), ["official_url_not_allowed"]);
 });
 
 test("resume starts from saved offset and persists only the next batch", async () => {

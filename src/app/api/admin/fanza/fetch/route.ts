@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { fetchFanzaProducts, fanzaConfiguration } from "@/lib/fanza/client";
+import { fanzaSafetyReviewReasons } from "@/lib/fanza/pipeline";
 import { normalizeProductCode } from "@/lib/queries/public-works";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -61,8 +62,9 @@ export async function POST(request: Request) {
       if (!item.externalProductId) return [];
       const raw = fetched.rawItems[index];
       const candidates = item.normalizedProductCode ? matches.get(item.normalizedProductCode) ?? [] : [];
+      const reviewReasons = fanzaSafetyReviewReasons(item);
       let previewStatus: "new" | "update" | "unchanged" | "duplicate" | "needs_review" = "new";
-      if (!item.productCode || !item.title) previewStatus = "needs_review";
+      if (reviewReasons.length) previewStatus = "needs_review";
       else if (candidates.length > 1) previewStatus = "duplicate";
       else if (candidates.length === 1) {
         const video = candidates[0].video;
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
         preview_status: previewStatus,
         review_status: "pending",
         duplicate_video_id: candidates.length === 1 ? candidates[0].id : null,
-        error_message: null,
+        error_message: reviewReasons.length ? reviewReasons.join(",") : null,
       }];
     });
     if (rows.length) {

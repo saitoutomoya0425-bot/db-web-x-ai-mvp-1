@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { catalogPublicationEligibilityReasons } from "@/lib/catalog/publication-safety";
+import { canonicalizeProductCodeValue } from "@/lib/fanza/normalize";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -36,26 +38,17 @@ const workSchema = z.object({
 });
 const updateSchema = workSchema.extend({ id: z.string().uuid() });
 
-function isOfficialSalesUrl(value: string | null | undefined) {
-  if (!value) return false;
-  try {
-    const host = new URL(value).hostname.toLowerCase();
-    return ["dmm.com", "dmm.co.jp", "fanza.com", "fanza.co.jp"]
-      .some((domain) => host === domain || host.endsWith(`.${domain}`));
-  } catch {
-    return false;
-  }
-}
-
-function publicationError(input: z.infer<typeof workSchema>) {
+function publicationError(
+  input: z.infer<typeof workSchema>,
+  options: {
+    hasActressRelation: boolean;
+    hasSourceRelation: boolean;
+    hasDuplicate: boolean;
+  },
+) {
   if (!input.is_published) return null;
-  if (!input.source_name || !input.external_product_id || !input.official_url) {
-    return "公開するには、出典名・公式の外部商品ID・通常の公式商品URLが必要です。";
-  }
-  if (!isOfficialSalesUrl(input.official_url)) {
-    return "公式商品URLはDMM/FANZAの正規ドメインを指定してください。";
-  }
-  return null;
+  const reasons = catalogPublicationEligibilityReasons(input, options);
+  return reasons.length ? `公開条件を満たしていません: ${reasons.join(",")}` : null;
 }
 
 async function authorize() {
@@ -85,7 +78,11 @@ export async function POST(request: Request) {
   if (!await authorize()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const parsed = workSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "入力内容を確認してください" }, { status: 400 });
-  const publishError = publicationError(parsed.data);
+  const publishError = publicationError(parsed.data, {
+    hasActressRelation: false,
+    hasSourceRelation: false,
+    hasDuplicate: false,
+  });
   if (publishError) return NextResponse.json({ error: publishError }, { status: 400 });
   const values = {
     product_code: parsed.data.product_code.toUpperCase(),
@@ -120,7 +117,51 @@ export async function PATCH(request: Request) {
   if (!await authorize()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "入力内容を確認してください" }, { status: 400 });
-  const publishError = publicationError(parsed.data);
+  const admin = createAdminClient();
+  let hasActressRelation = false;
+  let hasSourceRelation = false;
+  let hasDuplicate = false;
+  if (parsed.data.is_published) {
+    const normalizedCode = canonicalizeProductCodeValue(parsed.data.product_code).canonicalNormalized;
+    const [
+      { data: current, error: currentError },
+      { count: relationCount, error: relationError },
+      { count: sourceRelationCount, error: sourceRelationError },
+      { data: matches, error: matchError },
+    ] =
+      await Promise.all([
+        admin.from("videos").select("actress_id,actress_name").eq("id", parsed.data.id).maybeSingle(),
+        admin.from("video_actresses").select("actress_id", { count: "exact", head: true })
+          .eq("video_id", parsed.data.id),
+        admin.from("video_source_links").select("source_product_id", { count: "exact", head: true })
+          .eq("video_id", parsed.data.id),
+        admin.rpc("match_videos_for_import", {
+          external_ids: parsed.data.external_product_id ? [parsed.data.external_product_id] : [],
+          normalized_codes: normalizedCode ? [normalizedCode.toLowerCase()] : [],
+        }),
+      ]);
+    if (currentError || relationError || sourceRelationError || matchError) {
+      return NextResponse.json({
+        error: currentError?.message
+          ?? relationError?.message
+          ?? sourceRelationError?.message
+          ?? matchError?.message,
+      }, { status: 500 });
+    }
+    hasActressRelation = Boolean(
+      current?.actress_id
+      && current.actress_name
+      && current.actress_name === parsed.data.actress_name
+      && (relationCount ?? 0) > 0,
+    );
+    hasSourceRelation = (sourceRelationCount ?? 0) > 0;
+    hasDuplicate = (matches ?? []).some((match) => match.id !== parsed.data.id);
+  }
+  const publishError = publicationError(parsed.data, {
+    hasActressRelation,
+    hasSourceRelation,
+    hasDuplicate,
+  });
   if (publishError) return NextResponse.json({ error: publishError }, { status: 400 });
   const { id, ...input } = parsed.data;
   const values = {
@@ -129,7 +170,7 @@ export async function PATCH(request: Request) {
     source_checked_at: input.source_name && input.official_url ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
   };
-  const { data, error } = await createAdminClient().from("videos").update(values).eq("id", id).select("*").single();
+  const { data, error } = await admin.from("videos").update(values).eq("id", id).select("*").single();
   return error ? NextResponse.json({ error: error.message }, { status: error.code === "23505" ? 409 : 500 }) : NextResponse.json(data);
 }
 

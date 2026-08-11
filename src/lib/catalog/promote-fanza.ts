@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeImportErrorMessage } from "@/lib/fanza/import-state";
 import type { NormalizedFanzaProduct } from "@/lib/fanza/normalize";
+import { fanzaSafetyReviewReasons } from "@/lib/fanza/pipeline";
 import type { Video } from "@/types/database";
 
 type WritableVideo = Omit<Video, "id" | "created_at" | "updated_at">;
@@ -19,7 +20,13 @@ export async function promoteFanzaProducts(ids: string[], reviewerId: string) {
         throw new Error("重複候補または要確認データは、修正・確認後に承認してください。");
       }
       const item = sourceProduct.normalized_data as NormalizedFanzaProduct;
-      if (!item?.productCode || !item.title) throw new Error("品番とタイトルが必要です。");
+      const safetyReasons = item ? fanzaSafetyReviewReasons(item) : ["normalized_data_missing"];
+      if (safetyReasons.length) {
+        throw new Error(`FANZA安全条件を満たしていません: ${safetyReasons.join(",")}`);
+      }
+      if (!item.productCode || !item.title) {
+        throw new Error("FANZA安全条件の型検証に失敗しました。");
+      }
 
       let existing: Video | null = null;
       if (sourceProduct.duplicate_video_id) {

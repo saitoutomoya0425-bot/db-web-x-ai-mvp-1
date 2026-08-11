@@ -67,8 +67,13 @@ export const FANZA_ALLOWED_DOMAINS = ["dmm.co.jp", "fanza.co.jp"] as const;
 export function isAllowedFanzaUrl(value: string | null) {
   if (!value) return false;
   try {
-    const host = new URL(value).hostname.toLowerCase();
-    return FANZA_ALLOWED_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:"
+      && url.username === ""
+      && url.password === ""
+      && (url.port === "" || url.port === "443")
+      && FANZA_ALLOWED_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
   } catch {
     return false;
   }
@@ -83,9 +88,12 @@ export function fanzaSafetyReviewReasons(product: NormalizedFanzaProduct) {
   if (!product.title) reasons.push("title_missing");
   if (product.actressNames.length === 0) reasons.push("actress_metadata_missing");
   if (!isAllowedFanzaUrl(product.officialUrl)) reasons.push("official_url_not_allowed");
-  const imageUrls = [product.thumbnailUrl, ...product.sampleImages].filter((value): value is string => Boolean(value));
-  if (imageUrls.some((value) => !isAllowedFanzaUrl(value))) reasons.push("image_url_not_allowed");
-  if (product.affiliateUrl && !isAllowedFanzaUrl(product.affiliateUrl)) reasons.push("affiliate_url_not_allowed");
+  const imageUrls = [product.cardThumbnailUrl, product.thumbnailUrl, ...product.sampleImages]
+    .filter((value): value is string => Boolean(value));
+  if (!imageUrls.length) reasons.push("image_missing");
+  else if (imageUrls.some((value) => !isAllowedFanzaUrl(value))) reasons.push("image_url_not_allowed");
+  if (!product.affiliateUrl) reasons.push("affiliate_url_missing");
+  else if (!isAllowedFanzaUrl(product.affiliateUrl)) reasons.push("affiliate_url_not_allowed");
   return reasons;
 }
 

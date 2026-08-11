@@ -38,6 +38,18 @@ test("normalizes documented ItemList fields without inventing missing values", (
   assert.equal(item.description, null);
 });
 
+test("preserves every provided actress in source order and does not invent missing names", () => {
+  const multiple = normalizeFanzaItem({
+    content_id: "multi001",
+    product_id: "multi-001",
+    iteminfo: {
+      actress: [{ name: "架空女優A" }, { name: "架空女優B" }, { name: "  " }],
+    },
+  });
+  assert.deepEqual(multiple.actressNames, ["架空女優A", "架空女優B"]);
+  assert.deepEqual(normalizeFanzaItem({ content_id: "missing001" }).actressNames, []);
+});
+
 test("allows only official FANZA image hosts", () => {
   assert.equal(officialFanzaImageUrl("https://pics.dmm.co.jp/sample.jpg"), "https://pics.dmm.co.jp/sample.jpg");
   assert.equal(officialFanzaImageUrl("https://example.com/sample.jpg"), null);
