@@ -1,9 +1,13 @@
 import postgres from "postgres";
 import { normalizeFanzaItem } from "../src/lib/fanza/normalize.ts";
+import { parseFanzaPaginationCli } from "../src/lib/fanza/pagination.ts";
 import { stageFanzaItems } from "../src/lib/fanza/pipeline.ts";
 
-const TOTAL = Math.min(1_000, Math.max(1, Number(process.argv[2] ?? 100)));
-const PAGE_SIZE = TOTAL > 100 ? 100 : Math.min(10, TOTAL);
+const pagination = parseFanzaPaginationCli(process.argv.slice(2), { maxItems: 100, pageSize: 100, sort: "date" });
+const TOTAL = Math.min(1_000, pagination.maxItems);
+const PAGE_SIZE = process.argv.some((argument) => argument.startsWith("--page-size="))
+  ? Math.min(pagination.pageSize, TOTAL)
+  : (TOTAL > 100 ? 100 : Math.min(10, TOTAL));
 const MAX_RETRIES = 3;
 const startedAt = performance.now();
 const memoryBefore = process.memoryUsage().heapUsed;
@@ -71,7 +75,7 @@ async function fetchPage(offset) {
     floor: process.env.FANZA_API_FLOOR?.trim() || "videoa",
     hits: String(PAGE_SIZE),
     offset: String(offset),
-    sort: "date",
+    sort: pagination.sort,
     output: "json",
   });
   let retries = 0;
@@ -110,7 +114,7 @@ const before = await inReadOnlyTransaction(databaseSnapshot);
 try {
   const rawItems = [];
   const pages = [];
-  let checkpoint = 1;
+  let checkpoint = pagination.startOffset;
   for (let page = 1; rawItems.length < TOTAL; page++) {
     const requested = Math.min(PAGE_SIZE, TOTAL - rawItems.length);
     const fetched = await fetchPage(checkpoint);
@@ -248,6 +252,9 @@ try {
     classifications: staged.counts,
     pagination: {
       page_size: PAGE_SIZE,
+      start_offset: pagination.startOffset,
+      end_offset: checkpoint - 1,
+      sort: pagination.sort,
       pages: pages.length,
       offsets: pages.map((page) => page.offset),
       final_checkpoint: checkpoint,

@@ -1,5 +1,6 @@
 import "server-only";
 import { normalizeFanzaItem, type NormalizedFanzaProduct } from "@/lib/fanza/normalize";
+import { normalizeFanzaPaginationOptions, type FanzaContinuationSort } from "@/lib/fanza/pagination";
 
 const ENDPOINT = "https://api.dmm.com/affiliate/v3/ItemList";
 
@@ -34,11 +35,18 @@ export async function fetchFanzaProducts(options: {
   keyword?: string | null;
   offset?: number;
   maxRetries?: number;
+  sort?: FanzaContinuationSort;
 } = {}): Promise<FetchResult> {
   const config = fanzaConfiguration();
   if (!config.configured) throw new Error("FANZA_API_CREDENTIALS_MISSING");
   const hits = Math.min(100, Math.max(1, options.limit ?? 10));
-  const offset = Math.max(1, Math.floor(options.offset ?? 1));
+  const pagination = normalizeFanzaPaginationOptions({
+    startOffset: options.offset ?? 1,
+    maxItems: hits,
+    pageSize: hits,
+    sort: options.sort ?? "date",
+  });
+  const offset = pagination.startOffset;
   const maxRetries = Math.min(5, Math.max(0, Math.floor(options.maxRetries ?? 3)));
   const keyword = options.keyword?.trim().slice(0, 100) || null;
   const params = new URLSearchParams({
@@ -49,7 +57,7 @@ export async function fetchFanzaProducts(options: {
     floor: config.floor,
     hits: String(hits),
     offset: String(offset),
-    sort: "date",
+    sort: pagination.sort,
     output: "json",
   });
   if (keyword) params.set("keyword", keyword);

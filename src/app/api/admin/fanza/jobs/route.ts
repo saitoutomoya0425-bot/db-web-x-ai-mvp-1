@@ -12,6 +12,7 @@ export const maxDuration = 60;
 const createSchema = z.object({
   action: z.literal("create"),
   keyword: z.string().trim().max(100).nullable().optional(),
+  startOffset: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(50),
   maxItems: z.number().int().min(1).max(1_000_000),
   dryRun: z.boolean().default(true),
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       data_source_id: source.id,
       status: "pending",
       keyword: parsed.data.keyword || null,
+      next_offset: parsed.data.startOffset,
       page_size: parsed.data.pageSize,
       max_items: parsed.data.maxItems,
       dry_run: parsed.data.dryRun,

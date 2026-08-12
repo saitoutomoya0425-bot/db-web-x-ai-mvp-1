@@ -1,9 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
+import { parseFanzaPaginationCli } from "../src/lib/fanza/pagination.ts";
 import { stageFanzaItems } from "../src/lib/fanza/pipeline.ts";
 import { persistStagedFanzaProducts } from "../src/lib/fanza/persistence.ts";
 
-const TOTAL = Math.min(1_000, Math.max(1, Number(process.argv[2] ?? 100)));
-const PAGE_SIZE = TOTAL > 100 ? 100 : 10;
+const pagination = parseFanzaPaginationCli(process.argv.slice(2), { maxItems: 100, pageSize: 100, sort: "date" });
+const TOTAL = Math.min(1_000, pagination.maxItems);
+const PAGE_SIZE = process.argv.some((argument) => argument.startsWith("--page-size="))
+  ? Math.min(pagination.pageSize, TOTAL)
+  : (TOTAL > 100 ? 100 : 10);
 for (const key of [
   "NEXT_PUBLIC_SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
@@ -30,7 +34,7 @@ async function fetchPage(offset) {
     floor: process.env.FANZA_API_FLOOR?.trim() || "videoa",
     hits: String(PAGE_SIZE),
     offset: String(offset),
-    sort: "date",
+    sort: pagination.sort,
     output: "json",
   });
   for (let attempt = 0; attempt <= 3; attempt++) {
@@ -89,7 +93,7 @@ const { data: job, error: jobError } = await admin.from("fanza_import_jobs").ins
   status: "running",
   page_size: PAGE_SIZE,
   max_items: TOTAL,
-  next_offset: 1,
+  next_offset: pagination.startOffset,
   dry_run: false,
   started_at: new Date().toISOString(),
 }).select("*").single();
@@ -101,7 +105,7 @@ let needsReview = 0;
 let unchangedCount = 0;
 let duplicateCount = 0;
 let failedCount = 0;
-let offset = 1;
+let offset = pagination.startOffset;
 
 try {
   while (processed < TOTAL) {
@@ -249,6 +253,9 @@ const after = {
 console.log(JSON.stringify({
   job_id: finalJob.id,
   status: finalJob.status,
+  start_offset: pagination.startOffset,
+  end_offset: offset - 1,
+  sort: pagination.sort,
   processed: Number(finalJob.processed_count),
   staged: Number(finalJob.staged_count),
   needs_review: Number(finalJob.needs_review_count),
