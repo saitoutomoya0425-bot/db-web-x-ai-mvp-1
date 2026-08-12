@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { createHash } from "node:crypto";
 import { stageFanzaItems } from "../src/lib/fanza/pipeline.ts";
-import { nextSourceState } from "../src/lib/fanza/import-state.ts";
+import { persistStagedFanzaProducts } from "../src/lib/fanza/persistence.ts";
 
 const TOTAL = Math.min(1_000, Math.max(1, Number(process.argv[2] ?? 100)));
 const PAGE_SIZE = TOTAL > 100 ? 100 : 10;
@@ -174,33 +173,13 @@ try {
     };
     const result = await stageFanzaItems(rawItems, lookup);
     const now = new Date().toISOString();
-    const rows = result.products.map((product) => {
-      const state = nextSourceState(product);
-      return {
-        data_source_id: source.id,
-        import_job_id: job.id,
-        external_product_id: product.externalProductId,
-        product_code: product.normalized.productCode,
-        original_product_code: product.normalized.originalProductCode,
-        normalized_product_code: product.normalized.normalizedProductCode,
-        raw_payload: product.rawPayload,
-        normalized_data: product.normalized,
-        payload_hash: product.payloadHash
-          || createHash("sha256").update(JSON.stringify(product.rawPayload)).digest("hex"),
-        fetched_at: now,
-        preview_status: state.previewStatus,
-        review_status: state.reviewStatus,
-        duplicate_video_id: product.duplicateVideoId,
-        error_message: product.reviewReasons.length ? product.reviewReasons.join(",") : null,
-        attempt_count: state.attemptCount,
-        last_attempt_at: now,
-        next_retry_at: null,
-      };
+    await persistStagedFanzaProducts({
+      admin,
+      dataSourceId: source.id,
+      importJobId: job.id,
+      products: result.products,
+      fetchedAt: now,
     });
-    const { error: saveError } = await admin.from("source_products").upsert(rows, {
-      onConflict: "data_source_id,external_product_id",
-    });
-    if (saveError) throw new Error("FANZA_CANDIDATE_BATCH_SAVE_FAILED");
 
     if (result.errors.length) {
       failedCount += result.errors.length;
