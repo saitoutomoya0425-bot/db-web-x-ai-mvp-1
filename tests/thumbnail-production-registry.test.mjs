@@ -25,6 +25,10 @@ import {
   GENERATED_PHASE4E_REVIEWED_STATS,
 } from "../src/lib/thumbnail/generated-phase4e-reviewed-decisions.ts";
 import {
+  GENERATED_PHASE5_REVIEWED_DECISION_RECORDS,
+  GENERATED_PHASE5_REVIEWED_STATS,
+} from "../src/lib/thumbnail/generated-phase5-reviewed-decisions.ts";
+import {
   getProductionThumbnailDecision,
   PRODUCTION_BASELINE_THUMBNAIL_DECISIONS,
   PRODUCTION_THUMBNAIL_DECISIONS,
@@ -79,10 +83,17 @@ test("production registry applies one explicit precedence without conflicts", ()
     "phase4c_reviewed",
     "generated_human",
     "generated_gold",
+    "phase5_reviewed",
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
   assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 0);
+  assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
+    input_total: 0,
+    eligible_total: 0,
+    ignored_apply_false: 0,
+  });
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -99,6 +110,9 @@ test("all generated records pass the canonical runtime validator", () => {
     assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
   }
   for (const record of GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS) {
+    assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
+  }
+  for (const record of GENERATED_PHASE5_REVIEWED_DECISION_RECORDS) {
     assert.equal(assertCanonicalThumbnailDecision(adaptHumanApprovalRecord(record)).code, record.code);
   }
 });

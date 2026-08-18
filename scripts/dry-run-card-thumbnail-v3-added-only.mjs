@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 
-const root = process.cwd();
-const outDir = path.join(root, "tmp", "card-thumbnail-v3-dry-run");
-const cacheDir = path.join(outDir, "cache");
-const reportPath = path.join(outDir, "report.json");
-const summaryPath = path.join(outDir, "summary.json");
+let root = process.cwd();
+let outDir = path.join(root, "tmp", "card-thumbnail-v3-dry-run");
+let cacheDir = path.join(outDir, "cache");
+let reportPath = path.join(outDir, "report.json");
+let summaryPath = path.join(outDir, "summary.json");
 
 const MIN_SAMPLE_SHORT_EDGE = 360;
 const MIN_SAMPLE_AREA = 200_000;
@@ -34,7 +35,18 @@ const REPRESENTATIVE_CODES = new Set([
   "1SBP00400",
 ]);
 
-await fs.mkdir(cacheDir, { recursive: true });
+export function configureThumbnailCandidateV3({
+  repositoryRoot = root,
+  outputDirectory = path.join(repositoryRoot, "tmp", "card-thumbnail-v3-dry-run"),
+  cacheDirectory = path.join(outputDirectory, "cache"),
+} = {}) {
+  root = path.resolve(repositoryRoot);
+  outDir = path.resolve(outputDirectory);
+  cacheDir = path.resolve(cacheDirectory);
+  reportPath = path.join(outDir, "report.json");
+  summaryPath = path.join(outDir, "summary.json");
+  return Object.freeze({ root, outDir, cacheDir, reportPath, summaryPath });
+}
 
 function normalizeUrl(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -81,6 +93,7 @@ async function imageBuffer(url) {
     }
   }
   const file = cachePathForUrl(url);
+  await fs.mkdir(cacheDir, { recursive: true });
   try {
     return await fs.readFile(file);
   } catch {
@@ -406,16 +419,22 @@ function scoreCandidate({ candidate, video, meta, visual, lowResolution }) {
 }
 
 async function analyzeCandidate(candidate, video) {
-  const buffer = candidate.buffer ?? await imageBuffer(candidate.url);
+  const analysisUrl = candidate.analysisUrl ?? candidate.url;
+  const buffer = candidate.buffer ?? await imageBuffer(analysisUrl);
   const meta = await imageMetaFromBuffer(buffer);
   if (!buffer || !meta) return null;
   const visual = await visualMetrics(buffer);
   const lowResolution =
     candidate.type === "sample"
+    && !candidate.analysisProxy
     && (meta.shortEdge < MIN_SAMPLE_SHORT_EDGE || meta.area < MIN_SAMPLE_AREA);
   const scored = scoreCandidate({ candidate, video, meta, visual, lowResolution });
   return {
     ...candidate,
+    analysisUrl,
+    sourceUrl: candidate.sourceUrl ?? candidate.url,
+    sourceHash: candidate.sourceHash ?? createHash("sha256").update(buffer).digest("hex"),
+    outputHash: createHash("sha256").update(buffer).digest("hex"),
     meta: {
       width: meta.width,
       height: meta.height,
@@ -428,7 +447,40 @@ async function analyzeCandidate(candidate, video) {
   };
 }
 
-async function decide(video) {
+function samplePairKey(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname.replace(/jp-(\d+)\.jpg$/i, "-$1.jpg");
+  } catch {
+    return url;
+  }
+}
+
+function deduplicatedSampleEntries(sampleImages, preferSmallSampleProxy) {
+  const byPair = new Map();
+  for (const [index, url] of sampleImages.entries()) {
+    const key = samplePairKey(url);
+    const entry = byPair.get(key) ?? {};
+    if (/jp-\d+\.jpg$/i.test(new URL(url).pathname)) entry.source = { index, url };
+    else entry.proxy = { index, url };
+    byPair.set(key, entry);
+  }
+  return [...byPair.values()].map((entry) => {
+    const source = entry.source ?? entry.proxy;
+    const proxy = preferSmallSampleProxy ? entry.proxy ?? source : source;
+    return {
+      ...source,
+      analysisUrl: proxy.url,
+      analysisProxy: proxy.url !== source.url,
+    };
+  }).sort((left, right) => left.index - right.index);
+}
+
+export async function decideThumbnailCandidateV3(video, {
+  deduplicateSamplePairs = false,
+  preferSmallSampleProxy = false,
+  sampleConcurrency = 1,
+} = {}) {
   const sampleImages = Array.isArray(video.sample_images)
     ? video.sample_images.map(normalizeUrl).filter((url) => url && isOfficialImage(url))
     : [];
@@ -436,6 +488,9 @@ async function decide(video) {
   const currentUrl = normalizeUrl(video.card_thumbnail_url);
   const thumbBuffer = thumbUrl ? await imageBuffer(thumbUrl) : null;
   const thumbMeta = await imageMetaFromBuffer(thumbBuffer);
+  const thumbHash = thumbBuffer
+    ? createHash("sha256").update(thumbBuffer).digest("hex")
+    : null;
   const candidates = [];
 
   if (thumbUrl && thumbBuffer) {
@@ -447,6 +502,10 @@ async function decide(video) {
         type: "dvd_right",
         url: `generated:${video.product_code}-auto-right.jpg`,
         buffer: right.buffer,
+        sourceUrl: thumbUrl,
+        sourceHash: thumbHash,
+        sourceWidth: thumbMeta?.width ?? null,
+        sourceHeight: thumbMeta?.height ?? null,
         cropLeft: right.left,
         cropWidth: right.cropWidth,
       }, video);
@@ -458,6 +517,10 @@ async function decide(video) {
         type: "dvd_center",
         url: `generated:${video.product_code}-auto-center.jpg`,
         buffer: center.buffer,
+        sourceUrl: thumbUrl,
+        sourceHash: thumbHash,
+        sourceWidth: thumbMeta?.width ?? null,
+        sourceHeight: thumbMeta?.height ?? null,
         cropLeft: center.left,
         cropWidth: center.cropWidth,
       }, video);
@@ -469,12 +532,42 @@ async function decide(video) {
     }
   }
 
-  for (const [index, url] of sampleImages.entries()) {
-    const sample = await analyzeCandidate({ type: "sample", url, sampleIndex: index + 1 }, video);
-    if (sample) candidates.push(sample);
+  const sampleEntries = deduplicateSamplePairs
+    ? deduplicatedSampleEntries(sampleImages, preferSmallSampleProxy)
+    : sampleImages.map((url, index) => ({ index, url, analysisUrl: url, analysisProxy: false }));
+  const concurrency = Math.max(1, Math.min(4, Math.trunc(sampleConcurrency)));
+  for (let offset = 0; offset < sampleEntries.length; offset += concurrency) {
+    const batch = sampleEntries.slice(offset, offset + concurrency);
+    const samples = await Promise.all(batch.map(({ index, url, analysisUrl, analysisProxy }) =>
+      analyzeCandidate({
+        type: "sample",
+        url,
+        analysisUrl,
+        analysisProxy,
+        sampleIndex: index + 1,
+      }, video)));
+    candidates.push(...samples.filter(Boolean));
   }
 
   candidates.sort((a, b) => b.score - a.score);
+  while (candidates[0]?.type === "sample" && candidates[0].analysisProxy) {
+    const candidate = candidates[0];
+    const sourceBuffer = await imageBuffer(candidate.sourceUrl);
+    const sourceMeta = await imageMetaFromBuffer(sourceBuffer);
+    if (sourceBuffer && sourceMeta) {
+      const digest = createHash("sha256").update(sourceBuffer).digest("hex");
+      candidate.sourceHash = digest;
+      candidate.outputHash = digest;
+      candidate.sourceWidth = sourceMeta.width;
+      candidate.sourceHeight = sourceMeta.height;
+      candidate.analysisProxy = false;
+      break;
+    }
+    candidate.excluded = true;
+    candidate.review = true;
+    candidate.reasons = [...candidate.reasons, "selected_source_unavailable"];
+    candidates.sort((a, b) => Number(a.excluded) - Number(b.excluded) || b.score - a.score);
+  }
   const best = candidates[0] ?? null;
   const runnerUp = candidates[1] ?? null;
   const fullCandidate = candidates.find((item) => item.type === "dvd_full") ?? null;
@@ -549,6 +642,13 @@ async function decide(video) {
       visual: item.visual,
       cropLeft: item.cropLeft ?? null,
       cropWidth: item.cropWidth ?? null,
+      sourceUrl: item.sourceUrl,
+      sourceHash: item.sourceHash,
+      outputHash: item.outputHash,
+      sourceWidth: item.sourceWidth ?? item.meta?.width ?? null,
+      sourceHeight: item.sourceHeight ?? item.meta?.height ?? null,
+      analysisUrl: item.analysisUrl,
+      analysisProxy: item.analysisProxy ?? false,
     })),
   };
 }
@@ -582,6 +682,7 @@ async function main() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) throw new Error("Supabase environment variables are required");
+  await fs.mkdir(cacheDir, { recursive: true });
 
   const addedReportPath = path.join(root, "tmp", "publish-1000", "published-codes.json");
   const addedCodes = new Set(JSON.parse(await fs.readFile(addedReportPath, "utf8")).codes ?? []);
@@ -600,7 +701,7 @@ async function main() {
   const representatives = {};
   let processed = 0;
   for (const video of addedVideos) {
-    const row = await decide(video);
+    const row = await decideThumbnailCandidateV3(video);
     rows.push(row);
     if (REPRESENTATIVE_CODES.has(video.product_code)) representatives[video.product_code] = row;
     processed += 1;
@@ -671,4 +772,6 @@ async function main() {
   console.log(JSON.stringify(compact, null, 2));
 }
 
-await main();
+const isMain = process.argv[1]
+  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) await main();

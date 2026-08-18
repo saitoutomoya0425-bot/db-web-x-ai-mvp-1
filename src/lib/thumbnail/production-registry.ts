@@ -17,6 +17,9 @@ import {
 import {
   GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS,
 } from "./generated-phase4e-reviewed-decisions.ts";
+import {
+  GENERATED_PHASE5_REVIEWED_DECISION_RECORDS,
+} from "./generated-phase5-reviewed-decisions.ts";
 import type { CanonicalThumbnailDecision } from "./types.ts";
 
 export const THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY = Object.freeze([
@@ -26,6 +29,7 @@ export const THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY = Object.freeze([
   "phase4c_reviewed",
   "generated_human",
   "generated_gold",
+  "phase5_reviewed",
 ] as const);
 
 type RegistrySource = (typeof THUMBNAIL_PRODUCTION_REGISTRY_PRIORITY)[number];
@@ -54,6 +58,9 @@ const phase4EReviewedDecisions = GENERATED_PHASE4E_REVIEWED_DECISION_RECORDS.map
 );
 const generatedGoldDecisions = GENERATED_GOLD_DECISION_RECORDS.map((record) =>
   adaptGoldLabelRecord(record)
+);
+const phase5ReviewedDecisions = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.map(
+  (record) => adaptHumanApprovalRecord(record),
 );
 
 const baseline = new Map<string, CanonicalThumbnailDecision>();
@@ -138,6 +145,9 @@ for (const decision of generatedHumanDecisions) {
 }
 for (const decision of generatedGoldDecisions) {
   mergeDecision(decision, "generated_gold");
+}
+for (const decision of phase5ReviewedDecisions) {
+  mergeDecision(decision, "phase5_reviewed");
 }
 
 export const PRODUCTION_THUMBNAIL_DECISIONS: ReadonlyMap<
