@@ -18,7 +18,9 @@ const CENTER = ["FCSS00015","OFJE00654","125UMD01014","13DSVR02006","1FNS00237",
 const FULL = ["1SDCA00014AI","1NPH00249","1IENEE65102","H_1834TK00141","H_1834TK00143"];
 
 test("Phase 5F canary is the exact reviewed 10 RIGHT, 15 CENTER, 5 FULL set", async () => {
-  const rows = parseCsv(await fs.readFile(path.join(root, "data/thumbnail-phase5-reviewed-decisions.csv"), "utf8"));
+  const allRows = parseCsv(await fs.readFile(path.join(root, "data/thumbnail-phase5-reviewed-decisions.csv"), "utf8"));
+  const rows = allRows.filter((row) => row.approval_batch === "phase5f-canary-30");
+  assert.equal(allRows.length, 349);
   assert.equal(rows.length, 30);
   assert.deepEqual(rows.filter((row) => row.mode === "PACKAGE_RIGHT").map((row) => row.code), RIGHT);
   assert.deepEqual(rows.filter((row) => row.mode === "PACKAGE_CENTER").map((row) => row.code), CENTER);
@@ -75,7 +77,7 @@ test("Phase 5F canary is the exact reviewed 10 RIGHT, 15 CENTER, 5 FULL set", as
       row.code,
     );
   }
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size - rows.length, 104);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 134);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size - rows.length, 423);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 453);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
 });

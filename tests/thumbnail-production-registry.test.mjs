@@ -88,11 +88,11 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 250);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 146);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 453);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 349);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 146,
-    eligible_total: 146,
+    input_total: 349,
+    eligible_total: 349,
     ignored_apply_false: 0,
   });
 });
@@ -143,6 +143,48 @@ test("Phase 5 batch 02 appends exact human-reviewed provenance while preserving 
       assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-right.jpg`, record.code);
     }
     if (record.mode === "PACKAGE_CENTER") {
+      assert.equal(record.source_id, "dvd:center", record.code);
+      assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-center.jpg`, record.code);
+    }
+  }
+});
+
+test("Phase 5 batch 03 appends only 203 delegated visual approvals and preserves the first 146 decisions byte-for-byte", async () => {
+  const source = await readFile("data/thumbnail-phase5-reviewed-decisions.csv", "utf8");
+  const lines = source.split("\n");
+  const preservedPrefix = `${lines.slice(0, 147).join("\n")}\n`;
+  assert.equal(
+    crypto.createHash("sha256").update(preservedPrefix).digest("hex"),
+    "99aea276b2109ee7b7638d23bbe753e4800287d0b9367e401f5b59bcd4407889",
+  );
+  const batch03 = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5f-review-batch-03",
+  );
+  assert.equal(batch03.length, 203);
+  assert.equal(new Set(batch03.map((record) => record.code)).size, 203);
+  assert.deepEqual(
+    batch03.reduce((counts, record) => {
+      counts[record.mode] = (counts[record.mode] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { PACKAGE_CENTER: 3, PACKAGE_RIGHT: 191, SAMPLE: 9 },
+  );
+  for (const record of batch03) {
+    assert.equal(record.approved_by, "owner_delegated_via_chatgpt", record.code);
+    assert.equal(record.approval_batch, "phase5f-review-batch-03", record.code);
+    assert.match(record.reason, /owner delegated proxy approval via ChatGPT/, record.code);
+    assert.match(record.reason, /not an auto-safe classification/, record.code);
+    if (record.mode === "SAMPLE") {
+      const index = /^sample:([1-9]\d*)$/.exec(record.source_id)?.[1];
+      assert.ok(index, record.code);
+      assert.match(record.source_path_or_url, new RegExp(`jp-${index}\\.jpg$`, "i"), record.code);
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    } else if (record.mode === "PACKAGE_RIGHT") {
+      assert.equal(record.source_id, "dvd:right", record.code);
+      assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-right.jpg`, record.code);
+    } else {
+      assert.equal(record.mode, "PACKAGE_CENTER", record.code);
       assert.equal(record.source_id, "dvd:center", record.code);
       assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-center.jpg`, record.code);
     }
@@ -373,12 +415,12 @@ test("READY decisions use one mode-level object-fit contract", () => {
     {},
   );
   assert.deepEqual(counts, {
-    "SAMPLE|scale-down": 36,
-    "PACKAGE_RIGHT|cover": 129,
+    "SAMPLE|scale-down": 45,
+    "PACKAGE_RIGHT|cover": 320,
     "PACKAGE_FULL|contain": 31,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
-    "PACKAGE_CENTER|cover": 24,
+    "PACKAGE_CENTER|cover": 27,
   });
 });
 
