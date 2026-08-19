@@ -28,18 +28,12 @@ const SOURCE_IDS = Object.freeze({
 });
 const EXPECTED_HEADERS = Object.freeze([
   "code",
-  "video_id",
-  "external_product_id",
   "mode",
   "source_id",
   "source_path_or_url",
   "source_hash",
   "output_path_or_url",
   "output_hash",
-  "crop_left",
-  "crop_width",
-  "source_width",
-  "source_height",
   "approved_by",
   "approved_at",
   "approval_batch",
@@ -54,63 +48,6 @@ const required = (value, context) => {
   if (!normalized) throw new Error(`${context}:MISSING_VALUE`);
   return normalized;
 };
-
-const positiveInteger = (value, context) => {
-  const normalized = required(value, context);
-  const parsed = Number(normalized);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0 || String(parsed) !== normalized) {
-    throw new Error(`${context}:INVALID_POSITIVE_INTEGER`);
-  }
-  return parsed;
-};
-
-const nonNegativeInteger = (value, context) => {
-  const normalized = required(value, context);
-  const parsed = Number(normalized);
-  if (!Number.isSafeInteger(parsed) || parsed < 0 || String(parsed) !== normalized) {
-    throw new Error(`${context}:INVALID_NON_NEGATIVE_INTEGER`);
-  }
-  return parsed;
-};
-
-function verifyCandidateEvidence(row, code, mode, sourceId, sourcePath, outputPath) {
-  const context = `PHASE5_REVIEWED:${code}`;
-  required(row.video_id, `${context}:VIDEO_ID`);
-  required(row.external_product_id, `${context}:EXTERNAL_PRODUCT_ID`);
-  const sourceWidth = positiveInteger(row.source_width, `${context}:SOURCE_WIDTH`);
-  const sourceHeight = positiveInteger(row.source_height, `${context}:SOURCE_HEIGHT`);
-  if (mode === "PACKAGE_RIGHT" || mode === "PACKAGE_CENTER") {
-    const cropLeft = nonNegativeInteger(row.crop_left, `${context}:CROP_LEFT`);
-    const cropWidth = positiveInteger(row.crop_width, `${context}:CROP_WIDTH`);
-    if (cropLeft + cropWidth > sourceWidth) {
-      throw new Error(`${context}:CROP_OUT_OF_BOUNDS`);
-    }
-    const expectedWidth = Math.max(1, Math.min(sourceWidth, Math.round(sourceHeight * 0.735)));
-    const expectedLeft = mode === "PACKAGE_CENTER"
-      ? Math.max(0, Math.round((sourceWidth - expectedWidth) / 2))
-      : Math.max(0, sourceWidth - expectedWidth);
-    if (cropWidth !== expectedWidth || cropLeft !== expectedLeft) {
-      throw new Error(`${context}:CROP_PROVENANCE_MISMATCH`);
-    }
-    const suffix = mode === "PACKAGE_RIGHT" ? "auto-right.jpg" : "auto-center.jpg";
-    if (sourceId !== (mode === "PACKAGE_RIGHT" ? "dvd:right" : "dvd:center")) {
-      throw new Error(`${context}:CROP_SOURCE_ID_MISMATCH`);
-    }
-    if (outputPath !== `/card-thumbnails/${code}-${suffix}`) {
-      throw new Error(`${context}:CROP_OUTPUT_PATH_MISMATCH`);
-    }
-    if (!sourcePath.startsWith("https://pics.dmm.co.jp/")) {
-      throw new Error(`${context}:CROP_SOURCE_MUST_BE_OFFICIAL`);
-    }
-    return;
-  }
-  if (row.crop_left !== "" || row.crop_width !== "") {
-    throw new Error(`${context}:UNEXPECTED_CROP_PROVENANCE`);
-  }
-  if (mode === "PACKAGE_FULL" && sourceId !== "dvd:full") {
-    throw new Error(`${context}:FULL_SOURCE_ID_MISMATCH`);
-  }
-}
 
 function canonicalCode(value) {
   const raw = required(value, "PHASE5_REVIEWED:CODE");
@@ -164,7 +101,6 @@ async function materialize(row) {
   if (!isTrustedThumbnailOutput(sourcePath) || !isTrustedThumbnailOutput(outputPath)) {
     throw new Error(`${context}:URL_CONTRACT`);
   }
-  verifyCandidateEvidence(row, code, mode, sourceId, sourcePath, outputPath);
   if (row.review_status !== "HUMAN_APPROVED") {
     throw new Error(`${context}:REVIEW_STATUS_CONTRACT`);
   }

@@ -7,7 +7,8 @@ import path from "node:path";
 import sharp from "sharp";
 import { materializePhase5ReviewedAssets } from "../scripts/materialize-thumbnail-phase5-reviewed-assets.mjs";
 
-const HEADER = "code,video_id,external_product_id,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,crop_left,crop_width,source_width,source_height,approved_by,approved_at,approval_batch,reason,apply,review_status\n";
+const DECISION_HEADER = "code,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,approved_by,approved_at,approval_batch,reason,apply,review_status\n";
+const EVIDENCE_HEADER = "product_code,video_id,external_product_id,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,crop_left,crop_width,source_width,source_height,apply\n";
 const URL = "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg";
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const response = (bytes) => ({ ok: true, status: 200, arrayBuffer: async () => bytes });
@@ -25,27 +26,42 @@ async function fixture() {
 }
 
 function csv({ sourceHash, outputHash, code = "PHASE500001", outputPath = "/card-thumbnails/PHASE500001-auto-right.jpg" }) {
-  return HEADER + [
-    code, "video-phase5-1", "phase500001", "PACKAGE_RIGHT", "dvd:right", URL,
-    sourceHash, outputPath, outputHash, "405", "395", "800", "538",
-    "owner_delegated_via_chatgpt", "2026-08-19T06:43:13Z", "phase5f-canary-30",
-    "delegated visual truth", "true", "HUMAN_APPROVED",
-  ].join(",") + "\n";
+  const common = ["PACKAGE_RIGHT", "dvd:right", URL, sourceHash, outputPath, outputHash];
+  return {
+    decision: DECISION_HEADER + [
+      code, ...common,
+      "owner_delegated_via_chatgpt", "2026-08-19T06:43:13Z", "phase5f-canary-30",
+      "delegated visual truth", "true", "HUMAN_APPROVED",
+    ].join(",") + "\n",
+    evidence: EVIDENCE_HEADER + [
+      code, "video-phase5-1", "phase500001", ...common, "405", "395", "800", "538", "true",
+    ].join(",") + "\n",
+  };
+}
+
+async function writeInputs(directory, value) {
+  const decisionFilePath = path.join(directory, "reviewed.csv");
+  const evidenceFilePath = path.join(directory, "evidence.csv");
+  await fs.writeFile(decisionFilePath, value.decision);
+  await fs.writeFile(evidenceFilePath, value.evidence);
+  return { decisionFilePath, evidenceFilePath };
 }
 
 test("materializer is deterministic and reuses an identical reviewed asset", async () => {
   const value = await fixture();
-  const file = path.join(value.directory, "reviewed.csv");
-  await fs.writeFile(file, csv({ sourceHash: sha256(value.source), outputHash: sha256(value.output) }));
+  const inputs = await writeInputs(
+    value.directory,
+    csv({ sourceHash: sha256(value.source), outputHash: sha256(value.output) }),
+  );
   try {
     const first = await materializePhase5ReviewedAssets({
-      decisionFilePath: file,
+      ...inputs,
       repositoryRoot: value.directory,
       fetchImpl: async () => response(value.source),
       write: true,
     });
     const second = await materializePhase5ReviewedAssets({
-      decisionFilePath: file,
+      ...inputs,
       repositoryRoot: value.directory,
       fetchImpl: async () => response(value.source),
       write: true,
@@ -60,16 +76,21 @@ test("materializer is deterministic and reuses an identical reviewed asset", asy
 });
 test("materializer fails closed on source and output hash mismatches", async () => {
   const value = await fixture();
-  const file = path.join(value.directory, "reviewed.csv");
   try {
-    await fs.writeFile(file, csv({ sourceHash: "a".repeat(64), outputHash: sha256(value.output) }));
+    let inputs = await writeInputs(
+      value.directory,
+      csv({ sourceHash: "a".repeat(64), outputHash: sha256(value.output) }),
+    );
     await assert.rejects(
-      materializePhase5ReviewedAssets({ decisionFilePath: file, repositoryRoot: value.directory, fetchImpl: async () => response(value.source), write: true }),
+      materializePhase5ReviewedAssets({ ...inputs, repositoryRoot: value.directory, fetchImpl: async () => response(value.source), write: true }),
       /SOURCE_HASH_MISMATCH/,
     );
-    await fs.writeFile(file, csv({ sourceHash: sha256(value.source), outputHash: "b".repeat(64) }));
+    inputs = await writeInputs(
+      value.directory,
+      csv({ sourceHash: sha256(value.source), outputHash: "b".repeat(64) }),
+    );
     await assert.rejects(
-      materializePhase5ReviewedAssets({ decisionFilePath: file, repositoryRoot: value.directory, fetchImpl: async () => response(value.source), write: true }),
+      materializePhase5ReviewedAssets({ ...inputs, repositoryRoot: value.directory, fetchImpl: async () => response(value.source), write: true }),
       /OUTPUT_HASH_MISMATCH/,
     );
   } finally {
@@ -79,9 +100,8 @@ test("materializer fails closed on source and output hash mismatches", async () 
 
 test("materializer rejects path traversal before fetching", async () => {
   const value = await fixture();
-  const file = path.join(value.directory, "reviewed.csv");
   let fetched = false;
-  await fs.writeFile(file, csv({
+  const inputs = await writeInputs(value.directory, csv({
     code: "../ESCAPE",
     sourceHash: sha256(value.source),
     outputHash: sha256(value.output),
@@ -90,7 +110,7 @@ test("materializer rejects path traversal before fetching", async () => {
   try {
     await assert.rejects(
       materializePhase5ReviewedAssets({
-        decisionFilePath: file,
+        ...inputs,
         repositoryRoot: value.directory,
         fetchImpl: async () => { fetched = true; return response(value.source); },
         write: true,
@@ -105,15 +125,17 @@ test("materializer rejects path traversal before fetching", async () => {
 
 test("materializer never overwrites an existing differing file", async () => {
   const value = await fixture();
-  const file = path.join(value.directory, "reviewed.csv");
   const outputPath = path.join(value.directory, "public/card-thumbnails/PHASE500001-auto-right.jpg");
   const existing = Buffer.from("existing user bytes");
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, existing);
-  await fs.writeFile(file, csv({ sourceHash: sha256(value.source), outputHash: sha256(value.output) }));
+  const inputs = await writeInputs(
+    value.directory,
+    csv({ sourceHash: sha256(value.source), outputHash: sha256(value.output) }),
+  );
   try {
     await assert.rejects(
-      materializePhase5ReviewedAssets({ decisionFilePath: file, repositoryRoot: value.directory, fetchImpl: async () => response(value.source), write: true }),
+      materializePhase5ReviewedAssets({ ...inputs, repositoryRoot: value.directory, fetchImpl: async () => response(value.source), write: true }),
       /EXISTING_OUTPUT_DIFFERS/,
     );
     assert.deepEqual(await fs.readFile(outputPath), existing);

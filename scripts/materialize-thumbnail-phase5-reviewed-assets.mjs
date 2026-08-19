@@ -7,7 +7,16 @@ import { isTrustedThumbnailOutput } from "../src/lib/thumbnail/contract.ts";
 import { parseCsv } from "./generate-thumbnail-production-registry.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const defaultInput = path.join(root, "data", "thumbnail-phase5-reviewed-decisions.csv");
+const defaultDecisionInput = path.join(root, "data", "thumbnail-phase5-reviewed-decisions.csv");
+const defaultEvidenceInput = path.join(
+  process.env.HOME ?? "",
+  "Documents",
+  "Codex",
+  "okazudb-state",
+  "thumbnail-reviews",
+  "phase5f-canary-30",
+  "canary-30.csv",
+);
 const SHA256 = /^[a-f0-9]{64}$/;
 const CROP_RATIO = 0.735;
 
@@ -92,18 +101,46 @@ async function writeNewOutput(absolute, bytes, context) {
 }
 
 export async function materializePhase5ReviewedAssets({
-  decisionFilePath = defaultInput,
+  decisionFilePath = defaultDecisionInput,
+  evidenceFilePath = defaultEvidenceInput,
   repositoryRoot = root,
   fetchImpl = fetch,
   write = false,
 } = {}) {
-  const rows = parseCsv(await fs.readFile(decisionFilePath, "utf8"))
+  const decisions = parseCsv(await fs.readFile(decisionFilePath, "utf8"))
     .filter((row) => row.apply === "true");
+  const evidenceRows = parseCsv(await fs.readFile(evidenceFilePath, "utf8"));
+  const evidenceByCode = new Map();
+  for (const evidence of evidenceRows) {
+    const code = text(evidence.product_code, "PHASE5_MATERIALIZER:EVIDENCE_CODE");
+    if (evidenceByCode.has(code)) throw new Error(`PHASE5_MATERIALIZER:${code}:DUPLICATE_EVIDENCE`);
+    evidenceByCode.set(code, evidence);
+  }
+  if (evidenceByCode.size !== decisions.length) {
+    throw new Error("PHASE5_MATERIALIZER:EVIDENCE_TARGET_COUNT_MISMATCH");
+  }
   const downloadCache = new Map();
   const results = [];
-  for (const row of rows) {
-    const code = text(row.code, "PHASE5_MATERIALIZER:CODE");
+  for (const decision of decisions) {
+    const code = text(decision.code, "PHASE5_MATERIALIZER:CODE");
     const context = `PHASE5_MATERIALIZER:${code}`;
+    const evidence = evidenceByCode.get(code);
+    if (!evidence) throw new Error(`${context}:EVIDENCE_MISSING`);
+    const matchedFields = [
+      ["mode", "mode"],
+      ["source_id", "source_id"],
+      ["source_path_or_url", "source_path_or_url"],
+      ["source_hash", "source_hash"],
+      ["output_path_or_url", "output_path_or_url"],
+      ["output_hash", "output_hash"],
+    ];
+    for (const [decisionField, evidenceField] of matchedFields) {
+      if (decision[decisionField] !== evidence[evidenceField]) {
+        throw new Error(`${context}:EVIDENCE_${decisionField.toUpperCase()}_MISMATCH`);
+      }
+    }
+    if (evidence.apply !== "true") throw new Error(`${context}:EVIDENCE_NOT_APPROVED_FOR_APPLY`);
+    const row = { ...evidence, ...decision };
     const mode = text(row.mode, `${context}:MODE`);
     const sourceId = text(row.source_id, `${context}:SOURCE_ID`);
     const sourcePath = text(row.source_path_or_url, `${context}:SOURCE_PATH`);
@@ -166,7 +203,7 @@ export async function materializePhase5ReviewedAssets({
     results.push(Object.freeze({ code, mode, source_id: sourceId, output_path: outputPath, state }));
   }
   return Object.freeze({
-    input_total: rows.length,
+    input_total: decisions.length,
     transformed_total: results.filter((row) => row.mode !== "PACKAGE_FULL").length,
     full_verified_total: results.filter((row) => row.mode === "PACKAGE_FULL").length,
     created_total: results.filter((row) => row.state === "created").length,
@@ -177,12 +214,17 @@ export async function materializePhase5ReviewedAssets({
 }
 
 export async function runCli(args = process.argv.slice(2)) {
-  if (args.some((arg) => arg !== "--write" && arg !== "--check")) {
+  if (args.some((arg) => arg !== "--write" && arg !== "--check" && !arg.startsWith("--evidence="))) {
     throw new Error("PHASE5_MATERIALIZER:UNKNOWN_ARGUMENT");
   }
   const write = args.includes("--write");
   if (write && args.includes("--check")) throw new Error("PHASE5_MATERIALIZER:AMBIGUOUS_MODE");
-  const result = await materializePhase5ReviewedAssets({ write });
+  const evidenceArgument = args.find((arg) => arg.startsWith("--evidence="));
+  const evidenceFilePath = evidenceArgument
+    ? evidenceArgument.slice("--evidence=".length)
+    : defaultEvidenceInput;
+  if (!evidenceFilePath) throw new Error("PHASE5_MATERIALIZER:EVIDENCE_PATH_REQUIRED");
+  const result = await materializePhase5ReviewedAssets({ write, evidenceFilePath });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
