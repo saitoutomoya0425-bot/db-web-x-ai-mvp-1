@@ -12,6 +12,10 @@ import {
   selectProductionEligiblePhase5Records,
   selectStratifiedCanary,
 } from "../scripts/lib/thumbnail-phase5-candidates.mjs";
+import {
+  classifyThumbnailCandidate,
+  FULL_RIGHT_REVIEW_GAP,
+} from "../scripts/lib/thumbnail-candidate-classification.mjs";
 import { PHASE4B_LEGACY_THUMBNAIL_DECISIONS } from "../src/lib/thumbnail/phase4b-legacy-registry.ts";
 import {
   getProductionThumbnailDecision,
@@ -127,12 +131,66 @@ test("candidate generation is deterministic and classifications never imply appl
     candidate_generated: 1,
     no_candidate: 0,
     recommended_modes: { SAMPLE: 1 },
-    confidence: { high: 1 },
-    risk: { safe: 1 },
-    classification: { A: 1 },
+    confidence: { medium: 1 },
+    risk: { review: 1 },
+    classification: { B: 1 },
     apply_true: 0,
   });
   assert.deepEqual(selectProductionEligiblePhase5Records(records), []);
+});
+
+test("SAMPLE candidates are review-only even with a high score and no visual risk", () => {
+  const sample = v3Candidate({ score: 180, review: false });
+  const gate = classifyThumbnailCandidate({ best: sample });
+  assert.deepEqual(
+    { classification: gate.classification, risk: gate.risk, confidence: gate.confidence },
+    { classification: "B", risk: "review", confidence: "medium" },
+  );
+  assert.equal(gate.reason_codes.includes("SAMPLE_REQUIRES_REVIEW"), true);
+});
+
+test("FULL requires a calibrated lead over RIGHT before it can be Class A", () => {
+  const full = v3Candidate({ type: "dvd_full", score: 140 });
+  const closeRight = v3Candidate({ type: "dvd_right", score: 140 - FULL_RIGHT_REVIEW_GAP + 1 });
+  const clearRight = v3Candidate({ type: "dvd_right", score: 140 - FULL_RIGHT_REVIEW_GAP });
+  const close = classifyThumbnailCandidate({ best: full, runnerUp: closeRight, rightCandidate: closeRight });
+  const clear = classifyThumbnailCandidate({ best: full, runnerUp: clearRight, rightCandidate: clearRight });
+  assert.equal(close.classification, "B");
+  assert.equal(close.reason_codes.includes("FULL_RIGHT_MARGIN_TOO_SMALL"), true);
+  assert.equal(clear.classification, "A");
+});
+
+test("RIGHT and CENTER ranking remains intact while ambiguous cases are review-only", () => {
+  const right = v3Candidate({ type: "dvd_right", score: 140 });
+  const center = v3Candidate({ type: "dvd_center", score: 140 });
+  assert.equal(classifyThumbnailCandidate({ best: right }).classification, "A");
+  assert.equal(classifyThumbnailCandidate({ best: right, sampleCandidateAvailable: true }).classification, "B");
+  assert.equal(classifyThumbnailCandidate({ best: center }).classification, "B");
+});
+
+test("Phase 5 consumes the V3 decision gate as its single classification truth", () => {
+  const candidate = v3Candidate({
+    type: "dvd_right",
+    sampleIndex: null,
+    cropLeft: 520,
+    cropWidth: 735,
+    sourceWidth: 1200,
+    sourceHeight: 1000,
+  });
+  const decisionGate = Object.freeze({
+    classification: "B",
+    confidence: "medium",
+    risk: "review",
+    needs_review: true,
+    reason_codes: ["RIGHT_WITH_SAMPLE_CANDIDATES_REQUIRES_REVIEW"],
+  });
+  const record = buildPhase5CandidateRecord({
+    video: video(),
+    v3Row: row([candidate], { decision_gate: decisionGate }),
+  });
+  assert.equal(record.classification, "B");
+  assert.equal(record.confidence, "medium");
+  assert.equal(record.risk, "review");
 });
 
 test("apply=false reviewed rows cannot enter the generated Phase 5 registry", async () => {

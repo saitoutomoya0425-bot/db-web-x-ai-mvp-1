@@ -296,7 +296,7 @@ export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) 
       } else {
         const v3Row = await decideThumbnailCandidateV3(video, {
           deduplicateSamplePairs: true,
-          preferSmallSampleProxy: true,
+          preferSmallSampleProxy: false,
           sampleConcurrency: 2,
         });
         const sourceProduct = bestSourceProduct(video, sourceByPromotedVideo, sourceByCode);

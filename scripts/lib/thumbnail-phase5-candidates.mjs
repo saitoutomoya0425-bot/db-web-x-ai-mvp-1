@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { classifyThumbnailCandidate } from "./thumbnail-candidate-classification.mjs";
 
 export const PHASE5_CANDIDATE_HEADERS = Object.freeze([
   "product_code",
@@ -107,22 +108,6 @@ export function phase5CandidateDigest(records) {
   return crypto.createHash("sha256").update(JSON.stringify(stable)).digest("hex");
 }
 
-function hasCandidateRisk(candidate) {
-  return Boolean(
-    candidate?.excluded
-      || candidate?.review
-      || candidate?.flags?.bodyPartOrClose
-      || candidate?.flags?.faceOnlyLike
-      || candidate?.flags?.plainScene
-      || candidate?.flags?.cropLooksCut
-      || candidate?.components?.bodyPart > 0
-      || candidate?.components?.faceOnly > 0
-      || candidate?.components?.scenePhoto >= 40
-      || candidate?.reasons?.some((reason) =>
-        /body_part|face_only|plain_scene|person_or_text_cut|low_resolution/.test(reason)),
-  );
-}
-
 function sourceId(candidate) {
   if (candidate?.type === "sample") {
     if (!Number.isInteger(candidate.sampleIndex) || candidate.sampleIndex < 1) return null;
@@ -142,19 +127,15 @@ function outputPreview(candidate, code) {
 }
 
 function classificationFor(row, best, runnerUp) {
-  if (!best) return { classification: "C", confidence: "none", risk: "reject" };
-  const delta = runnerUp ? best.score - runnerUp.score : null;
-  if (hasCandidateRisk(best) || best.score < 78) {
-    return { classification: "C", confidence: "low", risk: "reject" };
-  }
-  if (
-    best.type === "dvd_center"
-      || (delta !== null && delta < 12)
-      || row.needs_review
-  ) {
-    return { classification: "B", confidence: "medium", risk: "review" };
-  }
-  return { classification: "A", confidence: "high", risk: "safe" };
+  if (row?.decision_gate) return row.decision_gate;
+  const candidates = row?.candidates ?? [];
+  return classifyThumbnailCandidate({
+    best,
+    runnerUp,
+    rightCandidate: candidates.find((candidate) => candidate.type === "dvd_right") ?? null,
+    sampleCandidateAvailable: candidates.some((candidate) => candidate.type === "sample" && !candidate.excluded),
+    centerEligible: row?.center_candidate_eligible !== false,
+  });
 }
 
 function materializedCandidate(candidate, code) {

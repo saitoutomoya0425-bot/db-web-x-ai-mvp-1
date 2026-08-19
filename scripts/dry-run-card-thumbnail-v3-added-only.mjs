@@ -4,6 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
+import {
+  classifyThumbnailCandidate,
+  FULL_RIGHT_REVIEW_GAP,
+  THUMBNAIL_CANDIDATE_AUTO_SCORE,
+  THUMBNAIL_CANDIDATE_REVIEW_GAP,
+} from "./lib/thumbnail-candidate-classification.mjs";
 
 let root = process.cwd();
 let outDir = path.join(root, "tmp", "card-thumbnail-v3-dry-run");
@@ -19,6 +25,10 @@ const AUTO_THRESHOLD = 58;
 const HIGH_CONF_DELTA = 24;
 const MEDIUM_CONF_DELTA = 12;
 const AMBIGUOUS_GAP = 8;
+const SAMPLE_SCORE_OFFSET = -20;
+const SAMPLE_INFORMATION_DISCOUNT = 0.5;
+const SAMPLE_JACKET_DISCOUNT = 0.5;
+const FULL_INFORMATION_ALLOWANCE = 16;
 
 const REPRESENTATIVE_CODES = new Set([
   "H_1784FTO00064",
@@ -378,7 +388,24 @@ function scoreCandidate({ candidate, video, meta, visual, lowResolution }) {
       flags: {},
     };
   }
-  const components = componentScores({ candidate, meta, visual, video });
+  const baseComponents = componentScores({ candidate, meta, visual, video });
+  const sampleInformationDiscount = candidate.type === "sample"
+    ? Math.round(baseComponents.infoDensity * SAMPLE_INFORMATION_DISCOUNT)
+    : 0;
+  const sampleJacketDiscount = candidate.type === "sample"
+    ? Math.round(baseComponents.jacketFeel * SAMPLE_JACKET_DISCOUNT)
+    : 0;
+  const sampleScoreOffset = candidate.type === "sample" ? SAMPLE_SCORE_OFFSET : 0;
+  const fullInformationDiscount = candidate.type === "dvd_full" || candidate.type === "vertical_package"
+    ? Math.max(0, baseComponents.infoDensity - FULL_INFORMATION_ALLOWANCE)
+    : 0;
+  const components = {
+    ...baseComponents,
+    sampleInformationDiscount,
+    sampleJacketDiscount,
+    sampleScoreOffset,
+    fullInformationDiscount,
+  };
   const score =
     components.explanationPower
     + components.jacketFeel
@@ -389,7 +416,11 @@ function scoreCandidate({ candidate, video, meta, visual, lowResolution }) {
     - components.personCut
     - components.bodyPart
     - components.faceOnly
-    - components.scenePhoto;
+    - components.scenePhoto
+    + components.sampleScoreOffset
+    - components.sampleInformationDiscount
+    - components.sampleJacketDiscount
+    - components.fullInformationDiscount;
 
   const reasons = [];
   if (components.explanationPower >= 40) reasons.push("strong_explanation_power");
@@ -401,6 +432,9 @@ function scoreCandidate({ candidate, video, meta, visual, lowResolution }) {
   if (components.scenePhoto > 0) reasons.push("plain_scene_risk");
   if (candidate.type === "dvd_center" && components.flags.sideBandOrBlur) reasons.push("center_crop_rescues_side_band");
   if (candidate.type === "dvd_full" && components.flags.ensemble && components.flags.informationDense) reasons.push("dvd_full_preserves_context");
+  if (components.sampleInformationDiscount > 0) reasons.push("sample_information_signal_discounted");
+  if (components.sampleJacketDiscount > 0) reasons.push("sample_jacket_signal_discounted");
+  if (components.fullInformationDiscount > 0) reasons.push("full_information_saturation_discounted");
 
   const review =
     score < AUTO_THRESHOLD
@@ -480,6 +514,7 @@ export async function decideThumbnailCandidateV3(video, {
   deduplicateSamplePairs = false,
   preferSmallSampleProxy = false,
   sampleConcurrency = 1,
+  candidateLimit = 12,
 } = {}) {
   const sampleImages = Array.isArray(video.sample_images)
     ? video.sample_images.map(normalizeUrl).filter((url) => url && isOfficialImage(url))
@@ -579,14 +614,20 @@ export async function decideThumbnailCandidateV3(video, {
       ? candidates.find((item) => item.type === "dvd_center")
       : candidates.find((item) => item.url === currentUrl)
         ?? (currentType === "dvd_full" ? candidates.find((item) => item.type === "dvd_full") : null);
-  const ambiguous = best && runnerUp && best.score - runnerUp.score < AMBIGUOUS_GAP;
   const centerEligible =
     best?.type !== "dvd_center"
     || Boolean(fullCandidate?.flags?.sideBandOrBlur)
     || Boolean(rightCandidate?.flags?.cropLooksCut)
     || Boolean(rightCandidate?.flags?.bodyPartOrClose)
     || Boolean(rightCandidate && rightCandidate.score < AUTO_THRESHOLD);
-  const needsReview = !best || best.review || ambiguous || !centerEligible;
+  const decisionGate = classifyThumbnailCandidate({
+    best,
+    runnerUp,
+    rightCandidate,
+    sampleCandidateAvailable: candidates.some((item) => item.type === "sample" && !item.excluded),
+    centerEligible,
+  });
+  const needsReview = decisionGate.needs_review;
   const nextType = needsReview ? "needs_review" : best.type;
   const nextUrl = needsReview ? currentUrl : best.type === "dvd_right"
     ? `/card-thumbnails/${video.product_code}-auto-right.jpg`
@@ -596,12 +637,7 @@ export async function decideThumbnailCandidateV3(video, {
   const changed = Boolean(!needsReview && currentUrl !== nextUrl);
   const currentScore = currentCandidate?.score ?? null;
   const scoreDelta = changed && currentScore !== null && best ? best.score - currentScore : null;
-  let confidence = "none";
-  if (changed && best) {
-    if (best.score >= 78 && (scoreDelta === null || scoreDelta >= HIGH_CONF_DELTA) && !best.reasons.includes("body_part_risk") && !best.reasons.includes("plain_scene_risk")) confidence = "high";
-    else if (best.score >= 66 && (scoreDelta === null || scoreDelta >= MEDIUM_CONF_DELTA)) confidence = "medium";
-    else confidence = "low";
-  }
+  const confidence = decisionGate.confidence;
 
   return {
     product_code: video.product_code,
@@ -619,15 +655,16 @@ export async function decideThumbnailCandidateV3(video, {
     needs_review: needsReview,
     confidence,
     reason: needsReview
-      ? (!centerEligible ? "center_candidate_requires_manual_review" : (ambiguous ? "score_gap_too_small" : "best_candidate_below_auto_threshold_or_risk"))
+      ? decisionGate.reason_codes.join(",").toLowerCase()
       : best.reasons.join(",") || "highest_total_score",
+    decision_gate: decisionGate,
     low_resolution_excluded: candidates.filter((item) => item.excluded).length,
     center_candidate_available: candidates.some((item) => item.type === "dvd_center"),
     center_candidate_won: best?.type === "dvd_center",
     center_candidate_eligible: centerEligible,
     dvd_full_candidate_won: best?.type === "dvd_full",
     current_plain_or_bodypart: Boolean(currentCandidate?.flags?.plainScene || currentCandidate?.flags?.bodyPartOrClose || currentCandidate?.flags?.faceOnlyLike),
-    candidates: candidates.slice(0, 12).map((item) => ({
+    candidates: candidates.slice(0, candidateLimit === null ? candidates.length : candidateLimit).map((item) => ({
       type: item.type,
       url: item.url,
       file: fileNameOf(item.url),
@@ -722,6 +759,9 @@ async function main() {
       crop_ratio: CROP_RATIO,
       auto_threshold: AUTO_THRESHOLD,
       ambiguous_gap: AMBIGUOUS_GAP,
+      candidate_auto_score: THUMBNAIL_CANDIDATE_AUTO_SCORE,
+      candidate_review_gap: THUMBNAIL_CANDIDATE_REVIEW_GAP,
+      full_right_review_gap: FULL_RIGHT_REVIEW_GAP,
       high_conf_delta: HIGH_CONF_DELTA,
       medium_conf_delta: MEDIUM_CONF_DELTA,
     },
