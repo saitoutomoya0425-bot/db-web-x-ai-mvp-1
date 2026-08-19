@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
   adaptGoldLabelRecord,
@@ -87,13 +88,65 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 134);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 30);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 250);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 146);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 30,
-    eligible_total: 30,
+    input_total: 146,
+    eligible_total: 146,
     ignored_apply_false: 0,
   });
+});
+
+test("Phase 5 batch 02 appends exact human-reviewed provenance while preserving canary 30 bytes", async () => {
+  const source = await readFile("data/thumbnail-phase5-reviewed-decisions.csv", "utf8");
+  const lines = source.split("\n");
+  const canaryPrefix = `${lines.slice(0, 31).join("\n")}\n`;
+  assert.equal(
+    crypto.createHash("sha256").update(canaryPrefix).digest("hex"),
+    "f6faac86383466e9bc2e0a757af31bcaf84a022074e1443a01b56805ac45ccd0",
+  );
+  const canary = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5f-canary-30",
+  );
+  const batch02 = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5f-review-batch-02",
+  );
+  assert.equal(canary.length, 30);
+  assert.equal(batch02.length, 116);
+  assert.equal(new Set(batch02.map((record) => record.code)).size, 116);
+  assert.deepEqual(
+    batch02.reduce((counts, record) => {
+      counts[record.mode] = (counts[record.mode] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { PACKAGE_CENTER: 4, PACKAGE_FULL: 17, PACKAGE_RIGHT: 86, SAMPLE: 9 },
+  );
+  for (const record of batch02) {
+    assert.equal(record.approved_by, "owner_delegated_via_chatgpt", record.code);
+    assert.equal(record.approval_batch, "phase5f-review-batch-02", record.code);
+    assert.match(record.reason, /owner delegated proxy approval via ChatGPT/, record.code);
+    assert.match(record.reason, /not an auto-safe classification/, record.code);
+    if (record.mode === "SAMPLE") {
+      const index = /^sample:([1-9]\d*)$/.exec(record.source_id)?.[1];
+      assert.ok(index, record.code);
+      assert.match(record.source_path_or_url, new RegExp(`jp-${index}\\.jpg$`, "i"), record.code);
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    }
+    if (record.mode === "PACKAGE_FULL") {
+      assert.equal(record.source_id, "dvd:full", record.code);
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    }
+    if (record.mode === "PACKAGE_RIGHT") {
+      assert.equal(record.source_id, "dvd:right", record.code);
+      assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-right.jpg`, record.code);
+    }
+    if (record.mode === "PACKAGE_CENTER") {
+      assert.equal(record.source_id, "dvd:center", record.code);
+      assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-center.jpg`, record.code);
+    }
+  }
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -320,12 +373,12 @@ test("READY decisions use one mode-level object-fit contract", () => {
     {},
   );
   assert.deepEqual(counts, {
-    "SAMPLE|scale-down": 27,
-    "PACKAGE_RIGHT|cover": 43,
-    "PACKAGE_FULL|contain": 14,
+    "SAMPLE|scale-down": 36,
+    "PACKAGE_RIGHT|cover": 129,
+    "PACKAGE_FULL|contain": 31,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
-    "PACKAGE_CENTER|cover": 20,
+    "PACKAGE_CENTER|cover": 24,
   });
 });
 

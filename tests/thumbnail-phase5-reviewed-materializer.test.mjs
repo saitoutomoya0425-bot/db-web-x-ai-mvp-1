@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { materializePhase5ReviewedAssets } from "../scripts/materialize-thumbnail-phase5-reviewed-assets.mjs";
 
 const DECISION_HEADER = "code,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,approved_by,approved_at,approval_batch,reason,apply,review_status\n";
-const EVIDENCE_HEADER = "product_code,video_id,external_product_id,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,crop_left,crop_width,source_width,source_height,apply\n";
+const EVIDENCE_HEADER = "product_code,video_id,external_product_id,mode,source_id,sample_index,source_path_or_url,source_hash,output_path_or_url,output_hash,crop_left,crop_width,source_width,source_height,apply\n";
 const URL = "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg";
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const response = (bytes) => ({ ok: true, status: 200, arrayBuffer: async () => bytes });
@@ -34,10 +34,39 @@ function csv({ sourceHash, outputHash, code = "PHASE500001", outputPath = "/card
       "delegated visual truth", "true", "HUMAN_APPROVED",
     ].join(",") + "\n",
     evidence: EVIDENCE_HEADER + [
-      code, "video-phase5-1", "phase500001", ...common, "405", "395", "800", "538", "true",
+      code, "video-phase5-1", "phase500001", common[0], common[1], "", ...common.slice(2), "405", "395", "800", "538", "true",
     ].join(",") + "\n",
   };
 }
+
+test("materializer verifies an exact SAMPLE source without transformation", async () => {
+  const value = await fixture();
+  const sourceHash = sha256(value.source);
+  const decision = DECISION_HEADER + [
+    "PHASE500001", "SAMPLE", "sample:7", URL, sourceHash, URL, sourceHash,
+    "owner_delegated_via_chatgpt", "2026-08-19T10:30:00Z", "phase5f-review-batch-02",
+    "delegated exact sample visual truth", "true", "HUMAN_APPROVED",
+  ].join(",") + "\n";
+  const evidence = EVIDENCE_HEADER + [
+    "PHASE500001", "video-phase5-1", "phase500001", "SAMPLE", "sample:7", "7",
+    URL, sourceHash, URL, sourceHash, "", "", "800", "538", "true",
+  ].join(",") + "\n";
+  try {
+    const inputs = await writeInputs(value.directory, { decision, evidence });
+    const result = await materializePhase5ReviewedAssets({
+      ...inputs,
+      repositoryRoot: value.directory,
+      fetchImpl: async () => response(value.source),
+      write: true,
+    });
+    assert.equal(result.sample_verified_total, 1);
+    assert.equal(result.transformed_total, 0);
+    assert.equal(result.created_total, 0);
+    assert.equal(result.results[0].source_id, "sample:7");
+  } finally {
+    await fs.rm(value.directory, { recursive: true, force: true });
+  }
+});
 
 async function writeInputs(directory, value) {
   const decisionFilePath = path.join(directory, "reviewed.csv");

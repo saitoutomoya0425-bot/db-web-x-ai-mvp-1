@@ -150,9 +150,11 @@ export async function materializePhase5ReviewedAssets({
     if (!SHA256.test(sourceHash) || !SHA256.test(outputHash)) {
       throw new Error(`${context}:HASH_CONTRACT`);
     }
-    if (mode === "PACKAGE_FULL") {
+    if (mode === "PACKAGE_FULL" || mode === "SAMPLE") {
+      const sampleMatch = /^sample:([1-9]\d*)$/.exec(sourceId);
       if (
-        sourceId !== "dvd:full"
+        (mode === "PACKAGE_FULL" ? sourceId !== "dvd:full" : !sampleMatch)
+        || (mode === "SAMPLE" && integer(row.sample_index, `${context}:SAMPLE_INDEX`) !== Number(sampleMatch?.[1]))
         || sourcePath !== outputPath
         || sourceHash !== outputHash
         || row.crop_left !== ""
@@ -204,8 +206,9 @@ export async function materializePhase5ReviewedAssets({
   }
   return Object.freeze({
     input_total: decisions.length,
-    transformed_total: results.filter((row) => row.mode !== "PACKAGE_FULL").length,
+    transformed_total: results.filter((row) => row.mode === "PACKAGE_RIGHT" || row.mode === "PACKAGE_CENTER").length,
     full_verified_total: results.filter((row) => row.mode === "PACKAGE_FULL").length,
+    sample_verified_total: results.filter((row) => row.mode === "SAMPLE").length,
     created_total: results.filter((row) => row.state === "created").length,
     reused_total: results.filter((row) => row.state === "reused").length,
     fetched_unique_total: downloadCache.size,
