@@ -87,11 +87,11 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 0);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 134);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 30);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 0,
-    eligible_total: 0,
+    input_total: 30,
+    eligible_total: 30,
     ignored_apply_false: 0,
   });
 });
@@ -321,11 +321,11 @@ test("READY decisions use one mode-level object-fit contract", () => {
   );
   assert.deepEqual(counts, {
     "SAMPLE|scale-down": 27,
-    "PACKAGE_RIGHT|cover": 33,
-    "PACKAGE_FULL|contain": 9,
+    "PACKAGE_RIGHT|cover": 43,
+    "PACKAGE_FULL|contain": 14,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
-    "PACKAGE_CENTER|cover": 5,
+    "PACKAGE_CENTER|cover": 20,
   });
 });
 

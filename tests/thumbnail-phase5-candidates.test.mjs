@@ -196,8 +196,8 @@ test("Phase 5 consumes the V3 decision gate as its single classification truth",
 test("apply=false reviewed rows cannot enter the generated Phase 5 registry", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "phase5-reviewed-"));
   const file = path.join(directory, "reviewed.csv");
-  const header = "code,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,approved_by,approved_at,approval_batch,reason,apply,review_status\n";
-  const pending = `PHASE500001,SAMPLE,sample:1,https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-1.jpg,${HASH_A},https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-1.jpg,${HASH_A},,,,,false,PENDING_REVIEW\n`;
+  const header = "code,video_id,external_product_id,mode,source_id,source_path_or_url,source_hash,output_path_or_url,output_hash,crop_left,crop_width,source_width,source_height,approved_by,approved_at,approval_batch,reason,apply,review_status\n";
+  const pending = `PHASE500001,video-phase5-1,phase500001,SAMPLE,sample:1,https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-1.jpg,${HASH_A},https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-1.jpg,${HASH_A},,,800,450,,,,false,PENDING_REVIEW\n`;
   try {
     await fs.writeFile(file, header + pending);
     const result = await generatePhase5ReviewedSource({ decisionFilePath: file });
@@ -239,7 +239,7 @@ test("stratified canary is fixed at 10 SAMPLE 10 RIGHT 5 CENTER 5 FULL", () => {
 });
 
 test("production registry and ten no-change controls remain unchanged", () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 104);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 134);
   const canonical = [
     ["1START00590", "SAMPLE", "sample:1"],
     ["1SBP00423", "SCENE_FULL", "scene:pl"],
