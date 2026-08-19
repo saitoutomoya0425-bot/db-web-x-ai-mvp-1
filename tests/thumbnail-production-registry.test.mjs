@@ -88,11 +88,11 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 453);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 349);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 796);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 692);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 349,
-    eligible_total: 349,
+    input_total: 692,
+    eligible_total: 692,
     ignored_apply_false: 0,
   });
 });
@@ -187,6 +187,57 @@ test("Phase 5 batch 03 appends only 203 delegated visual approvals and preserves
       assert.equal(record.mode, "PACKAGE_CENTER", record.code);
       assert.equal(record.source_id, "dvd:center", record.code);
       assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-center.jpg`, record.code);
+    }
+  }
+});
+
+test("Phase 5 batch 04 appends exactly 343 visual approvals and preserves the existing 349 decisions byte-for-byte", async () => {
+  const source = await readFile("data/thumbnail-phase5-reviewed-decisions.csv", "utf8");
+  const lines = source.split("\n");
+  const preservedPrefix = `${lines.slice(0, 350).join("\n")}\n`;
+  assert.equal(
+    crypto.createHash("sha256").update(preservedPrefix).digest("hex"),
+    "14412b120621dce63970b16c1bb9f60f9c5774a532d47f21d67f18ce1f69f4b1",
+  );
+  const batch04 = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5f-review-batch-04",
+  );
+  assert.equal(batch04.length, 343);
+  assert.equal(new Set(batch04.map((record) => record.code)).size, 343);
+  assert.deepEqual(
+    batch04.reduce((counts, record) => {
+      counts[record.mode] = (counts[record.mode] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { PACKAGE_CENTER: 5, PACKAGE_FULL: 2, PACKAGE_RIGHT: 323, SAMPLE: 13 },
+  );
+  for (const record of batch04) {
+    assert.equal(record.approved_by, "owner_delegated_via_chatgpt", record.code);
+    assert.equal(record.approval_batch, "phase5f-review-batch-04", record.code);
+    assert.match(record.reason, /owner delegated proxy approval via ChatGPT/, record.code);
+    assert.match(record.reason, /not an auto-safe classification/, record.code);
+    const effective = getProductionThumbnailDecision(record.code);
+    assert.equal(effective?.approval_status, "HUMAN_APPROVED", record.code);
+    assert.equal(effective?.render_status, "READY", record.code);
+    assert.equal(effective?.mode, record.mode, record.code);
+    assert.equal(effective?.source_id, record.source_id, record.code);
+    assert.equal(effective?.output_path_or_url, record.output_path_or_url, record.code);
+    if (record.mode === "SAMPLE") {
+      const index = /^sample:([1-9]\d*)$/.exec(record.source_id)?.[1];
+      assert.ok(index, record.code);
+      assert.match(record.source_path_or_url, new RegExp(`jp-${index}\\.jpg$`, "i"), record.code);
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    } else if (record.mode === "PACKAGE_FULL") {
+      assert.equal(record.source_id, "dvd:full", record.code);
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    } else {
+      const suffix = record.mode === "PACKAGE_RIGHT" ? "right" : "center";
+      assert.equal(record.source_id, `dvd:${suffix}`, record.code);
+      assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-${suffix}.jpg`, record.code);
+      const bytes = await readFile(`public${record.output_path_or_url}`);
+      assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), record.output_hash, record.code);
     }
   }
 });
@@ -415,12 +466,12 @@ test("READY decisions use one mode-level object-fit contract", () => {
     {},
   );
   assert.deepEqual(counts, {
-    "SAMPLE|scale-down": 45,
-    "PACKAGE_RIGHT|cover": 320,
-    "PACKAGE_FULL|contain": 31,
+    "SAMPLE|scale-down": 58,
+    "PACKAGE_RIGHT|cover": 643,
+    "PACKAGE_FULL|contain": 33,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
-    "PACKAGE_CENTER|cover": 27,
+    "PACKAGE_CENTER|cover": 32,
   });
 });
 
