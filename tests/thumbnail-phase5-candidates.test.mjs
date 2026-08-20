@@ -239,7 +239,7 @@ test("stratified canary is fixed at 10 SAMPLE 10 RIGHT 5 CENTER 5 FULL", () => {
 });
 
 test("production registry grows only by reviewed records and ten no-change controls remain unchanged", () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 796);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 1382);
   const canonical = [
     ["1START00590", "SAMPLE", "sample:1"],
     ["1SBP00423", "SCENE_FULL", "scene:pl"],
