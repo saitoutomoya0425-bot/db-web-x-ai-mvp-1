@@ -88,11 +88,11 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 1382);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 1278);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2014);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 1910);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 1278,
-    eligible_total: 1278,
+    input_total: 1910,
+    eligible_total: 1910,
     ignored_apply_false: 0,
   });
 });
@@ -294,6 +294,72 @@ test("Phase 5 batch 05 appends exactly 586 delegated visual approvals and preser
       assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), record.output_hash, record.code);
     }
   }
+});
+
+test("Phase 5 final review appends exactly 632 delegated approvals and preserves all prior Phase 5 decisions byte-for-byte", async () => {
+  const source = await readFile("data/thumbnail-phase5-reviewed-decisions.csv", "utf8");
+  const lines = source.split("\n");
+  const preservedPrefix = `${lines.slice(0, 1279).join("\n")}\n`;
+  assert.equal(
+    crypto.createHash("sha256").update(preservedPrefix).digest("hex"),
+    "9b3ce7aa8ae1972c7943a523651820df46e1e9b5632d830571d5ae987ed032ec",
+  );
+  const finalReview = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5f-review-final",
+  );
+  assert.equal(finalReview.length, 632);
+  assert.equal(new Set(finalReview.map((record) => record.code)).size, 632);
+  assert.deepEqual(
+    finalReview.reduce((counts, record) => {
+      counts[record.mode] = (counts[record.mode] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { PACKAGE_RIGHT: 533, SAMPLE: 99 },
+  );
+  for (const record of finalReview) {
+    assert.equal(record.approved_by, "owner_delegated_via_chatgpt", record.code);
+    assert.equal(record.approval_batch, "phase5f-review-final", record.code);
+    assert.match(record.reason, /owner delegated proxy approval via ChatGPT/, record.code);
+    assert.match(record.reason, /not an auto-safe classification/, record.code);
+    const effective = getProductionThumbnailDecision(record.code);
+    assert.equal(effective?.approval_status, "HUMAN_APPROVED", record.code);
+    assert.equal(effective?.render_status, "READY", record.code);
+    assert.equal(effective?.mode, record.mode, record.code);
+    assert.equal(effective?.source_id, record.source_id, record.code);
+    assert.equal(effective?.source_path_or_url, record.source_path_or_url, record.code);
+    assert.equal(effective?.source_hash, record.source_hash, record.code);
+    assert.equal(effective?.output_path_or_url, record.output_path_or_url, record.code);
+    assert.equal(effective?.output_hash, record.output_hash, record.code);
+    if (record.mode === "SAMPLE") {
+      const index = /^sample:([1-9]\d*)$/.exec(record.source_id)?.[1];
+      assert.ok(index, record.code);
+      assert.match(record.source_path_or_url, new RegExp(`jp-${index}\\.jpg$`, "i"), record.code);
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    } else {
+      assert.equal(record.mode, "PACKAGE_RIGHT", record.code);
+      assert.equal(record.source_id, "dvd:right", record.code);
+      assert.equal(record.output_path_or_url, `/card-thumbnails/${record.code}-auto-right.jpg`, record.code);
+      const bytes = await readFile(`public${record.output_path_or_url}`);
+      assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), record.output_hash, record.code);
+    }
+    const surfaces = ["list", "search", "detail", "related", "recently-viewed"].map(() =>
+      resolveThumbnailPresentation({
+        code: record.code,
+        legacy_runtime_override: null,
+        legacy_card_url: "https://pics.dmm.co.jp/stale.jpg",
+        legacy_thumbnail_url: "https://pics.dmm.co.jp/stale.jpg",
+      })
+    );
+    for (const resolution of surfaces) {
+      assert.equal(resolution.resolution_kind, "CANONICAL", record.code);
+      assert.equal(resolution.resolved_url, record.output_path_or_url, record.code);
+      assert.equal(resolution.mode, record.mode, record.code);
+      assert.equal(resolution.source_id, record.source_id, record.code);
+    }
+  }
+  assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2014);
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -520,8 +586,8 @@ test("READY decisions use one mode-level object-fit contract", () => {
     {},
   );
   assert.deepEqual(counts, {
-    "SAMPLE|scale-down": 93,
-    "PACKAGE_RIGHT|cover": 1114,
+    "SAMPLE|scale-down": 192,
+    "PACKAGE_RIGHT|cover": 1647,
     "PACKAGE_FULL|contain": 102,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
