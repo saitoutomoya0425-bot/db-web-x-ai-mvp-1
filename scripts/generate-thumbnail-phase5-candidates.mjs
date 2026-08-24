@@ -110,7 +110,7 @@ export async function loadExactHandoff(file, expectedCount) {
     if (seenVideoIds.has(videoId)) throw new Error(`PHASE5_CANDIDATE:HANDOFF_DUPLICATE_VIDEO_ID:${videoId}`);
     seenCodes.add(code);
     seenVideoIds.add(videoId);
-    const rowMembership = text(row.frontier_membership_hash);
+    const rowMembership = text(row.frontier_membership_hash || row.membership_sha);
     if (membership === null) membership = rowMembership;
     if (!rowMembership || rowMembership !== membership) {
       throw new Error(`PHASE5_CANDIDATE:HANDOFF_MEMBERSHIP_MISMATCH:${code}`);

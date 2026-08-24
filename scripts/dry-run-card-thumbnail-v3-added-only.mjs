@@ -16,6 +16,8 @@ let outDir = path.join(root, "tmp", "card-thumbnail-v3-dry-run");
 let cacheDir = path.join(outDir, "cache");
 let reportPath = path.join(outDir, "report.json");
 let summaryPath = path.join(outDir, "summary.json");
+let networkFetchesByUrl = new Map();
+let inFlightImageFetches = new Map();
 
 const MIN_SAMPLE_SHORT_EDGE = 360;
 const MIN_SAMPLE_AREA = 200_000;
@@ -55,7 +57,20 @@ export function configureThumbnailCandidateV3({
   cacheDir = path.resolve(cacheDirectory);
   reportPath = path.join(outDir, "report.json");
   summaryPath = path.join(outDir, "summary.json");
+  networkFetchesByUrl = new Map();
+  inFlightImageFetches = new Map();
   return Object.freeze({ root, outDir, cacheDir, reportPath, summaryPath });
+}
+
+export function getThumbnailCandidateV3FetchStats() {
+  const duplicateNetworkGets = [...networkFetchesByUrl.values()]
+    .reduce((total, count) => total + Math.max(0, count - 1), 0);
+  return Object.freeze({
+    uniqueNetworkGets: networkFetchesByUrl.size,
+    totalNetworkGets: [...networkFetchesByUrl.values()].reduce((total, count) => total + count, 0),
+    duplicateNetworkGets,
+    urls: Object.freeze([...networkFetchesByUrl.keys()]),
+  });
 }
 
 function normalizeUrl(value) {
@@ -103,6 +118,7 @@ async function imageBuffer(url) {
     }
   }
   const file = cachePathForUrl(url);
+  const missing = `${file}.missing`;
   await fs.mkdir(cacheDir, { recursive: true });
   try {
     return await fs.readFile(file);
@@ -110,17 +126,37 @@ async function imageBuffer(url) {
     // fetch below
   }
   try {
-    const response = await fetch(url, {
-      headers: { accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!response.ok) return null;
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.length > 0) await fs.writeFile(file, buffer);
-    return buffer;
-  } catch {
+    await fs.access(missing);
     return null;
+  } catch {
+    // A prior successful cache entry or first request continues below.
   }
+  if (!inFlightImageFetches.has(url)) {
+    inFlightImageFetches.set(url, (async () => {
+      networkFetchesByUrl.set(url, (networkFetchesByUrl.get(url) ?? 0) + 1);
+      try {
+        const response = await fetch(url, {
+          headers: { accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
+          signal: AbortSignal.timeout(20_000),
+        });
+        if (!response.ok) {
+          await fs.writeFile(missing, `${response.status}\n`);
+          return null;
+        }
+        const buffer = Buffer.from(await response.arrayBuffer());
+        if (buffer.length > 0) {
+          await fs.writeFile(file, buffer);
+          return buffer;
+        }
+        await fs.writeFile(missing, "empty\n");
+        return null;
+      } catch (error) {
+        await fs.writeFile(missing, `${error?.name ?? "fetch_error"}\n`);
+        return null;
+      }
+    })());
+  }
+  return inFlightImageFetches.get(url);
 }
 
 async function imageMetaFromBuffer(buffer) {
@@ -510,11 +546,19 @@ function deduplicatedSampleEntries(sampleImages, preferSmallSampleProxy) {
   }).sort((left, right) => left.index - right.index);
 }
 
+export function deduplicatedSampleSourceIndices(sampleImages) {
+  const normalized = Array.isArray(sampleImages)
+    ? sampleImages.map(normalizeUrl).filter((url) => url && isOfficialImage(url))
+    : [];
+  return Object.freeze(deduplicatedSampleEntries(normalized, false).map((entry) => entry.index + 1));
+}
+
 export async function decideThumbnailCandidateV3(video, {
   deduplicateSamplePairs = false,
   preferSmallSampleProxy = false,
   sampleConcurrency = 1,
   candidateLimit = 12,
+  sampleIndices = null,
 } = {}) {
   const sampleImages = Array.isArray(video.sample_images)
     ? video.sample_images.map(normalizeUrl).filter((url) => url && isOfficialImage(url))
@@ -570,9 +614,19 @@ export async function decideThumbnailCandidateV3(video, {
   const sampleEntries = deduplicateSamplePairs
     ? deduplicatedSampleEntries(sampleImages, preferSmallSampleProxy)
     : sampleImages.map((url, index) => ({ index, url, analysisUrl: url, analysisProxy: false }));
+  const selectedSampleIndices = sampleIndices === null
+    ? null
+    : new Set(sampleIndices.map((value) => Number(value)));
+  if (selectedSampleIndices && [...selectedSampleIndices].some((value) =>
+    !Number.isInteger(value) || value < 1 || value > sampleImages.length)) {
+    throw new Error(`THUMBNAIL_V3_INVALID_SAMPLE_INDEX:${video.product_code}`);
+  }
+  const selectedSampleEntries = selectedSampleIndices
+    ? sampleEntries.filter((entry) => selectedSampleIndices.has(entry.index + 1))
+    : sampleEntries;
   const concurrency = Math.max(1, Math.min(4, Math.trunc(sampleConcurrency)));
-  for (let offset = 0; offset < sampleEntries.length; offset += concurrency) {
-    const batch = sampleEntries.slice(offset, offset + concurrency);
+  for (let offset = 0; offset < selectedSampleEntries.length; offset += concurrency) {
+    const batch = selectedSampleEntries.slice(offset, offset + concurrency);
     const samples = await Promise.all(batch.map(({ index, url, analysisUrl, analysisProxy }) =>
       analyzeCandidate({
         type: "sample",

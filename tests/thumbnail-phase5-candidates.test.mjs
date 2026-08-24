@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import sharp from "sharp";
 import { generatePhase5ReviewedSource } from "../scripts/generate-thumbnail-phase5-reviewed-decisions.mjs";
 import {
   buildPhase5CandidateRecord,
@@ -21,6 +22,17 @@ import {
   loadExactHandoff,
   validateExactScopeRows,
 } from "../scripts/generate-thumbnail-phase5-candidates.mjs";
+import {
+  configureThumbnailCandidateV3,
+  deduplicatedSampleSourceIndices,
+  decideThumbnailCandidateV3,
+  getThumbnailCandidateV3FetchStats,
+} from "../scripts/dry-run-card-thumbnail-v3-added-only.mjs";
+import {
+  selectAdaptiveStageCodes,
+  selectEvenlyDistributedIndices,
+  selectInterleavedIndices,
+} from "../scripts/review-thumbnail-scoped-adaptive.mjs";
 import { PHASE4B_LEGACY_THUMBNAIL_DECISIONS } from "../src/lib/thumbnail/phase4b-legacy-registry.ts";
 import {
   getProductionThumbnailDecision,
@@ -92,6 +104,103 @@ test("exact handoff is fail-closed for count, duplicates, missing fields, and me
     await fs.writeFile(file, `${header}PHASE500001,video-1,phase500001,${membership}\nPHASE500002,video-2,phase500002,${"7".repeat(64)}\n`);
     await assert.rejects(() => loadExactHandoff(file, 2), /HANDOFF_MEMBERSHIP_MISMATCH/);
   } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("exact handoff accepts the durable frontier membership_sha field", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "phase5-handoff-membership-sha-"));
+  const file = path.join(directory, "handoff.csv");
+  try {
+    await fs.writeFile(
+      file,
+      `product_code,video_id,external_product_id,membership_sha\nPHASE500001,video-1,phase500001,${membership}\n`,
+    );
+    const rows = await loadExactHandoff(file, 1);
+    assert.equal(rows[0].membership_sha, membership);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("adaptive sample indices are deterministic, distributed, and interleaved", () => {
+  const stage1 = selectEvenlyDistributedIndices(40, 8);
+  const stage2 = selectInterleavedIndices(40, stage1, 8);
+  assert.equal(stage1.length, 8);
+  assert.equal(stage1[0], 1);
+  assert.equal(stage1.at(-1), 40);
+  assert.equal(stage2.length, 8);
+  assert.equal(new Set([...stage1, ...stage2]).size, 16);
+  assert.deepEqual(selectEvenlyDistributedIndices(3, 8), [1, 2, 3]);
+  assert.deepEqual(selectEvenlyDistributedIndices(0, 8), []);
+  assert.deepEqual(deduplicatedSampleSourceIndices([
+    "https://pics.dmm.co.jp/digital/video/phase500001/phase500001-1.jpg",
+    "https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-1.jpg",
+    "https://pics.dmm.co.jp/digital/video/phase500001/phase500001-2.jpg",
+    "https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-2.jpg",
+  ]), [2, 4]);
+});
+
+test("adaptive Stage 2 and Stage 3 select only explicitly escalated works", () => {
+  const allCodes = ["CLEAR", "PACKAGE_WINS", "COMPETITIVE"];
+  const stage2Classifications = {
+    CLEAR: "SAMPLE_CLEARLY_NONCOMPETITIVE",
+    PACKAGE_WINS: "SAMPLE_POTENTIALLY_COMPETITIVE",
+    COMPETITIVE: "SAMPLE_POTENTIALLY_COMPETITIVE",
+  };
+  assert.deepEqual(selectAdaptiveStageCodes({
+    stage: 2,
+    allCodes,
+    classifications: stage2Classifications,
+  }), ["PACKAGE_WINS", "COMPETITIVE"]);
+  const works = {
+    CLEAR: { stage2_classification: "SAMPLE_CLEARLY_NONCOMPETITIVE" },
+    PACKAGE_WINS: { stage2_classification: "SAMPLE_POTENTIALLY_COMPETITIVE" },
+    COMPETITIVE: { stage2_classification: "SAMPLE_POTENTIALLY_COMPETITIVE" },
+  };
+  assert.deepEqual(selectAdaptiveStageCodes({
+    stage: 3,
+    allCodes,
+    works,
+    classifications: {
+      PACKAGE_WINS: "PACKAGE_CLEAR_WIN",
+      COMPETITIVE: "SAMPLE_STILL_COMPETITIVE",
+    },
+  }), ["COMPETITIVE"]);
+});
+
+test("V3 scoped samples retain original sample:N and one network GET per URL", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "phase5-adaptive-v3-"));
+  const originalFetch = globalThis.fetch;
+  const image = await sharp({
+    create: { width: 800, height: 600, channels: 3, background: { r: 120, g: 80, b: 160 } },
+  }).jpeg().toBuffer();
+  globalThis.fetch = async () => new Response(image, { status: 200, headers: { "content-type": "image/jpeg" } });
+  try {
+    configureThumbnailCandidateV3({ repositoryRoot: directory, outputDirectory: directory, cacheDirectory: path.join(directory, "cache") });
+    const scopedVideo = video({
+      thumbnail_url: "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg",
+      sample_images: [1, 2, 3, 4].map((index) => `https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-${index}.jpg`),
+    });
+    const first = await decideThumbnailCandidateV3(scopedVideo, {
+      deduplicateSamplePairs: true,
+      candidateLimit: null,
+      sampleIndices: [2, 4],
+    });
+    assert.deepEqual(
+      first.candidates.filter((candidate) => candidate.type === "sample").map((candidate) => candidate.sampleIndex).sort(),
+      [2, 4],
+    );
+    assert.equal(getThumbnailCandidateV3FetchStats().totalNetworkGets, 3);
+    await decideThumbnailCandidateV3(scopedVideo, {
+      deduplicateSamplePairs: true,
+      candidateLimit: null,
+      sampleIndices: [2, 4],
+    });
+    assert.equal(getThumbnailCandidateV3FetchStats().totalNetworkGets, 3);
+    assert.equal(getThumbnailCandidateV3FetchStats().duplicateNetworkGets, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
@@ -318,7 +427,7 @@ test("stratified canary is fixed at 10 SAMPLE 10 RIGHT 5 CENTER 5 FULL", () => {
 });
 
 test("production registry grows only by reviewed records and ten no-change controls remain unchanged", () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2166);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2250);
   const canonical = [
     ["1START00590", "SAMPLE", "sample:1"],
     ["1SBP00423", "SCENE_FULL", "scene:pl"],
