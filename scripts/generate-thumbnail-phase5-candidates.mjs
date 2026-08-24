@@ -42,6 +42,8 @@ const CONTROL_CODES = Object.freeze([
 
 const text = (value) => typeof value === "string" && value.trim() ? value.trim() : "";
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
+const HANDOFF_FIELDS = Object.freeze(["product_code", "video_id"]);
+const SCOPED_QUERY_CHUNK_SIZE = 50;
 
 async function atomicWrite(file, contents) {
   await fs.mkdir(path.dirname(file), { recursive: true });
@@ -64,9 +66,108 @@ async function fetchAll(db, table, select, configure = (query) => query) {
   return rows;
 }
 
+export async function fetchRowsByExactValues(
+  db,
+  { table, select, column, values, chunkSize = SCOPED_QUERY_CHUNK_SIZE },
+) {
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new Error(`PHASE5_CANDIDATE:${table}:EMPTY_EXACT_SCOPE`);
+  }
+  const rows = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    const chunk = values.slice(index, index + chunkSize);
+    const { data, error } = await db.from(table).select(select).in(column, chunk);
+    if (error) throw new Error(`${table}:${error.message}`);
+    rows.push(...(data ?? []));
+  }
+  return rows;
+}
+
 function canonicalCode(value) {
   const result = canonicalizeProductCodeValue(value);
   return result.canonical && !result.rejected ? result.canonical : text(value).toUpperCase();
+}
+
+export async function loadExactHandoff(file, expectedCount) {
+  const contents = await fs.readFile(file, "utf8");
+  const rows = parseCsv(contents);
+  if (rows.length !== expectedCount) {
+    throw new Error(`PHASE5_CANDIDATE:HANDOFF_COUNT_MISMATCH:${rows.length}:${expectedCount}`);
+  }
+  const seenCodes = new Set();
+  const seenVideoIds = new Set();
+  let membership = null;
+  return Object.freeze(rows.map((row, index) => {
+    for (const field of HANDOFF_FIELDS) {
+      if (!text(row[field])) throw new Error(`PHASE5_CANDIDATE:HANDOFF_MISSING_${field.toUpperCase()}:${index + 1}`);
+    }
+    const code = canonicalCode(row.product_code);
+    const videoId = text(row.video_id);
+    if (code !== text(row.product_code)) {
+      throw new Error(`PHASE5_CANDIDATE:HANDOFF_NONCANONICAL_CODE:${row.product_code}`);
+    }
+    if (seenCodes.has(code)) throw new Error(`PHASE5_CANDIDATE:HANDOFF_DUPLICATE_CODE:${code}`);
+    if (seenVideoIds.has(videoId)) throw new Error(`PHASE5_CANDIDATE:HANDOFF_DUPLICATE_VIDEO_ID:${videoId}`);
+    seenCodes.add(code);
+    seenVideoIds.add(videoId);
+    const rowMembership = text(row.frontier_membership_hash);
+    if (membership === null) membership = rowMembership;
+    if (!rowMembership || rowMembership !== membership) {
+      throw new Error(`PHASE5_CANDIDATE:HANDOFF_MEMBERSHIP_MISMATCH:${code}`);
+    }
+    return Object.freeze({ ...row, product_code: code, video_id: videoId });
+  }));
+}
+
+export function validateExactScopeRows(handoffRows, videos, sourceProducts) {
+  const videosById = new Map();
+  for (const video of videos) {
+    if (!video?.id || videosById.has(video.id)) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_VIDEO_DUPLICATE:${video?.id ?? "missing"}`);
+    }
+    videosById.set(video.id, video);
+  }
+  const sourcesByVideoId = new Map();
+  for (const source of sourceProducts) {
+    if (!source?.promoted_video_id || sourcesByVideoId.has(source.promoted_video_id)) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_SOURCE_DUPLICATE:${source?.promoted_video_id ?? "missing"}`);
+    }
+    sourcesByVideoId.set(source.promoted_video_id, source);
+  }
+  if (videosById.size !== handoffRows.length) {
+    throw new Error(`PHASE5_CANDIDATE:SCOPED_VIDEO_COUNT_MISMATCH:${videosById.size}:${handoffRows.length}`);
+  }
+  if (sourcesByVideoId.size !== handoffRows.length) {
+    throw new Error(`PHASE5_CANDIDATE:SCOPED_SOURCE_COUNT_MISMATCH:${sourcesByVideoId.size}:${handoffRows.length}`);
+  }
+  const orderedVideos = [];
+  for (const handoff of handoffRows) {
+    const video = videosById.get(handoff.video_id);
+    const source = sourcesByVideoId.get(handoff.video_id);
+    if (!video) throw new Error(`PHASE5_CANDIDATE:SCOPED_VIDEO_MISSING:${handoff.product_code}`);
+    if (!source) throw new Error(`PHASE5_CANDIDATE:SCOPED_SOURCE_MISSING:${handoff.product_code}`);
+    if (canonicalCode(video.product_code) !== handoff.product_code) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_VIDEO_CODE_MISMATCH:${handoff.product_code}`);
+    }
+    if (!video.is_published || !text(video.source_name).toUpperCase().includes("FANZA")) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_VIDEO_NOT_PUBLISHED_FANZA:${handoff.product_code}`);
+    }
+    if (text(source.promoted_video_id) !== handoff.video_id) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_SOURCE_VIDEO_MISMATCH:${handoff.product_code}`);
+    }
+    const sourceCodes = new Set([
+      canonicalCode(source.normalized_product_code),
+      canonicalCode(source.external_product_id),
+    ].filter(Boolean));
+    if (!sourceCodes.has(handoff.product_code)) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_SOURCE_CODE_MISMATCH:${handoff.product_code}`);
+    }
+    if (text(handoff.external_product_id) && text(source.external_product_id) !== text(handoff.external_product_id)) {
+      throw new Error(`PHASE5_CANDIDATE:SCOPED_SOURCE_EXTERNAL_ID_MISMATCH:${handoff.product_code}`);
+    }
+    orderedVideos.push(video);
+  }
+  return Object.freeze(orderedVideos);
 }
 
 function parseArguments(args) {
@@ -78,6 +179,7 @@ function parseArguments(args) {
     allowDynamicCount: false,
     resume: true,
     limit: null,
+    handoffFile: null,
   };
   for (let index = 0; index < args.length; index += 1) {
     const value = args[index];
@@ -87,6 +189,7 @@ function parseArguments(args) {
     else if (value === "--allow-dynamic-count") options.allowDynamicCount = true;
     else if (value === "--no-resume") options.resume = false;
     else if (value === "--limit") options.limit = Number(args[++index]);
+    else if (value === "--handoff-file") options.handoffFile = path.resolve(args[++index]);
     else throw new Error(`PHASE5_CANDIDATE:UNKNOWN_ARGUMENT:${value}`);
   }
   if (!Number.isInteger(options.expectedCount) || options.expectedCount < 1) {
@@ -94,6 +197,9 @@ function parseArguments(args) {
   }
   if (options.limit !== null && (!Number.isInteger(options.limit) || options.limit < 1)) {
     throw new Error("PHASE5_CANDIDATE:INVALID_LIMIT");
+  }
+  if (options.handoffFile && options.limit !== null) {
+    throw new Error("PHASE5_CANDIDATE:HANDOFF_LIMIT_FORBIDDEN");
   }
   return options;
 }
@@ -225,6 +331,9 @@ function controlSnapshot(videosByCode) {
 
 export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) {
   const options = parseArguments(args);
+  const exactHandoff = options.handoffFile
+    ? await loadExactHandoff(options.handoffFile, options.expectedCount)
+    : null;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) throw new Error("PHASE5_CANDIDATE:SUPABASE_ENV_MISSING");
@@ -241,21 +350,42 @@ export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) 
   const db = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const [videos, sourceProducts, protectedCodes] = await Promise.all([
-    fetchAll(
-      db,
-      "videos",
-      "id,product_code,title,maker_name,series_name,label_name,genre,thumbnail_url,card_thumbnail_url,sample_images,is_published,source_name,external_product_id,created_at,source_checked_at",
-      (query) => query.eq("is_published", true).order("id", { ascending: true }),
-    ),
-    fetchAll(
-      db,
-      "source_products",
-      "id,external_product_id,normalized_product_code,normalized_data,import_job_id,promoted_video_id,created_at",
-      (query) => query.order("id", { ascending: true }),
-    ),
-    readProtectedCodes(),
-  ]);
+  const videoSelect = "id,product_code,title,maker_name,series_name,label_name,genre,thumbnail_url,card_thumbnail_url,sample_images,is_published,source_name,external_product_id,created_at,source_checked_at";
+  const sourceSelect = "id,external_product_id,normalized_product_code,normalized_data,import_job_id,promoted_video_id,created_at";
+  const [rawVideos, sourceProducts, protectedCodes] = exactHandoff
+    ? await Promise.all([
+      fetchRowsByExactValues(db, {
+        table: "videos",
+        select: videoSelect,
+        column: "id",
+        values: exactHandoff.map((row) => row.video_id),
+      }),
+      fetchRowsByExactValues(db, {
+        table: "source_products",
+        select: sourceSelect,
+        column: "promoted_video_id",
+        values: exactHandoff.map((row) => row.video_id),
+      }),
+      readProtectedCodes(),
+    ])
+    : await Promise.all([
+      fetchAll(
+        db,
+        "videos",
+        videoSelect,
+        (query) => query.eq("is_published", true).order("id", { ascending: true }),
+      ),
+      fetchAll(
+        db,
+        "source_products",
+        sourceSelect,
+        (query) => query.order("id", { ascending: true }),
+      ),
+      readProtectedCodes(),
+    ]);
+  const videos = exactHandoff
+    ? validateExactScopeRows(exactHandoff, rawVideos, sourceProducts)
+    : rawVideos;
   const sourceByPromotedVideo = new Map();
   const sourceByCode = new Map();
   for (const sourceProduct of sourceProducts) {
@@ -275,10 +405,17 @@ export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) 
     });
   }).sort((left, right) => canonicalCode(left.product_code).localeCompare(canonicalCode(right.product_code), "en"));
 
-  if (!options.allowDynamicCount && cohort.length !== options.expectedCount) {
+  if ((!options.allowDynamicCount || exactHandoff) && cohort.length !== options.expectedCount) {
     throw new Error(`PHASE5_CANDIDATE:COHORT_COUNT_MISMATCH:${cohort.length}:${options.expectedCount}`);
   }
   const selectedCohort = options.limit ? cohort.slice(0, options.limit) : cohort;
+  if (exactHandoff) {
+    const cohortCodes = new Set(cohort.map((video) => canonicalCode(video.product_code)));
+    const excluded = exactHandoff.filter((row) => !cohortCodes.has(row.product_code));
+    if (excluded.length) {
+      throw new Error(`PHASE5_CANDIDATE:HANDOFF_NOT_PENDING:${excluded.map((row) => row.product_code).join(",")}`);
+    }
+  }
   const checkpointPath = path.join(cacheDirectory, "candidate-state.jsonl");
   const checkpoint = options.resume ? await loadCheckpoint(checkpointPath) : new Map();
   if (!options.resume) await fs.rm(checkpointPath, { force: true });
@@ -297,7 +434,7 @@ export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) 
         const v3Row = await decideThumbnailCandidateV3(video, {
           deduplicateSamplePairs: true,
           preferSmallSampleProxy: false,
-          sampleConcurrency: 2,
+          sampleConcurrency: exactHandoff ? 1 : 2,
         });
         const sourceProduct = bestSourceProduct(video, sourceByPromotedVideo, sourceByCode);
         const record = buildPhase5CandidateRecord({ video, sourceProduct, v3Row });
@@ -321,12 +458,15 @@ export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) 
   }
   const inventory = serializeCandidateCsv(records);
   const canaryCsvSource = canaryCsv(canary);
-  const reviewSource = reviewHtml(canary, detailsByCode);
+  const reviewRecords = exactHandoff ? records : canary;
+  const reviewSource = reviewHtml(reviewRecords, detailsByCode);
   const summary = {
     production_sha: PRODUCTION_SHA,
     generated_at: new Date().toISOString(),
     read_only: true,
-    discovery: "published FANZA + explicit decision absent + not Phase4B protected",
+    discovery: exactHandoff
+      ? "exact handoff product_code + video_id allowlist; published FANZA + explicit decision absent"
+      : "published FANZA + explicit decision absent + not Phase4B protected",
     cohort_total: cohort.length,
     processed_total: selectedCohort.length,
     expected_phase5_total: options.expectedCount,
@@ -335,6 +475,18 @@ export async function runPhase5CandidateGenerator(args = process.argv.slice(2)) 
     canary_sha256: sha256(canaryCsvSource),
     review_html_sha256: sha256(reviewSource),
     summary: candidateSummary(records),
+    exact_scope: exactHandoff ? {
+      enabled: true,
+      handoff_file: options.handoffFile,
+      handoff_rows: exactHandoff.length,
+      unique_product_codes: new Set(exactHandoff.map((row) => row.product_code)).size,
+      unique_video_ids: new Set(exactHandoff.map((row) => row.video_id)).size,
+      frontier_membership_hash: exactHandoff[0]?.frontier_membership_hash ?? null,
+      videos_fetched: videos.length,
+      source_products_fetched: sourceProducts.length,
+      query_chunk_size: SCOPED_QUERY_CHUNK_SIZE,
+      allowlist_excluded_processed: 0,
+    } : { enabled: false },
     canary: {
       total: canary.length,
       by_mode: canary.reduce((counts, record) => {

@@ -16,6 +16,11 @@ import {
   classifyThumbnailCandidate,
   FULL_RIGHT_REVIEW_GAP,
 } from "../scripts/lib/thumbnail-candidate-classification.mjs";
+import {
+  fetchRowsByExactValues,
+  loadExactHandoff,
+  validateExactScopeRows,
+} from "../scripts/generate-thumbnail-phase5-candidates.mjs";
 import { PHASE4B_LEGACY_THUMBNAIL_DECISIONS } from "../src/lib/thumbnail/phase4b-legacy-registry.ts";
 import {
   getProductionThumbnailDecision,
@@ -64,6 +69,80 @@ const row = (candidates, overrides = {}) => ({
   candidates,
   needs_review: false,
   ...overrides,
+});
+
+const membership = "6".repeat(64);
+
+test("exact handoff is fail-closed for count, duplicates, missing fields, and membership", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "phase5-handoff-"));
+  const file = path.join(directory, "handoff.csv");
+  const header = "product_code,video_id,external_product_id,frontier_membership_hash\n";
+  try {
+    await fs.writeFile(file, `${header}PHASE500001,video-1,phase500001,${membership}\nPHASE500002,video-2,phase500002,${membership}\n`);
+    const rows = await loadExactHandoff(file, 2);
+    assert.deepEqual(rows.map((item) => item.product_code), ["PHASE500001", "PHASE500002"]);
+    await assert.rejects(() => loadExactHandoff(file, 3), /HANDOFF_COUNT_MISMATCH/);
+
+    await fs.writeFile(file, `${header}PHASE500001,video-1,phase500001,${membership}\nPHASE500001,video-2,phase500002,${membership}\n`);
+    await assert.rejects(() => loadExactHandoff(file, 2), /HANDOFF_DUPLICATE_CODE/);
+
+    await fs.writeFile(file, `${header}PHASE500001,,phase500001,${membership}\n`);
+    await assert.rejects(() => loadExactHandoff(file, 1), /HANDOFF_MISSING_VIDEO_ID/);
+
+    await fs.writeFile(file, `${header}PHASE500001,video-1,phase500001,${membership}\nPHASE500002,video-2,phase500002,${"7".repeat(64)}\n`);
+    await assert.rejects(() => loadExactHandoff(file, 2), /HANDOFF_MEMBERSHIP_MISMATCH/);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("scoped DB retrieval chunks only exact IDs and never performs a global range", async () => {
+  const calls = [];
+  const db = {
+    from(table) {
+      return {
+        select(select) {
+          return {
+            async in(column, values) {
+              calls.push({ table, select, column, values: [...values] });
+              return { data: values.map((id) => ({ id })), error: null };
+            },
+          };
+        },
+      };
+    },
+  };
+  const rows = await fetchRowsByExactValues(db, {
+    table: "videos",
+    select: "id,product_code",
+    column: "id",
+    values: ["a", "b", "c", "d", "e"],
+    chunkSize: 2,
+  });
+  assert.deepEqual(rows.map((item) => item.id), ["a", "b", "c", "d", "e"]);
+  assert.deepEqual(calls.map((call) => call.values), [["a", "b"], ["c", "d"], ["e"]]);
+  assert.equal(calls.every((call) => call.table === "videos" && call.column === "id"), true);
+});
+
+test("exact scope rejects missing/foreign rows and preserves handoff order", () => {
+  const handoff = [
+    { product_code: "PHASE500002", video_id: "video-2", external_product_id: "phase500002" },
+    { product_code: "PHASE500001", video_id: "video-1", external_product_id: "phase500001" },
+  ];
+  const videos = [
+    video({ id: "video-1", product_code: "PHASE500001", external_product_id: "phase500001" }),
+    video({ id: "video-2", product_code: "PHASE500002", external_product_id: "phase500002" }),
+  ];
+  const sources = [
+    { promoted_video_id: "video-1", normalized_product_code: "PHASE500001", external_product_id: "phase500001" },
+    { promoted_video_id: "video-2", normalized_product_code: "LEGACY_PHASE500002", external_product_id: "phase500002" },
+  ];
+  assert.deepEqual(validateExactScopeRows(handoff, videos, sources).map((item) => item.id), ["video-2", "video-1"]);
+  assert.throws(() => validateExactScopeRows(handoff, videos.slice(0, 1), sources), /SCOPED_VIDEO_COUNT_MISMATCH/);
+  assert.throws(
+    () => validateExactScopeRows(handoff, videos.map((item) => ({ ...item, source_name: "manual" })), sources),
+    /SCOPED_VIDEO_NOT_PUBLISHED_FANZA/,
+  );
 });
 
 test("future FANZA discovery is provenance-based and existing decisions/protections always win", () => {
@@ -239,7 +318,7 @@ test("stratified canary is fixed at 10 SAMPLE 10 RIGHT 5 CENTER 5 FULL", () => {
 });
 
 test("production registry grows only by reviewed records and ten no-change controls remain unchanged", () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 1382);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2166);
   const canonical = [
     ["1START00590", "SAMPLE", "sample:1"],
     ["1SBP00423", "SCENE_FULL", "scene:pl"],
