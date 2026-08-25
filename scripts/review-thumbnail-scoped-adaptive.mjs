@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import {
   configureThumbnailCandidateV3,
-  deduplicatedSampleSourceIndices,
+  deduplicatedSampleSources,
   decideThumbnailCandidateV3,
   getThumbnailCandidateV3FetchStats,
 } from "./dry-run-card-thumbnail-v3-added-only.mjs";
@@ -32,13 +32,15 @@ const canonicalCode = (value) => {
   return result.canonical && !result.rejected ? result.canonical : text(value).toUpperCase();
 };
 
-function parseArgs(args) {
+export function parseAdaptiveReviewArgs(args) {
   const options = {
     handoffFile: null,
     outputDirectory: DEFAULT_OUTPUT,
     cacheDirectory: DEFAULT_CACHE,
     expectedCount: 94,
     stage: 1,
+    stage1Max: 8,
+    stage2Max: 8,
     classifications: null,
   };
   for (let index = 0; index < args.length; index += 1) {
@@ -48,11 +50,16 @@ function parseArgs(args) {
     else if (value === "--cache-dir") options.cacheDirectory = path.resolve(args[++index]);
     else if (value === "--expected-count") options.expectedCount = Number(args[++index]);
     else if (value === "--stage") options.stage = Number(args[++index]);
+    else if (value === "--stage1-max") options.stage1Max = Number(args[++index]);
+    else if (value === "--stage2-max") options.stage2Max = Number(args[++index]);
     else if (value === "--classifications") options.classifications = path.resolve(args[++index]);
     else throw new Error(`PHASE5G_ADAPTIVE:UNKNOWN_ARGUMENT:${value}`);
   }
   if (!options.handoffFile || ![1, 2, 3].includes(options.stage)) {
     throw new Error("PHASE5G_ADAPTIVE:INVALID_ARGUMENTS");
+  }
+  if (![options.stage1Max, options.stage2Max].every((maximum) => Number.isInteger(maximum) && maximum >= 1 && maximum <= 8)) {
+    throw new Error("PHASE5G_ADAPTIVE:INVALID_STAGE_MAX");
   }
   if (options.stage > 1 && !options.classifications) {
     throw new Error("PHASE5G_ADAPTIVE:CLASSIFICATIONS_REQUIRED");
@@ -182,7 +189,12 @@ function reviewHtml(state, codes, cacheDirectory, stage) {
       || (left.sampleIndex ?? 0) - (right.sampleIndex ?? 0));
     return `<article><h2>${html(record.code)} — Stage ${stage}</h2><p>sample ${record.sample_count} / fetched [${record.fetched_sample_indices.join(", ")}] / current ${html(record.v3Row.current_type)}</p><div class="grid">${candidates.map((candidate) => candidateFigure(candidate, record.code, cacheDirectory)).join("\n")}</div><p class="decision">Visual classification: ____________________</p></article>`;
   }).join("\n");
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 5G adaptive Stage ${stage}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f2f2f2;color:#171717;margin:18px}article{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 0 18px;padding:14px}h2{margin:0 0 6px;font-size:17px}.grid{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:9px;overflow-x:auto}figure{margin:0}.frame{aspect-ratio:7/10;background:#ddd;display:flex;align-items:center;justify-content:center;overflow:hidden}.frame img{width:100%;height:100%;object-fit:scale-down}.frame.crop img{object-fit:cover}figcaption{font-size:10px;line-height:1.35;overflow-wrap:anywhere}.decision{font-weight:700}@media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(100px,1fr))}}</style></head><body><h1>Phase 5G exact 94 — Adaptive Stage ${stage}</h1><p>actual cached bytes only; package FULL/RIGHT/CENTER and fetched samples use the same URL cache.</p>${articles}</body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 5G adaptive Stage ${stage}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f2f2f2;color:#171717;margin:18px}article{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 0 18px;padding:14px}h2{margin:0 0 6px;font-size:17px}.grid{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:9px;overflow-x:auto}figure{margin:0}.frame{aspect-ratio:7/10;background:#ddd;display:flex;align-items:center;justify-content:center;overflow:hidden}.frame img{width:100%;height:100%;object-fit:scale-down}.frame.crop img{object-fit:cover}figcaption{font-size:10px;line-height:1.35;overflow-wrap:anywhere}.decision{font-weight:700}@media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(100px,1fr))}}</style></head><body><h1>Phase 5G exact ${state.expected_count} — Adaptive Stage ${stage}</h1><p>actual cached bytes only; package FULL/RIGHT/CENTER and fetched samples use the same URL cache.</p>${articles}</body></html>`;
+}
+
+function chunks(values, maximum = 50) {
+  return Array.from({ length: Math.ceil(values.length / maximum) }, (_, index) =>
+    values.slice(index * maximum, (index + 1) * maximum));
 }
 
 async function directoryStats(directory) {
@@ -235,7 +247,7 @@ async function queryExactScope(handoff) {
 }
 
 export async function runAdaptiveReview(args = process.argv.slice(2)) {
-  const options = parseArgs(args);
+  const options = parseAdaptiveReviewArgs(args);
   await fs.mkdir(options.outputDirectory, { recursive: true });
   await fs.mkdir(options.cacheDirectory, { recursive: true });
   const handoff = await loadExactHandoff(options.handoffFile, options.expectedCount);
@@ -243,7 +255,7 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
   const stateFile = path.join(options.outputDirectory, "adaptive-checkpoint.json");
   const existing = await readJson(stateFile, null);
   const state = existing ?? {
-    phase: "phase5g-5274-6273",
+    phase: path.basename(options.outputDirectory),
     handoff_file: options.handoffFile,
     membership_sha: handoff[0].frontier_membership_hash || handoff[0].membership_sha,
     expected_count: options.expectedCount,
@@ -256,10 +268,12 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
   if (state.expected_count !== options.expectedCount || state.membership_sha !== (handoff[0].frontier_membership_hash || handoff[0].membership_sha)) {
     throw new Error("PHASE5G_ADAPTIVE:CHECKPOINT_SCOPE_MISMATCH");
   }
-  if (options.stage === 1 && state.selection_contract_version !== 2) {
+  if (options.stage === 1 && state.selection_contract_version !== 3) {
     for (const work of Object.values(state.works)) work.stage_completed = 0;
   }
-  state.selection_contract_version = 2;
+  state.selection_contract_version = 3;
+  state.stage1_max = options.stage1Max;
+  state.stage2_max = options.stage2Max;
   if (options.stage > state.completed_stage + 1) throw new Error("PHASE5G_ADAPTIVE:STAGE_ORDER");
   const allCodes = handoff.map((row) => row.product_code);
   let classifications = null;
@@ -278,7 +292,9 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
   for (const code of allCodes) {
     const video = videosByCode.get(code);
     const sampleCount = Array.isArray(video.sample_images) ? video.sample_images.length : 0;
-    const actualSampleIndices = deduplicatedSampleSourceIndices(video.sample_images);
+    const actualSampleSources = deduplicatedSampleSources(video.sample_images);
+    const actualSampleIndices = actualSampleSources.map((entry) => entry.index);
+    const sampleUrlByIndex = new Map(actualSampleSources.map((entry) => [entry.index, entry.url]));
     const prior = state.works[code] ?? { code, sample_count: sampleCount, actual_sample_count: actualSampleIndices.length, fetched_sample_indices: [], stage_completed: 0 };
     prior.actual_sample_count = actualSampleIndices.length;
     if (options.stage === 2) prior.stage1_classification = classifications[code];
@@ -286,26 +302,33 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
       prior.stage2_review_classification = classifications[code];
     }
     if (selectedCodes.includes(code) && prior.stage_completed < options.stage) {
-      const stage1 = selectEvenlyDistributedValues(actualSampleIndices, 8);
-      const stage2 = selectInterleavedValues(actualSampleIndices, stage1, 8);
+      const stage1 = selectEvenlyDistributedValues(actualSampleIndices, options.stage1Max);
+      const stage2 = selectInterleavedValues(actualSampleIndices, stage1, options.stage2Max);
       const indices = options.stage === 1 ? stage1
         : options.stage === 2 ? [...new Set([...stage1, ...stage2])].sort((a, b) => a - b)
           : actualSampleIndices;
       const v3Row = await decideThumbnailCandidateV3(video, {
         deduplicateSamplePairs: true,
         preferSmallSampleProxy: false,
-        sampleConcurrency: 1,
+        sampleConcurrency: 4,
         candidateLimit: null,
         sampleIndices: indices,
       });
-      Object.assign(prior, { fetched_sample_indices: indices, stage_completed: options.stage, v3Row });
+      Object.assign(prior, {
+        fetched_sample_indices: indices,
+        fetched_sample_urls: indices.map((index) => sampleUrlByIndex.get(index)),
+        stage_completed: options.stage,
+        v3Row,
+      });
     } else if (prior.stage_completed < options.stage) {
       prior.stage_completed = options.stage;
     }
     if (options.stage === 2) prior.stage2_classification = classifications[code];
     state.works[code] = prior;
     processed += 1;
-    if (processed % 10 === 0 || processed === allCodes.length) {
+    if (processed % 50 === 0 || processed === allCodes.length) {
+      const checkpointStats = getThumbnailCandidateV3FetchStats();
+      state.fetched_urls = [...new Set([...state.fetched_urls, ...checkpointStats.urls])];
       await atomicWrite(stateFile, `${JSON.stringify(state, null, 2)}\n`);
       process.stdout.write(`${JSON.stringify({ stage: options.stage, processed, total: allCodes.length })}\n`);
     }
@@ -313,17 +336,44 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
   const stats = getThumbnailCandidateV3FetchStats();
   state.fetched_urls = [...new Set([...state.fetched_urls, ...stats.urls])];
   state.completed_stage = Math.max(state.completed_stage, options.stage);
+  const allSampleUrls = new Set(videos.flatMap((video) => deduplicatedSampleSources(video.sample_images).map((entry) => entry.url)));
+  const selectedSampleUrls = new Set(Object.values(state.works).flatMap((work) => work.fetched_sample_urls ?? []));
+  const networkSampleUrls = state.fetched_urls.filter((url) => allSampleUrls.has(url));
+  const networkPackageUrls = state.fetched_urls.filter((url) => !allSampleUrls.has(url));
   state.network = {
     unique_urls_total: state.fetched_urls.length,
-    package_urls: state.fetched_urls.filter((url) => !/jp-?\d+\.jpg$/i.test(new URL(url).pathname)).length,
-    sample_urls: state.fetched_urls.filter((url) => /jp-?\d+\.jpg$/i.test(new URL(url).pathname)).length,
+    package_urls: networkPackageUrls.length,
+    sample_urls: networkSampleUrls.length,
+    selected_sample_indices: Object.values(state.works).reduce((total, work) => total + (work.fetched_sample_indices?.length ?? 0), 0),
+    selected_unique_sample_urls: selectedSampleUrls.size,
+    actual_sample_network_gets: networkSampleUrls.length,
     duplicate_network_gets_current_process: stats.duplicateNetworkGets,
+    successful_network_gets_current_process: stats.successfulNetworkGets,
+    status_429_current_process: stats.status429,
+    unexpected_5xx_current_process: stats.unexpected5xx,
+    timeouts_current_process: stats.timeouts,
+    other_failures_current_process: stats.otherFailures,
+    peak_network_concurrency_current_process: stats.peakNetworkConcurrency,
+    cache_race_current_process: stats.cacheRaceCount,
   };
+  if (options.stage === 1) {
+    const zeroSampleWorks = videos.filter((video) => deduplicatedSampleSources(video.sample_images).length === 0).length;
+    const theoreticalMaximum = (videos.length - zeroSampleWorks) * options.stage1Max;
+    if (state.network.selected_sample_indices > theoreticalMaximum
+      || state.network.selected_unique_sample_urls > theoreticalMaximum
+      || state.network.actual_sample_network_gets > theoreticalMaximum) {
+      throw new Error("PHASE5G_ADAPTIVE:STAGE1_SAMPLE_GET_CAP_EXCEEDED");
+    }
+  }
   state.cache = await directoryStats(options.cacheDirectory);
   const reviewCodes = options.stage === 1 ? allCodes : selectedCodes;
+  const reviewChunks = chunks(reviewCodes, 50);
   await Promise.all([
     atomicWrite(stateFile, `${JSON.stringify(state, null, 2)}\n`),
-    atomicWrite(path.join(options.outputDirectory, `adaptive-review-stage${options.stage}.html`), reviewHtml(state, reviewCodes, options.cacheDirectory, options.stage)),
+    ...reviewChunks.map((codes, index) => atomicWrite(
+      path.join(options.outputDirectory, `review-stage${options.stage}-${String(index + 1).padStart(3, "0")}.html`),
+      reviewHtml(state, codes, options.cacheDirectory, options.stage),
+    )),
     atomicWrite(path.join(options.outputDirectory, `adaptive-fetch-stage${options.stage}-summary.json`), `${JSON.stringify({ stage: options.stage, reviewed_works: reviewCodes.length, selected_codes: selectedCodes, network: state.network, cache: state.cache }, null, 2)}\n`),
   ]);
   process.stdout.write(`${JSON.stringify({ stage: options.stage, exact_scope: allCodes.length, selected: selectedCodes.length, network: state.network, cache: state.cache }, null, 2)}\n`);

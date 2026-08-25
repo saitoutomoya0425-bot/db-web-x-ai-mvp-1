@@ -18,6 +18,16 @@ let reportPath = path.join(outDir, "report.json");
 let summaryPath = path.join(outDir, "summary.json");
 let networkFetchesByUrl = new Map();
 let inFlightImageFetches = new Map();
+const emptyNetworkFetchOutcomes = () => ({
+  ok: 0,
+  status429: 0,
+  unexpected5xx: 0,
+  timeouts: 0,
+  otherFailures: 0,
+  active: 0,
+  peak: 0,
+});
+let networkFetchOutcomes = emptyNetworkFetchOutcomes();
 
 const MIN_SAMPLE_SHORT_EDGE = 360;
 const MIN_SAMPLE_AREA = 200_000;
@@ -59,6 +69,7 @@ export function configureThumbnailCandidateV3({
   summaryPath = path.join(outDir, "summary.json");
   networkFetchesByUrl = new Map();
   inFlightImageFetches = new Map();
+  networkFetchOutcomes = emptyNetworkFetchOutcomes();
   return Object.freeze({ root, outDir, cacheDir, reportPath, summaryPath });
 }
 
@@ -69,6 +80,13 @@ export function getThumbnailCandidateV3FetchStats() {
     uniqueNetworkGets: networkFetchesByUrl.size,
     totalNetworkGets: [...networkFetchesByUrl.values()].reduce((total, count) => total + count, 0),
     duplicateNetworkGets,
+    successfulNetworkGets: networkFetchOutcomes?.ok ?? 0,
+    status429: networkFetchOutcomes?.status429 ?? 0,
+    unexpected5xx: networkFetchOutcomes?.unexpected5xx ?? 0,
+    timeouts: networkFetchOutcomes?.timeouts ?? 0,
+    otherFailures: networkFetchOutcomes?.otherFailures ?? 0,
+    peakNetworkConcurrency: networkFetchOutcomes?.peak ?? 0,
+    cacheRaceCount: duplicateNetworkGets,
     urls: Object.freeze([...networkFetchesByUrl.keys()]),
   });
 }
@@ -134,25 +152,36 @@ async function imageBuffer(url) {
   if (!inFlightImageFetches.has(url)) {
     inFlightImageFetches.set(url, (async () => {
       networkFetchesByUrl.set(url, (networkFetchesByUrl.get(url) ?? 0) + 1);
+      networkFetchOutcomes.active += 1;
+      networkFetchOutcomes.peak = Math.max(networkFetchOutcomes.peak, networkFetchOutcomes.active);
       try {
         const response = await fetch(url, {
           headers: { accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
           signal: AbortSignal.timeout(20_000),
         });
         if (!response.ok) {
+          if (response.status === 429) networkFetchOutcomes.status429 += 1;
+          else if (response.status >= 500) networkFetchOutcomes.unexpected5xx += 1;
+          else networkFetchOutcomes.otherFailures += 1;
           await fs.writeFile(missing, `${response.status}\n`);
           return null;
         }
         const buffer = Buffer.from(await response.arrayBuffer());
         if (buffer.length > 0) {
           await fs.writeFile(file, buffer);
+          networkFetchOutcomes.ok += 1;
           return buffer;
         }
+        networkFetchOutcomes.otherFailures += 1;
         await fs.writeFile(missing, "empty\n");
         return null;
       } catch (error) {
+        if (error?.name === "TimeoutError" || error?.name === "AbortError") networkFetchOutcomes.timeouts += 1;
+        else networkFetchOutcomes.otherFailures += 1;
         await fs.writeFile(missing, `${error?.name ?? "fetch_error"}\n`);
         return null;
+      } finally {
+        networkFetchOutcomes.active -= 1;
       }
     })());
   }
@@ -553,6 +582,16 @@ export function deduplicatedSampleSourceIndices(sampleImages) {
   return Object.freeze(deduplicatedSampleEntries(normalized, false).map((entry) => entry.index + 1));
 }
 
+export function deduplicatedSampleSources(sampleImages) {
+  const normalized = Array.isArray(sampleImages)
+    ? sampleImages.map(normalizeUrl).filter((url) => url && isOfficialImage(url))
+    : [];
+  return Object.freeze(deduplicatedSampleEntries(normalized, false).map((entry) => Object.freeze({
+    index: entry.index + 1,
+    url: entry.url,
+  })));
+}
+
 export async function decideThumbnailCandidateV3(video, {
   deduplicateSamplePairs = false,
   preferSmallSampleProxy = false,
@@ -624,7 +663,7 @@ export async function decideThumbnailCandidateV3(video, {
   const selectedSampleEntries = selectedSampleIndices
     ? sampleEntries.filter((entry) => selectedSampleIndices.has(entry.index + 1))
     : sampleEntries;
-  const concurrency = Math.max(1, Math.min(4, Math.trunc(sampleConcurrency)));
+  const concurrency = Math.max(1, Math.min(6, Math.trunc(sampleConcurrency)));
   for (let offset = 0; offset < selectedSampleEntries.length; offset += concurrency) {
     const batch = selectedSampleEntries.slice(offset, offset + concurrency);
     const samples = await Promise.all(batch.map(({ index, url, analysisUrl, analysisProxy }) =>

@@ -3696,6 +3696,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "1NPH00254: sample:3 is visibly clearer and more representative in the actual 7:10 card frame than the package and other reviewed SAMPLE alternatives. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "1NSBB00035",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1nsbb00035/1nsbb00035jp-1.jpg",
+    "source_hash": "c1f7e5b5647d1f6be101f3016e14dd1e243cd6d9045bab08d93020bd9682a036",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/1nsbb00035/1nsbb00035jp-1.jpg",
+    "output_hash": "c1f7e5b5647d1f6be101f3016e14dd1e243cd6d9045bab08d93020bd9682a036",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for 1NSBB00035: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "1NSBB00036",
     "mode": "PACKAGE_CENTER",
     "state": "RESOLVED",
@@ -4461,6 +4476,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "1SDNM00559: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "1SEVEN00035",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1seven00035/1seven00035jp-1.jpg",
+    "source_hash": "037a078dec85fbce18412c3b03e55285a738acd472e44e65d4f187a4bb36bd63",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/1seven00035/1seven00035jp-1.jpg",
+    "output_hash": "037a078dec85fbce18412c3b03e55285a738acd472e44e65d4f187a4bb36bd63",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for 1SEVEN00035: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "1SGKI00089B",
     "mode": "PACKAGE_FULL",
     "state": "RESOLVED",
@@ -5089,6 +5119,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T19:00:00Z",
     "approval_batch": "phase5f-review-batch-04",
     "reason": "1SVBGR00005: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "1TLDC00057",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1tldc00057/1tldc00057jp-1.jpg",
+    "source_hash": "c1458e7daf240c2fdb68b4e90c8a6b9302a943402a5380d48eb957a7f8b5d5f0",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/1tldc00057/1tldc00057jp-1.jpg",
+    "output_hash": "c1458e7daf240c2fdb68b4e90c8a6b9302a943402a5380d48eb957a7f8b5d5f0",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for 1TLDC00057: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "1TLDC00058",
@@ -6184,6 +6229,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T10:30:00Z",
     "approval_batch": "phase5f-review-batch-02",
     "reason": "PACKAGE_FULL preserves the complete package composition and identifying context; available crops remove important information and sample stills are less representative; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "55TMAVR00283",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/55tmavr00283/55tmavr00283jp-1.jpg",
+    "source_hash": "d60f64989d36d80da1331bc06ea151e9a6e874836ae88ea088698a9729661f1a",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/55tmavr00283/55tmavr00283jp-1.jpg",
+    "output_hash": "d60f64989d36d80da1331bc06ea151e9a6e874836ae88ea088698a9729661f1a",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for 55TMAVR00283: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "55TMAVR00286",
@@ -8091,6 +8151,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Actual-source and 7:10 card previews visually reviewed; PACKAGE_RIGHT preserves the clearest representative subject and title context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "AQUMA00149",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:13",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/aquma00149/aquma00149jp-13.jpg",
+    "source_hash": "30a948ba893559d4a362ef87e9e4952151b1cbfe7c90857b41a3f287c4f563a0",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/aquma00149/aquma00149jp-13.jpg",
+    "output_hash": "30a948ba893559d4a362ef87e9e4952151b1cbfe7c90857b41a3f287c4f563a0",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for AQUMA00149: sample:13 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "AQUMA00152",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -8314,6 +8389,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Actual-source and 7:10 card previews visually reviewed; PACKAGE_RIGHT preserves the clearest representative subject and title context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "ATID00685",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/atid00685/atid00685pl.jpg",
+    "source_hash": "30cccb5467e213bb7e6afb8163a4c84d998db879f8b015f44af44eb9e33d26c8",
+    "output_path_or_url": "/card-thumbnails/ATID00685-auto-right.jpg",
+    "output_hash": "ada19f36c6439903aca6dc5d5ea38ffd2585edc9dca6956fdb5a229f90481e0c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for ATID00685: fetched samples were visually noncompetitive, while the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "ATID00686",
@@ -9109,6 +9199,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "BBTU00118: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "BEBL00055",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:3",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/bebl00055/bebl00055jp-3.jpg",
+    "source_hash": "8e1348cabd2fc0a765978f539fd4cb8ac69819acfba4e5be03716a6cd56fe1dc",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/bebl00055/bebl00055jp-3.jpg",
+    "output_hash": "8e1348cabd2fc0a765978f539fd4cb8ac69819acfba4e5be03716a6cd56fe1dc",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for BEBL00055: sample:3 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "BEBL00061",
@@ -10489,6 +10594,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "CRFV00024: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "CRNX00335",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/crnx00335/crnx00335jp-1.jpg",
+    "source_hash": "632bf59b3c56ffed64d83a85661ceebc5a501917a83bbe7530d275ba34f1cb8b",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/crnx00335/crnx00335jp-1.jpg",
+    "output_hash": "632bf59b3c56ffed64d83a85661ceebc5a501917a83bbe7530d275ba34f1cb8b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for CRNX00335: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "CRNX00336",
@@ -12096,6 +12216,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Actual-source and 7:10 card previews visually reviewed; PACKAGE_RIGHT preserves the clearest representative subject and title context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "DVMM00417",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/dvmm00417/dvmm00417jp-1.jpg",
+    "source_hash": "6d8de5503296e7375aa981699fd9301ccd69444b60572330098e7e86e2cf90e3",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/dvmm00417/dvmm00417jp-1.jpg",
+    "output_hash": "6d8de5503296e7375aa981699fd9301ccd69444b60572330098e7e86e2cf90e3",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for DVMM00417: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "DVMM00426",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -12664,6 +12799,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-24T06:59:10Z",
     "approval_batch": "phase5g-4274-5273",
     "reason": "Phase 5G exact-186 visual review for FCVR00071: the centered package composition preserves the main subject and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "FCVR00075",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/fcvr00075/fcvr00075jp-1.jpg",
+    "source_hash": "ccaa229d631a64280f4cfd36cd136f2111b3fc600fd87073134f4b0e8fa08f08",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/fcvr00075/fcvr00075jp-1.jpg",
+    "output_hash": "ccaa229d631a64280f4cfd36cd136f2111b3fc600fd87073134f4b0e8fa08f08",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for FCVR00075: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "FCVR00076",
@@ -15591,6 +15741,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "H_1650EMBM00053: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_1651Y00404",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1651y00404/h_1651y00404pl.jpg",
+    "source_hash": "9bcd8ad79f22bf801eb47a30c690c32d10f9073b879ac41a8c7b2a4aacabc868",
+    "output_path_or_url": "/card-thumbnails/H_1651Y00404-auto-right.jpg",
+    "output_hash": "73748c08e16cfad3a4e53a5cf6b63dc410bcb79593af5407bf8e4a8b854d191b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for H_1651Y00404: fetched samples were visually noncompetitive, while the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_1651Y00411",
     "mode": "PACKAGE_CENTER",
     "state": "RESOLVED",
@@ -15949,6 +16114,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T19:00:00Z",
     "approval_batch": "phase5f-review-batch-04",
     "reason": "H_1711JKEZ00007: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_1711MAAN01179",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1711maan01179/h_1711maan01179pl.jpg",
+    "source_hash": "3909b4854da6c8311fa6d5e47066f6b40fa23a807e4248842c833299d3abb714",
+    "output_path_or_url": "/card-thumbnails/H_1711MAAN01179-auto-right.jpg",
+    "output_hash": "8cf01cd2e8c611119f8524e2689fe2ff8204ed5d8ed33eec913a7c1c2696396e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for H_1711MAAN01179: fetched samples were visually noncompetitive, while the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "H_1711MAAN01181",
@@ -20811,6 +20991,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "JUVR00298",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/juvr00298/juvr00298jp-1.jpg",
+    "source_hash": "edf26ad97c031bf63fc5a91f0b01aec5442f37524e3f5f38387692673c028ea8",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/juvr00298/juvr00298jp-1.jpg",
+    "output_hash": "edf26ad97c031bf63fc5a91f0b01aec5442f37524e3f5f38387692673c028ea8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for JUVR00298: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "JUVR00301",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -20989,6 +21184,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T19:00:00Z",
     "approval_batch": "phase5f-review-batch-04",
     "reason": "KAM00280: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "KAVR00501",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kavr00501/kavr00501jp-1.jpg",
+    "source_hash": "c87a9edb5a546eebb77dd3647e429f27fd4bcb9634f150e431fe819117b9c01f",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/kavr00501/kavr00501jp-1.jpg",
+    "output_hash": "c87a9edb5a546eebb77dd3647e429f27fd4bcb9634f150e431fe819117b9c01f",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for KAVR00501: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "KAVR00510",
@@ -26556,6 +26766,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PRWF00015: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "PXVR00454",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/pxvr00454/pxvr00454jp-1.jpg",
+    "source_hash": "586828f4628bd33df6349e054e641d39e1b859397a311a9a022d3f46ae2c721c",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/pxvr00454/pxvr00454jp-1.jpg",
+    "output_hash": "586828f4628bd33df6349e054e641d39e1b859397a311a9a022d3f46ae2c721c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for PXVR00454: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "PXVR00464",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -27904,6 +28129,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-24T09:03:16Z",
     "approval_batch": "phase5g-5274-6273",
     "reason": "Phase 5G exact-94 adaptive visual review for SAVR01090: the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SAVR01104",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01104/savr01104jp-1.jpg",
+    "source_hash": "8935e74ef8d35ca9288922bf13c051a35ce511ce367c17e57c8b2098a9693a79",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01104/savr01104jp-1.jpg",
+    "output_hash": "8935e74ef8d35ca9288922bf13c051a35ce511ce367c17e57c8b2098a9693a79",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for SAVR01104: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "SAVR01122",
@@ -30351,6 +30591,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "URMT00008: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "URVRSP00580",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:2",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00580/urvrsp00580jp-2.jpg",
+    "source_hash": "74b8abd0fc3a0ade005501dc7bd6008748eae2e1a8f32f0483c627569a393fe8",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00580/urvrsp00580jp-2.jpg",
+    "output_hash": "74b8abd0fc3a0ade005501dc7bd6008748eae2e1a8f32f0483c627569a393fe8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for URVRSP00580: sample:2 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "URVRSP00586",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00586/urvrsp00586pl.jpg",
+    "source_hash": "8afbf5ecc8558f19e847d32fefa105bb252b6055ec8fe02f5255285abd8f2c98",
+    "output_path_or_url": "/card-thumbnails/URVRSP00586-auto-right.jpg",
+    "output_hash": "be5a98f932f0da8c41f1a787ec007a411429f14ab8902371d089c9096d8d22f5",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for URVRSP00586: fetched samples were visually noncompetitive, while the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "URVRSP00591",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -30694,6 +30964,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "VOD00064: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "VRKM01838",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:1",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/vrkm01838/vrkm01838jp-1.jpg",
+    "source_hash": "3a198d63998dfecb94b224ea6541f92318acfd33760cc61499effbe86bd73c55",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/vrkm01838/vrkm01838jp-1.jpg",
+    "output_hash": "3a198d63998dfecb94b224ea6541f92318acfd33760cc61499effbe86bd73c55",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-25T13:55:18Z",
+    "approval_batch": "phase5g-6567-7566",
+    "reason": "Phase 5G adaptive visual review for VRKM01838: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "VRKM01851",
@@ -32200,10 +32485,10 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
 
 export const GENERATED_PHASE5_REVIEWED_STATS = Object.freeze(
   {
-  "input_total": 2146,
-  "eligible_total": 2146,
+  "input_total": 2165,
+  "eligible_total": 2165,
   "ignored_apply_false": 0
 } as const,
 );
 
-export const GENERATED_PHASE5_REVIEWED_INPUT_SHA256 = "107c5f1a31b7b42c26fe159ec32398541443a3d8b249176e732fb65d66e185ae";
+export const GENERATED_PHASE5_REVIEWED_INPUT_SHA256 = "7eafee4d798a9aca18ec655e3a1b76afef76b01d8f44a80de1d39b2a2c27580f";

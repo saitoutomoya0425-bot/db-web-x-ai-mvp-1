@@ -29,6 +29,7 @@ import {
   getThumbnailCandidateV3FetchStats,
 } from "../scripts/dry-run-card-thumbnail-v3-added-only.mjs";
 import {
+  parseAdaptiveReviewArgs,
   selectAdaptiveStageCodes,
   selectEvenlyDistributedIndices,
   selectInterleavedIndices,
@@ -139,6 +140,25 @@ test("adaptive sample indices are deterministic, distributed, and interleaved", 
     "https://pics.dmm.co.jp/digital/video/phase500001/phase500001-2.jpg",
     "https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-2.jpg",
   ]), [2, 4]);
+});
+
+test("adaptive review defaults remain 8 while this cohort can cap both stages at 6", () => {
+  const defaults = parseAdaptiveReviewArgs(["--handoff-file", "/tmp/handoff.csv"]);
+  assert.equal(defaults.stage1Max, 8);
+  assert.equal(defaults.stage2Max, 8);
+  const capped = parseAdaptiveReviewArgs([
+    "--handoff-file", "/tmp/handoff.csv",
+    "--stage1-max", "6",
+    "--stage2-max", "6",
+  ]);
+  assert.equal(capped.stage1Max, 6);
+  assert.equal(capped.stage2Max, 6);
+  assert.deepEqual(selectEvenlyDistributedIndices(40, 6), [1, 9, 17, 24, 32, 40]);
+  assert.equal(selectInterleavedIndices(40, selectEvenlyDistributedIndices(40, 6), 6).length, 6);
+  assert.throws(
+    () => parseAdaptiveReviewArgs(["--handoff-file", "/tmp/handoff.csv", "--stage1-max", "9"]),
+    /INVALID_STAGE_MAX/,
+  );
 });
 
 test("adaptive Stage 2 and Stage 3 select only explicitly escalated works", () => {
@@ -427,7 +447,7 @@ test("stratified canary is fixed at 10 SAMPLE 10 RIGHT 5 CENTER 5 FULL", () => {
 });
 
 test("production registry grows only by reviewed records and ten no-change controls remain unchanged", () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2250);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
   const canonical = [
     ["1START00590", "SAMPLE", "sample:1"],
     ["1SBP00423", "SCENE_FULL", "scene:pl"],

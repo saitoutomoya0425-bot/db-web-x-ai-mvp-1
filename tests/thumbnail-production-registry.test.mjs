@@ -88,11 +88,11 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2250);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 2146);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 2165);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 2146,
-    eligible_total: 2146,
+    input_total: 2165,
+    eligible_total: 2165,
     ignored_apply_false: 0,
   });
 });
@@ -359,7 +359,7 @@ test("Phase 5 final review appends exactly 632 delegated approvals and preserves
     }
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2250);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
 });
 
 test("Phase 5G exact-186 review appends only 152 delegated visual approvals", async () => {
@@ -426,7 +426,7 @@ test("Phase 5G exact-186 review appends only 152 delegated visual approvals", as
     );
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2250);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
 });
 
 test("Phase 5G exact-94 adaptive review appends only 84 delegated visual approvals", async () => {
@@ -491,7 +491,58 @@ test("Phase 5G exact-94 adaptive review appends only 84 delegated visual approva
     );
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2250);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+});
+
+test("Phase 5G 6567-7566 appends only the 19 Stage 3 visual approvals", () => {
+  const batch = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5g-6567-7566",
+  );
+  assert.equal(batch.length, 19);
+  assert.equal(new Set(batch.map((record) => record.code)).size, 19);
+  assert.deepEqual(
+    batch.reduce((counts, record) => {
+      counts[record.mode] = (counts[record.mode] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { PACKAGE_RIGHT: 4, SAMPLE: 15 },
+  );
+  const samples = {
+    DVMM00417: "sample:1",
+    BEBL00055: "sample:3",
+    AQUMA00149: "sample:13",
+    "1TLDC00057": "sample:1",
+    "1SEVEN00035": "sample:1",
+    "1NSBB00035": "sample:1",
+    VRKM01838: "sample:1",
+    URVRSP00580: "sample:2",
+    "55TMAVR00283": "sample:1",
+    SAVR01104: "sample:1",
+    JUVR00298: "sample:1",
+    CRNX00335: "sample:1",
+    KAVR00501: "sample:1",
+    PXVR00454: "sample:1",
+    FCVR00075: "sample:1",
+  };
+  const right = new Set(["ATID00685", "H_1711MAAN01179", "H_1651Y00404", "URVRSP00586"]);
+  for (const record of batch) {
+    assert.equal(record.approved_by, "owner_delegated_via_chatgpt", record.code);
+    assert.match(record.reason, new RegExp(record.code), record.code);
+    assert.match(record.reason, /not an auto-safe classification/, record.code);
+    assert.equal(record.source_id, samples[record.code] ?? "dvd:right", record.code);
+    assert.equal(right.has(record.code), record.mode === "PACKAGE_RIGHT", record.code);
+    const effective = getProductionThumbnailDecision(record.code);
+    assert.equal(effective?.approval_status, "HUMAN_APPROVED", record.code);
+    assert.equal(effective?.render_status, "READY", record.code);
+    assert.equal(effective?.mode, record.mode, record.code);
+    assert.equal(effective?.source_id, record.source_id, record.code);
+    assert.equal(effective?.source_path_or_url, record.source_path_or_url, record.code);
+    assert.equal(effective?.source_hash, record.source_hash, record.code);
+    assert.equal(effective?.output_path_or_url, record.output_path_or_url, record.code);
+    assert.equal(effective?.output_hash, record.output_hash, record.code);
+  }
+  assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -718,8 +769,8 @@ test("READY decisions use one mode-level object-fit contract", () => {
     {},
   );
   assert.deepEqual(counts, {
-    "SAMPLE|scale-down": 210,
-    "PACKAGE_RIGHT|cover": 1783,
+    "SAMPLE|scale-down": 225,
+    "PACKAGE_RIGHT|cover": 1787,
     "PACKAGE_FULL|contain": 102,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
