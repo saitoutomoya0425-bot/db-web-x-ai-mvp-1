@@ -29,6 +29,7 @@ import {
   getThumbnailCandidateV3FetchStats,
 } from "../scripts/dry-run-card-thumbnail-v3-added-only.mjs";
 import {
+  applyStageDecision,
   parseAdaptiveReviewArgs,
   selectAdaptiveStageCodes,
   selectEvenlyDistributedIndices,
@@ -159,12 +160,21 @@ test("adaptive review defaults remain 8 while this cohort can cap both stages at
     () => parseAdaptiveReviewArgs(["--handoff-file", "/tmp/handoff.csv", "--stage1-max", "9"]),
     /INVALID_STAGE_MAX/,
   );
+  const concurrent = parseAdaptiveReviewArgs([
+    "--handoff-file", "/tmp/handoff.csv",
+    "--image-concurrency", "6",
+  ]);
+  assert.equal(concurrent.imageConcurrency, 6);
+  assert.throws(
+    () => parseAdaptiveReviewArgs(["--handoff-file", "/tmp/handoff.csv", "--image-concurrency", "9"]),
+    /INVALID_IMAGE_CONCURRENCY/,
+  );
 });
 
 test("adaptive Stage 2 and Stage 3 select only explicitly escalated works", () => {
   const allCodes = ["CLEAR", "PACKAGE_WINS", "COMPETITIVE"];
   const stage2Classifications = {
-    CLEAR: "SAMPLE_CLEARLY_NONCOMPETITIVE",
+    CLEAR: "FINAL_KEEP",
     PACKAGE_WINS: "SAMPLE_POTENTIALLY_COMPETITIVE",
     COMPETITIVE: "SAMPLE_POTENTIALLY_COMPETITIVE",
   };
@@ -174,9 +184,9 @@ test("adaptive Stage 2 and Stage 3 select only explicitly escalated works", () =
     classifications: stage2Classifications,
   }), ["PACKAGE_WINS", "COMPETITIVE"]);
   const works = {
-    CLEAR: { stage2_classification: "SAMPLE_CLEARLY_NONCOMPETITIVE" },
-    PACKAGE_WINS: { stage2_classification: "SAMPLE_POTENTIALLY_COMPETITIVE" },
-    COMPETITIVE: { stage2_classification: "SAMPLE_POTENTIALLY_COMPETITIVE" },
+    CLEAR: { stage1_classification: "FINAL_KEEP", stage2_classification: "FINAL_KEEP" },
+    PACKAGE_WINS: { stage1_classification: "SAMPLE_POTENTIALLY_COMPETITIVE", stage2_classification: "FINAL_RIGHT" },
+    COMPETITIVE: { stage1_classification: "SAMPLE_POTENTIALLY_COMPETITIVE", stage2_classification: "SAMPLE_STILL_COMPETITIVE" },
   };
   assert.deepEqual(selectAdaptiveStageCodes({
     stage: 3,
@@ -187,6 +197,100 @@ test("adaptive Stage 2 and Stage 3 select only explicitly escalated works", () =
       COMPETITIVE: "SAMPLE_STILL_COMPETITIVE",
     },
   }), ["COMPETITIVE"]);
+});
+
+test("durable package decisions preserve exact mode, hashes, reason, and stage", () => {
+  const packageFull = v3Candidate({
+    type: "dvd_full",
+    sampleIndex: null,
+    sourceUrl: "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg",
+    url: "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg",
+    sourceHash: HASH_A,
+    outputHash: HASH_A,
+  });
+  const packageRight = v3Candidate({
+    type: "dvd_right",
+    sampleIndex: null,
+    sourceUrl: packageFull.sourceUrl,
+    url: "generated:PHASE500001-auto-right.jpg",
+    sourceHash: HASH_A,
+    outputHash: HASH_B,
+  });
+  const record = {
+    code: "PHASE500001",
+    fetched_sample_indices: [1, 9, 17, 24, 32, 40],
+    v3Row: row([packageRight, packageFull], {
+      current_url: packageFull.url,
+      current_type: "dvd_full",
+    }),
+  };
+  const decision = {
+    classification: "FINAL_RIGHT",
+    visual_reason: "right panel preserves the main subject and title while full is too small in the card frame",
+    reviewed_at: "2026-08-26T10:00:00.000Z",
+  };
+  applyStageDecision(record, decision, 1);
+  assert.equal(record.final_decision, "APPROVE_RIGHT");
+  assert.equal(record.final_mode, "PACKAGE_RIGHT");
+  assert.equal(record.final_source_id, "dvd:right");
+  assert.equal(record.final_source_hash, HASH_A);
+  assert.equal(record.final_output_hash, HASH_B);
+  assert.equal(record.package_source_hash, HASH_A);
+  assert.equal(record.decision_stage, 1);
+  assert.equal(record.reviewed, true);
+  assert.match(record.visual_reason, /right panel preserves/);
+  const recordedReason = record.visual_reason;
+  applyStageDecision(record, decision, 1);
+  applyStageDecision(record, {
+    ...decision,
+    visual_reason: "a later resume must not rewrite durable visual evidence",
+  }, 1);
+  assert.equal(record.visual_reason, recordedReason);
+  assert.throws(() => applyStageDecision(record, {
+    ...decision,
+    classification: "FINAL_FULL",
+  }, 2), /FINAL_DECISION_ALREADY_RECORDED/);
+});
+
+test("Stage 3 SAMPLE finalization requires and preserves the original sample:N", () => {
+  const sample = v3Candidate({ sampleIndex: 17 });
+  const packageFull = v3Candidate({
+    type: "dvd_full",
+    sampleIndex: null,
+    sourceUrl: "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg",
+    url: "https://pics.dmm.co.jp/digital/video/phase500001/phase500001pl.jpg",
+  });
+  const record = {
+    code: "PHASE500001",
+    fetched_sample_indices: [17],
+    v3Row: row([sample, packageFull], { current_url: packageFull.url, current_type: "dvd_full" }),
+  };
+  assert.throws(() => applyStageDecision(record, {
+    classification: "FINAL_SAMPLE",
+    source_id: "sample:16",
+    visual_reason: "sample 16",
+    reviewed_at: "2026-08-26T10:00:00.000Z",
+  }, 3), /SAMPLE_CANDIDATE_NOT_FETCHED/);
+  applyStageDecision(record, {
+    classification: "FINAL_SAMPLE",
+    source_id: "sample:17",
+    visual_reason: "sample 17 shows the complete representative scene without package context loss",
+    reviewed_at: "2026-08-26T10:00:00.000Z",
+  }, 3);
+  assert.equal(record.final_decision, "APPROVE_SAMPLE");
+  assert.equal(record.final_mode, "SAMPLE");
+  assert.equal(record.final_source_id, "sample:17");
+  assert.equal(record.decision_stage, 3);
+  record.v3Row.candidates.push(v3Candidate({
+    sampleIndex: 18,
+    sourceUrl: "https://pics.dmm.co.jp/digital/video/phase500001/phase500001jp-18.jpg",
+  }));
+  assert.throws(() => applyStageDecision(record, {
+    classification: "FINAL_SAMPLE",
+    source_id: "sample:18",
+    visual_reason: "resume cannot replace the selected original sample index",
+    reviewed_at: "2026-08-26T10:01:00.000Z",
+  }, 3), /FINAL_DECISION_ALREADY_RECORDED/);
 });
 
 test("V3 scoped samples retain original sample:N and one network GET per URL", async () => {
@@ -447,7 +551,7 @@ test("stratified canary is fixed at 10 SAMPLE 10 RIGHT 5 CENTER 5 FULL", () => {
 });
 
 test("production registry grows only by reviewed records and ten no-change controls remain unchanged", () => {
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
   const canonical = [
     ["1START00590", "SAMPLE", "sample:1"],
     ["1SBP00423", "SCENE_FULL", "scene:pl"],

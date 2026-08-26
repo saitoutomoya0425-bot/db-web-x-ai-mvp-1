@@ -88,11 +88,11 @@ test("production registry applies one explicit precedence without conflicts", ()
   ]);
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
   assert.equal(PRODUCTION_BASELINE_THUMBNAIL_DECISIONS.size, 79);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
-  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 2165);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
+  assert.equal(GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.length, 2695);
   assert.deepEqual(GENERATED_PHASE5_REVIEWED_STATS, {
-    input_total: 2165,
-    eligible_total: 2165,
+    input_total: 2695,
+    eligible_total: 2695,
     ignored_apply_false: 0,
   });
 });
@@ -359,7 +359,7 @@ test("Phase 5 final review appends exactly 632 delegated approvals and preserves
     }
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
 });
 
 test("Phase 5G exact-186 review appends only 152 delegated visual approvals", async () => {
@@ -426,7 +426,7 @@ test("Phase 5G exact-186 review appends only 152 delegated visual approvals", as
     );
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
 });
 
 test("Phase 5G exact-94 adaptive review appends only 84 delegated visual approvals", async () => {
@@ -491,7 +491,7 @@ test("Phase 5G exact-94 adaptive review appends only 84 delegated visual approva
     );
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
 });
 
 test("Phase 5G 6567-7566 appends only the 19 Stage 3 visual approvals", () => {
@@ -542,7 +542,83 @@ test("Phase 5G 6567-7566 appends only the 19 Stage 3 visual approvals", () => {
     assert.equal(effective?.output_hash, record.output_hash, record.code);
   }
   assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
-  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2269);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
+});
+
+test("Phase 5G 7605-8604 appends the exact 530 delegated adaptive approvals", async () => {
+  const source = await readFile("data/thumbnail-phase5-reviewed-decisions.csv", "utf8");
+  const preservedPrefix = `${source.split("\n").slice(0, 2166).join("\n")}\n`;
+  assert.equal(
+    crypto.createHash("sha256").update(preservedPrefix).digest("hex"),
+    "7eafee4d798a9aca18ec655e3a1b76afef76b01d8f44a80de1d39b2a2c27580f",
+  );
+  const batch = GENERATED_PHASE5_REVIEWED_DECISION_RECORDS.filter(
+    (record) => record.approval_batch === "phase5g-7605-8604",
+  );
+  assert.equal(batch.length, 530);
+  assert.equal(new Set(batch.map((record) => record.code)).size, 530);
+  assert.deepEqual(
+    batch.reduce((counts, record) => {
+      counts[record.mode] = (counts[record.mode] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { PACKAGE_FULL: 10, PACKAGE_RIGHT: 427, SAMPLE: 93 },
+  );
+  const objectFit = {
+    PACKAGE_FULL: "contain",
+    PACKAGE_RIGHT: "cover",
+    SAMPLE: "scale-down",
+  };
+  for (const record of batch) {
+    assert.equal(record.approved_by, "owner_delegated_via_chatgpt", record.code);
+    assert.match(record.reason, new RegExp(record.code), record.code);
+    assert.match(record.reason, /not an auto-safe classification/, record.code);
+    const effective = getProductionThumbnailDecision(record.code);
+    assert.equal(effective?.approval_status, "HUMAN_APPROVED", record.code);
+    assert.equal(effective?.render_status, "READY", record.code);
+    assert.equal(effective?.mode, record.mode, record.code);
+    assert.equal(effective?.source_id, record.source_id, record.code);
+    assert.equal(effective?.source_path_or_url, record.source_path_or_url, record.code);
+    assert.equal(effective?.source_hash, record.source_hash, record.code);
+    assert.equal(effective?.output_path_or_url, record.output_path_or_url, record.code);
+    assert.equal(effective?.output_hash, record.output_hash, record.code);
+    if (record.mode === "PACKAGE_RIGHT") {
+      const bytes = await readFile(`public${record.output_path_or_url}`);
+      assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), record.output_hash, record.code);
+    } else {
+      assert.equal(record.source_path_or_url, record.output_path_or_url, record.code);
+      assert.equal(record.source_hash, record.output_hash, record.code);
+    }
+    const surfaces = ["list", "search", "detail", "related", "recently-viewed"].map(() =>
+      resolveThumbnailPresentation({
+        code: record.code,
+        legacy_runtime_override: null,
+        legacy_card_url: "https://pics.dmm.co.jp/stale.jpg",
+        legacy_thumbnail_url: "https://pics.dmm.co.jp/stale.jpg",
+      }),
+    );
+    for (const resolution of surfaces) {
+      assert.equal(resolution.resolution_kind, "CANONICAL", record.code);
+      assert.equal(resolution.resolved_url, record.output_path_or_url, record.code);
+      assert.equal(resolution.mode, record.mode, record.code);
+      assert.equal(resolution.source_id, record.source_id, record.code);
+      const contract = buildThumbnailRenderContract(resolution);
+      assert.equal(contract.src, record.output_path_or_url, record.code);
+      assert.equal(contract.object_fit, objectFit[record.mode], record.code);
+      assert.equal(contract.object_position, record.mode === "PACKAGE_RIGHT" ? "right" : "center", record.code);
+      assert.equal(contract.crop_spec, null, record.code);
+    }
+    const structured = thumbnailStructuredDataImage(surfaces[0], new URL("https://example.test"));
+    assert.equal(
+      structured.image,
+      record.output_path_or_url.startsWith("/")
+        ? `https://example.test${record.output_path_or_url}`
+        : record.output_path_or_url,
+      record.code,
+    );
+  }
+  assert.equal(PRODUCTION_THUMBNAIL_REGISTRY_CONFLICTS.length, 0);
+  assert.equal(PRODUCTION_THUMBNAIL_DECISIONS.size, 2799);
 });
 
 test("all generated records pass the canonical runtime validator", () => {
@@ -769,9 +845,9 @@ test("READY decisions use one mode-level object-fit contract", () => {
     {},
   );
   assert.deepEqual(counts, {
-    "SAMPLE|scale-down": 225,
-    "PACKAGE_RIGHT|cover": 1787,
-    "PACKAGE_FULL|contain": 102,
+    "SAMPLE|scale-down": 318,
+    "PACKAGE_RIGHT|cover": 2214,
+    "PACKAGE_FULL|contain": 112,
     "SCENE_FULL|contain": 1,
     "SCENE_CROP|scale-down": 29,
     "PACKAGE_CENTER|cover": 125,

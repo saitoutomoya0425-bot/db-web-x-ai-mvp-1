@@ -663,7 +663,7 @@ export async function decideThumbnailCandidateV3(video, {
   const selectedSampleEntries = selectedSampleIndices
     ? sampleEntries.filter((entry) => selectedSampleIndices.has(entry.index + 1))
     : sampleEntries;
-  const concurrency = Math.max(1, Math.min(6, Math.trunc(sampleConcurrency)));
+  const concurrency = Math.max(1, Math.min(8, Math.trunc(sampleConcurrency)));
   for (let offset = 0; offset < selectedSampleEntries.length; offset += concurrency) {
     const batch = selectedSampleEntries.slice(offset, offset + concurrency);
     const samples = await Promise.all(batch.map(({ index, url, analysisUrl, analysisProxy }) =>

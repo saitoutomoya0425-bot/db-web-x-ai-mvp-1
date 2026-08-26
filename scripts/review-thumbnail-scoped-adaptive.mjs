@@ -23,8 +23,19 @@ import { canonicalizeProductCodeValue } from "../src/lib/fanza/normalize.ts";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_OUTPUT = "/Users/saitoutomoya/Documents/Codex/okazudb-state/thumbnail-reviews/phase5g-5274-6273";
 const DEFAULT_CACHE = "/private/tmp/db-web-x-ai-mvp-1-phase5g-94-adaptive";
-const VALID_STAGE1 = new Set(["SAMPLE_CLEARLY_NONCOMPETITIVE", "SAMPLE_POTENTIALLY_COMPETITIVE"]);
-const VALID_STAGE2 = new Set(["PACKAGE_CLEAR_WIN", "SAMPLE_STILL_COMPETITIVE"]);
+const FINAL_PACKAGE_CLASSIFICATIONS = ["FINAL_RIGHT", "FINAL_CENTER", "FINAL_FULL", "FINAL_KEEP"];
+const VALID_STAGE1 = new Set([...FINAL_PACKAGE_CLASSIFICATIONS, "SAMPLE_POTENTIALLY_COMPETITIVE"]);
+const VALID_STAGE2 = new Set([...FINAL_PACKAGE_CLASSIFICATIONS, "SAMPLE_STILL_COMPETITIVE"]);
+const VALID_STAGE3 = new Set([...FINAL_PACKAGE_CLASSIFICATIONS, "FINAL_SAMPLE", "REVIEW_UNCERTAIN", "REJECT_ALL"]);
+const FINAL_CLASSIFICATION_CONTRACT = Object.freeze({
+  FINAL_RIGHT: { finalDecision: "APPROVE_RIGHT", finalMode: "PACKAGE_RIGHT", candidateType: "dvd_right", sourceId: "dvd:right" },
+  FINAL_CENTER: { finalDecision: "APPROVE_CENTER", finalMode: "PACKAGE_CENTER", candidateType: "dvd_center", sourceId: "dvd:center" },
+  FINAL_FULL: { finalDecision: "APPROVE_FULL", finalMode: "PACKAGE_FULL", candidateType: "dvd_full", sourceId: "dvd:full" },
+  FINAL_KEEP: { finalDecision: "KEEP_CURRENT", finalMode: "KEEP_CURRENT", candidateType: null, sourceId: null },
+  FINAL_SAMPLE: { finalDecision: "APPROVE_SAMPLE", finalMode: "SAMPLE", candidateType: "sample", sourceId: null },
+  REVIEW_UNCERTAIN: { finalDecision: "REVIEW_UNCERTAIN", finalMode: null, candidateType: null, sourceId: null },
+  REJECT_ALL: { finalDecision: "REJECT_ALL", finalMode: null, candidateType: null, sourceId: null },
+});
 
 const text = (value) => typeof value === "string" && value.trim() ? value.trim() : "";
 const canonicalCode = (value) => {
@@ -41,7 +52,10 @@ export function parseAdaptiveReviewArgs(args) {
     stage: 1,
     stage1Max: 8,
     stage2Max: 8,
+    imageConcurrency: 4,
     classifications: null,
+    decisions: null,
+    scopeSnapshot: null,
   };
   for (let index = 0; index < args.length; index += 1) {
     const value = args[index];
@@ -52,7 +66,10 @@ export function parseAdaptiveReviewArgs(args) {
     else if (value === "--stage") options.stage = Number(args[++index]);
     else if (value === "--stage1-max") options.stage1Max = Number(args[++index]);
     else if (value === "--stage2-max") options.stage2Max = Number(args[++index]);
+    else if (value === "--image-concurrency") options.imageConcurrency = Number(args[++index]);
     else if (value === "--classifications") options.classifications = path.resolve(args[++index]);
+    else if (value === "--decisions") options.decisions = path.resolve(args[++index]);
+    else if (value === "--scope-snapshot") options.scopeSnapshot = path.resolve(args[++index]);
     else throw new Error(`PHASE5G_ADAPTIVE:UNKNOWN_ARGUMENT:${value}`);
   }
   if (!options.handoffFile || ![1, 2, 3].includes(options.stage)) {
@@ -60,6 +77,9 @@ export function parseAdaptiveReviewArgs(args) {
   }
   if (![options.stage1Max, options.stage2Max].every((maximum) => Number.isInteger(maximum) && maximum >= 1 && maximum <= 8)) {
     throw new Error("PHASE5G_ADAPTIVE:INVALID_STAGE_MAX");
+  }
+  if (!Number.isInteger(options.imageConcurrency) || options.imageConcurrency < 1 || options.imageConcurrency > 8) {
+    throw new Error("PHASE5G_ADAPTIVE:INVALID_IMAGE_CONCURRENCY");
   }
   if (options.stage > 1 && !options.classifications) {
     throw new Error("PHASE5G_ADAPTIVE:CLASSIFICATIONS_REQUIRED");
@@ -113,7 +133,7 @@ export function selectAdaptiveStageCodes({ stage, allCodes, works = {}, classifi
   }
   if (stage === 3) {
     return allCodes.filter((code) =>
-      works[code]?.stage2_classification === "SAMPLE_POTENTIALLY_COMPETITIVE"
+      works[code]?.stage1_classification === "SAMPLE_POTENTIALLY_COMPETITIVE"
       && classifications[code] === "SAMPLE_STILL_COMPETITIVE");
   }
   throw new Error(`PHASE5G_ADAPTIVE:INVALID_STAGE:${stage}`);
@@ -137,19 +157,121 @@ async function readJson(file, fallback = null) {
 
 async function loadClassifications(file, expectedCodes, allowed) {
   const payload = await readJson(file);
-  const rawEntries = payload?.classifications ?? payload;
+  const rawEntries = payload?.decisions ?? payload?.classifications ?? payload;
   const entries = payload?.default
     ? Object.fromEntries(expectedCodes.map((code) => [code, rawEntries[code] ?? payload.default]))
     : rawEntries;
   if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
     throw new Error("PHASE5G_ADAPTIVE:INVALID_CLASSIFICATIONS");
   }
+  const normalized = {};
   for (const code of expectedCodes) {
-    if (!allowed.has(entries[code])) throw new Error(`PHASE5G_ADAPTIVE:CLASSIFICATION_MISSING:${code}`);
+    const value = entries[code];
+    const classification = typeof value === "string" ? value : value?.classification;
+    if (!allowed.has(classification)) throw new Error(`PHASE5G_ADAPTIVE:CLASSIFICATION_MISSING:${code}`);
+    normalized[code] = classification;
   }
   const unexpected = Object.keys(rawEntries).filter((code) => !expectedCodes.includes(code));
   if (unexpected.length) throw new Error(`PHASE5G_ADAPTIVE:CLASSIFICATION_OUT_OF_SCOPE:${unexpected.join(",")}`);
+  return normalized;
+}
+
+async function loadStageDecisions(file, expectedCodes, stage) {
+  const payload = await readJson(file);
+  const entries = payload?.decisions ?? payload?.classifications ?? payload;
+  if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
+    throw new Error("PHASE5G_ADAPTIVE:INVALID_DECISIONS");
+  }
+  const allowed = stage === 1 ? VALID_STAGE1 : stage === 2 ? VALID_STAGE2 : VALID_STAGE3;
+  const unexpected = Object.keys(entries).filter((code) => !expectedCodes.includes(code));
+  if (unexpected.length) throw new Error(`PHASE5G_ADAPTIVE:DECISION_OUT_OF_SCOPE:${unexpected.join(",")}`);
+  for (const code of expectedCodes) {
+    const decision = entries[code];
+    if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
+      throw new Error(`PHASE5G_ADAPTIVE:DECISION_MISSING:${code}`);
+    }
+    if (!allowed.has(decision.classification)) {
+      throw new Error(`PHASE5G_ADAPTIVE:DECISION_CLASSIFICATION_INVALID:${code}`);
+    }
+    if (decision.classification.startsWith("FINAL_") || ["REVIEW_UNCERTAIN", "REJECT_ALL"].includes(decision.classification)) {
+      if (!text(decision.visual_reason)) throw new Error(`PHASE5G_ADAPTIVE:VISUAL_REASON_MISSING:${code}`);
+      if (!text(decision.reviewed_at) || Number.isNaN(Date.parse(decision.reviewed_at))) {
+        throw new Error(`PHASE5G_ADAPTIVE:REVIEWED_AT_INVALID:${code}`);
+      }
+    }
+  }
   return entries;
+}
+
+function candidateForFinal(record, decision) {
+  const contract = FINAL_CLASSIFICATION_CONTRACT[decision.classification];
+  if (!contract) return null;
+  if (decision.classification === "FINAL_SAMPLE") {
+    if (!/^sample:[1-9]\d*$/.test(text(decision.source_id))) {
+      throw new Error(`PHASE5G_ADAPTIVE:SAMPLE_SOURCE_ID_REQUIRED:${record.code}`);
+    }
+    const sampleIndex = Number(decision.source_id.split(":")[1]);
+    const candidate = record.v3Row.candidates.find((item) => item.type === "sample" && item.sampleIndex === sampleIndex);
+    if (!candidate) throw new Error(`PHASE5G_ADAPTIVE:SAMPLE_CANDIDATE_NOT_FETCHED:${record.code}:${decision.source_id}`);
+    return candidate;
+  }
+  return contract.candidateType
+    ? record.v3Row.candidates.find((item) => item.type === contract.candidateType)
+    : null;
+}
+
+export function applyStageDecision(record, decision, stage) {
+  const classification = decision.classification;
+  if (!FINAL_CLASSIFICATION_CONTRACT[classification]) {
+    record[`stage${stage}_classification`] = classification;
+    return;
+  }
+  const contract = FINAL_CLASSIFICATION_CONTRACT[classification];
+  const candidate = candidateForFinal(record, decision);
+  if (contract.candidateType && !candidate) {
+    throw new Error(`PHASE5G_ADAPTIVE:FINAL_CANDIDATE_MISSING:${record.code}:${classification}`);
+  }
+  const packageCandidate = record.v3Row.candidates.find((item) => item.type === "dvd_full");
+  if (!packageCandidate) throw new Error(`PHASE5G_ADAPTIVE:PACKAGE_EVIDENCE_MISSING:${record.code}`);
+  const finalSourceId = classification === "FINAL_SAMPLE" ? decision.source_id : contract.sourceId;
+  const finalSourceUrl = classification === "FINAL_KEEP" ? record.v3Row.current_url : candidate?.sourceUrl;
+  const finalSourceHash = classification === "FINAL_KEEP"
+    ? record.v3Row.candidates.find((item) => item.sourceUrl === record.v3Row.current_url)?.sourceHash ?? null
+    : candidate?.sourceHash ?? null;
+  const finalOutputUrl = classification === "FINAL_KEEP" ? record.v3Row.current_url : candidate?.url;
+  const finalOutputHash = classification === "FINAL_KEEP"
+    ? record.v3Row.candidates.find((item) => item.sourceUrl === record.v3Row.current_url)?.outputHash ?? null
+    : candidate?.outputHash ?? null;
+  if (record.reviewed) {
+    if (
+      record.final_decision !== contract.finalDecision
+      || record.final_source_id !== finalSourceId
+      || record.decision_stage !== stage
+    ) {
+      throw new Error(`PHASE5G_ADAPTIVE:FINAL_DECISION_ALREADY_RECORDED:${record.code}`);
+    }
+    return record;
+  }
+  Object.assign(record, {
+    final_decision: contract.finalDecision,
+    final_mode: contract.finalMode,
+    final_source_id: finalSourceId,
+    final_source_url: finalSourceUrl,
+    final_source_hash: finalSourceHash,
+    final_output_url: finalOutputUrl,
+    final_output_hash: finalOutputHash,
+    package_source_url: packageCandidate.sourceUrl,
+    package_source_hash: packageCandidate.sourceHash,
+    url_hashes: Object.fromEntries(record.v3Row.candidates
+      .filter((item) => item.sourceUrl && item.sourceHash)
+      .map((item) => [item.sourceUrl, item.sourceHash])),
+    visual_reason: text(decision.visual_reason),
+    decision_stage: stage,
+    reviewed_at: text(decision.reviewed_at),
+    reviewed: true,
+  });
+  record[`stage${stage}_classification`] = classification;
+  return record;
 }
 
 function cacheFileForUrl(cacheDirectory, url) {
@@ -172,12 +294,15 @@ function html(value) {
     .replaceAll('"', "&quot;");
 }
 
-function candidateFigure(candidate, code, cacheDirectory) {
+function candidateFigure(candidate, code, cacheDirectory, currentUrl) {
   const url = candidate.sourceUrl || candidate.url;
   const local = url.startsWith("https://") ? `file://${cacheFileForUrl(cacheDirectory, url)}` : url;
   const crop = candidate.type === "dvd_right" || candidate.type === "dvd_center";
   const position = candidate.type === "dvd_right" ? "right" : "center";
-  return `<figure><div class="frame ${crop ? "crop" : "full"}"><img src="${html(local)}" alt="${html(code)} ${html(sourceId(candidate))}" loading="lazy" style="object-position:${position}"></div><figcaption><b>${html(sourceId(candidate))}</b> / score ${html(candidate.score)} / ${html(candidate.meta?.width)}×${html(candidate.meta?.height)}<br>${html((candidate.reasons ?? []).join(", ") || "highest_total_score")}</figcaption></figure>`;
+  const isCurrent = candidate.url === currentUrl
+    || (candidate.type === "dvd_full" && candidate.sourceUrl === currentUrl);
+  const current = isCurrent ? "<strong class=\"current\">CURRENT</strong> · " : "";
+  return `<figure><div class="frame ${crop ? "crop" : "full"}"><img src="${html(local)}" alt="${html(code)} ${html(sourceId(candidate))}" loading="lazy" style="object-position:${position}"></div><figcaption>${current}<b>${html(sourceId(candidate))}</b> / score ${html(candidate.score)} / ${html(candidate.meta?.width)}×${html(candidate.meta?.height)}<br>${html((candidate.reasons ?? []).join(", ") || "highest_total_score")}</figcaption></figure>`;
 }
 
 function reviewHtml(state, codes, cacheDirectory, stage) {
@@ -187,9 +312,9 @@ function reviewHtml(state, codes, cacheDirectory, stage) {
     const candidates = [...record.v3Row.candidates].sort((left, right) =>
       (order[left.type] ?? 9) - (order[right.type] ?? 9)
       || (left.sampleIndex ?? 0) - (right.sampleIndex ?? 0));
-    return `<article><h2>${html(record.code)} — Stage ${stage}</h2><p>sample ${record.sample_count} / fetched [${record.fetched_sample_indices.join(", ")}] / current ${html(record.v3Row.current_type)}</p><div class="grid">${candidates.map((candidate) => candidateFigure(candidate, record.code, cacheDirectory)).join("\n")}</div><p class="decision">Visual classification: ____________________</p></article>`;
+    return `<article><h2>${html(record.code)} — Stage ${stage}</h2><p>sample ${record.sample_count} / fetched [${record.fetched_sample_indices.join(", ")}] / current ${html(record.v3Row.current_type)}</p><div class="grid">${candidates.map((candidate) => candidateFigure(candidate, record.code, cacheDirectory, record.v3Row.current_url)).join("\n")}</div><p class="decision">Visual classification: ____________________</p></article>`;
   }).join("\n");
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 5G adaptive Stage ${stage}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f2f2f2;color:#171717;margin:18px}article{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 0 18px;padding:14px}h2{margin:0 0 6px;font-size:17px}.grid{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:9px;overflow-x:auto}figure{margin:0}.frame{aspect-ratio:7/10;background:#ddd;display:flex;align-items:center;justify-content:center;overflow:hidden}.frame img{width:100%;height:100%;object-fit:scale-down}.frame.crop img{object-fit:cover}figcaption{font-size:10px;line-height:1.35;overflow-wrap:anywhere}.decision{font-weight:700}@media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(100px,1fr))}}</style></head><body><h1>Phase 5G exact ${state.expected_count} — Adaptive Stage ${stage}</h1><p>actual cached bytes only; package FULL/RIGHT/CENTER and fetched samples use the same URL cache.</p>${articles}</body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 5G adaptive Stage ${stage}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f2f2f2;color:#171717;margin:18px}article{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 0 18px;padding:14px}h2{margin:0 0 6px;font-size:17px}.grid{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:9px;overflow-x:auto}figure{margin:0}.frame{aspect-ratio:7/10;background:#ddd;display:flex;align-items:center;justify-content:center;overflow:hidden}.frame img{width:100%;height:100%;object-fit:scale-down}.frame.crop img{object-fit:cover}figcaption{font-size:10px;line-height:1.35;overflow-wrap:anywhere}.current{color:#a40000}.decision{font-weight:700}@media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(100px,1fr))}}</style></head><body><h1>Phase 5G exact ${state.expected_count} — Adaptive Stage ${stage}</h1><p>actual cached bytes only; package FULL/RIGHT/CENTER and fetched samples use the same URL cache. CURRENT is marked on the matching candidate.</p>${articles}</body></html>`;
 }
 
 function chunks(values, maximum = 50) {
@@ -251,7 +376,28 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
   await fs.mkdir(options.outputDirectory, { recursive: true });
   await fs.mkdir(options.cacheDirectory, { recursive: true });
   const handoff = await loadExactHandoff(options.handoffFile, options.expectedCount);
-  const { videos, sources } = await queryExactScope(handoff);
+  let videos;
+  let sources;
+  if (options.scopeSnapshot) {
+    const snapshot = await readJson(options.scopeSnapshot);
+    const membership = handoff[0].frontier_membership_hash || handoff[0].membership_sha;
+    if (snapshot?.expected_count !== options.expectedCount || snapshot?.membership_sha !== membership) {
+      throw new Error("PHASE5G_ADAPTIVE:SCOPE_SNAPSHOT_MISMATCH");
+    }
+    videos = validateExactScopeRows(handoff, snapshot.videos, snapshot.sources);
+    sources = snapshot.sources;
+    for (const video of videos) {
+      const code = canonicalCode(video.product_code);
+      if (!isPhase5ThumbnailCandidatePending({
+        video,
+        hasProductionDecision: PRODUCTION_THUMBNAIL_DECISIONS.has(code),
+        hasPhase4BDecision: PHASE4B_LEGACY_THUMBNAIL_DECISIONS.has(code),
+        hasLegacyOverride: Boolean(getLegacyRuntimeThumbnailOverride(code)),
+      })) throw new Error(`PHASE5G_ADAPTIVE:SCOPE_SNAPSHOT_NOT_PENDING:${code}`);
+    }
+  } else {
+    ({ videos, sources } = await queryExactScope(handoff));
+  }
   const stateFile = path.join(options.outputDirectory, "adaptive-checkpoint.json");
   const existing = await readJson(stateFile, null);
   const state = existing ?? {
@@ -274,6 +420,7 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
   state.selection_contract_version = 3;
   state.stage1_max = options.stage1Max;
   state.stage2_max = options.stage2Max;
+  state.image_concurrency = options.imageConcurrency;
   if (options.stage > state.completed_stage + 1) throw new Error("PHASE5G_ADAPTIVE:STAGE_ORDER");
   const allCodes = handoff.map((row) => row.product_code);
   let classifications = null;
@@ -282,7 +429,7 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
     classifications = await loadClassifications(options.classifications, allCodes, VALID_STAGE1);
     selectedCodes = selectAdaptiveStageCodes({ stage: 2, allCodes, works: state.works, classifications });
   } else if (options.stage === 3) {
-    const stage2Codes = allCodes.filter((code) => state.works[code]?.stage2_classification === "SAMPLE_POTENTIALLY_COMPETITIVE");
+    const stage2Codes = allCodes.filter((code) => state.works[code]?.stage1_classification === "SAMPLE_POTENTIALLY_COMPETITIVE");
     classifications = await loadClassifications(options.classifications, stage2Codes, VALID_STAGE2);
     selectedCodes = selectAdaptiveStageCodes({ stage: 3, allCodes, works: state.works, classifications });
   }
@@ -298,7 +445,7 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
     const prior = state.works[code] ?? { code, sample_count: sampleCount, actual_sample_count: actualSampleIndices.length, fetched_sample_indices: [], stage_completed: 0 };
     prior.actual_sample_count = actualSampleIndices.length;
     if (options.stage === 2) prior.stage1_classification = classifications[code];
-    if (options.stage === 3 && prior.stage2_classification === "SAMPLE_POTENTIALLY_COMPETITIVE") {
+    if (options.stage === 3 && prior.stage1_classification === "SAMPLE_POTENTIALLY_COMPETITIVE") {
       prior.stage2_review_classification = classifications[code];
     }
     if (selectedCodes.includes(code) && prior.stage_completed < options.stage) {
@@ -310,13 +457,16 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
       const v3Row = await decideThumbnailCandidateV3(video, {
         deduplicateSamplePairs: true,
         preferSmallSampleProxy: false,
-        sampleConcurrency: 4,
+        sampleConcurrency: options.imageConcurrency,
         candidateLimit: null,
         sampleIndices: indices,
       });
       Object.assign(prior, {
         fetched_sample_indices: indices,
         fetched_sample_urls: indices.map((index) => sampleUrlByIndex.get(index)),
+        stage1_sample_indices: stage1,
+        stage2_sample_indices: options.stage >= 2 ? stage2 : [],
+        stage3_sample_indices: options.stage === 3 ? actualSampleIndices.filter((index) => !stage1.includes(index) && !stage2.includes(index)) : [],
         stage_completed: options.stage,
         v3Row,
       });
@@ -365,8 +515,15 @@ export async function runAdaptiveReview(args = process.argv.slice(2)) {
       throw new Error("PHASE5G_ADAPTIVE:STAGE1_SAMPLE_GET_CAP_EXCEEDED");
     }
   }
-  state.cache = await directoryStats(options.cacheDirectory);
+  if (state.network.package_urls > options.expectedCount) {
+    throw new Error("PHASE5G_ADAPTIVE:PACKAGE_GET_CAP_EXCEEDED");
+  }
   const reviewCodes = options.stage === 1 ? allCodes : selectedCodes;
+  if (options.decisions) {
+    const decisions = await loadStageDecisions(options.decisions, reviewCodes, options.stage);
+    for (const code of reviewCodes) applyStageDecision(state.works[code], decisions[code], options.stage);
+  }
+  state.cache = await directoryStats(options.cacheDirectory);
   const reviewChunks = chunks(reviewCodes, 50);
   await Promise.all([
     atomicWrite(stateFile, `${JSON.stringify(state, null, 2)}\n`),
