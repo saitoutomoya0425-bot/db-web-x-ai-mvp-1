@@ -1,15 +1,12 @@
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { createClient } from "@supabase/supabase-js";
-import {
-  fanzaSafetyReviewReasons,
-  stageFanzaItems,
-} from "../src/lib/fanza/pipeline.ts";
+import { stageFanzaItems } from "../src/lib/fanza/pipeline.ts";
 import {
   buildStagedFanzaSourceRows,
   persistStagedFanzaProducts,
 } from "../src/lib/fanza/persistence.ts";
+import { frozenSafeNewProvenanceIssues } from "./lib/fanza-frozen-provenance.mjs";
 
 const options = new Map();
 for (const argument of process.argv.slice(2)) {
@@ -91,16 +88,7 @@ if (new Set(frozen.map((candidate) => candidate.external_product_id)).size !== e
 
 const provenanceIssues = [];
 for (const candidate of frozen) {
-  const rawHash = createHash("sha256").update(JSON.stringify(candidate.raw_payload)).digest("hex");
-  const safetyReasons = candidate.normalized ? fanzaSafetyReviewReasons(candidate.normalized) : ["normalized_missing"];
-  if (candidate.classification !== "SAFE_NEW") provenanceIssues.push(`${candidate.external_product_id}:classification`);
-  if (!candidate.raw_payload || typeof candidate.raw_payload !== "object") provenanceIssues.push(`${candidate.external_product_id}:raw_payload`);
-  if (!candidate.normalized || typeof candidate.normalized !== "object") provenanceIssues.push(`${candidate.external_product_id}:normalized`);
-  if (candidate.payload_hash !== rawHash) provenanceIssues.push(`${candidate.external_product_id}:payload_hash`);
-  if (candidate.normalized?.externalProductId !== candidate.external_product_id) provenanceIssues.push(`${candidate.external_product_id}:external_id`);
-  if (candidate.normalized?.normalizedProductCode !== candidate.normalized_product_code) provenanceIssues.push(`${candidate.external_product_id}:normalized_code`);
-  if (!candidate.actress_metadata_present || candidate.normalized?.actressNames?.length < 1) provenanceIssues.push(`${candidate.external_product_id}:actress`);
-  if (safetyReasons.length) provenanceIssues.push(`${candidate.external_product_id}:${safetyReasons.join(",")}`);
+  provenanceIssues.push(...frozenSafeNewProvenanceIssues(candidate));
 }
 if (provenanceIssues.length) throw new Error(`FROZEN_PROVENANCE_INCOMPLETE_${provenanceIssues.length}`);
 

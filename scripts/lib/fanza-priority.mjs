@@ -1,4 +1,7 @@
+import { createHash } from "node:crypto";
+
 const DAY_MS = 86_400_000;
+const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
 export const FANZA_PRIORITY_POLICY = Object.freeze({
   version: "priority-v1",
@@ -74,6 +77,7 @@ export function priorityCandidateFromRaw(raw, context) {
   const rankPosition = context.sort === "rank" ? context.position : null;
   const maker = Array.isArray(raw?.iteminfo?.maker) ? text(raw.iteminfo.maker[0]?.name) : null;
   const series = Array.isArray(raw?.iteminfo?.series) ? text(raw.iteminfo.series[0]?.name) : null;
+  const payloadHash = sha256(JSON.stringify(raw));
   return {
     product_code: productCode,
     normalized_product_code: normalizePriorityCode(productCode),
@@ -91,7 +95,34 @@ export function priorityCandidateFromRaw(raw, context) {
     image_metadata_url: text(raw?.imageURL?.large) ?? text(raw?.imageURL?.list) ?? null,
     already_exists: false,
     reason: [],
+    raw_provenance: {
+      [context.sort]: {
+        raw_payload: raw,
+        raw_source_sort: context.sort,
+        raw_source_position: context.position,
+        payload_hash: payloadHash,
+      },
+    },
   };
+}
+
+function mergeRawProvenance(current, candidate) {
+  if (current.external_product_id && candidate.external_product_id
+    && current.external_product_id !== candidate.external_product_id) {
+    throw new Error("PROVENANCE_CONFLICT_EXTERNAL_ID");
+  }
+  if (current.normalized_product_code && candidate.normalized_product_code
+    && current.normalized_product_code !== candidate.normalized_product_code) {
+    throw new Error("PROVENANCE_CONFLICT_NORMALIZED_CODE");
+  }
+  for (const [sort, provenance] of Object.entries(candidate.raw_provenance ?? {})) {
+    const existing = current.raw_provenance?.[sort];
+    if (existing && existing.payload_hash !== provenance.payload_hash) {
+      throw new Error(`PROVENANCE_CONFLICT_${sort.toUpperCase()}`);
+    }
+    current.raw_provenance ??= {};
+    current.raw_provenance[sort] ??= provenance;
+  }
 }
 
 export function mergePriorityCandidates(inputs) {
@@ -102,12 +133,17 @@ export function mergePriorityCandidates(inputs) {
     const current = (candidate.external_product_id && byExternalId.get(candidate.external_product_id))
       || (candidate.normalized_product_code && byCode.get(candidate.normalized_product_code));
     if (!current) {
-      const added = { ...candidate, query_sorts: [...candidate.query_sorts] };
+      const added = {
+        ...candidate,
+        query_sorts: [...candidate.query_sorts],
+        raw_provenance: { ...candidate.raw_provenance },
+      };
       merged.push(added);
       if (added.external_product_id) byExternalId.set(added.external_product_id, added);
       if (added.normalized_product_code) byCode.set(added.normalized_product_code, added);
       continue;
     }
+    mergeRawProvenance(current, candidate);
     current.query_sorts = [...new Set([...current.query_sorts, ...candidate.query_sorts])].sort();
     if (current.official_review_signal === "NONE" && candidate.official_review_signal !== "NONE") {
       current.official_review_signal = candidate.official_review_signal;
@@ -154,7 +190,18 @@ export function selectPriorityCandidates({ rankCandidates, latestCandidates, bac
             ? "LATEST_0_7_DAY_PROTECTION"
             : "LATEST_DATE_ORDER"]
           : ["DURABLE_BACKFILL_FRONTIER"];
-      chosen.push({ ...candidate, lane, reason });
+      const canonicalSort = lane === "RECENT_POPULAR" ? "rank" : lane === "LATEST" ? "date" : "backfill";
+      const provenance = candidate.raw_provenance?.[canonicalSort];
+      if (!provenance) throw new Error(`PRIORITY_CANONICAL_RAW_MISSING_${canonicalSort.toUpperCase()}`);
+      chosen.push({
+        ...candidate,
+        lane,
+        reason,
+        raw_payload: provenance.raw_payload,
+        raw_source_sort: provenance.raw_source_sort,
+        raw_source_position: provenance.raw_source_position,
+        payload_hash: provenance.payload_hash,
+      });
       if (candidate.external_product_id) selectedIds.add(candidate.external_product_id);
       if (candidate.normalized_product_code) selectedCodes.add(candidate.normalized_product_code);
     }
@@ -170,6 +217,18 @@ export function selectPriorityCandidates({ rankCandidates, latestCandidates, bac
   }
   const ordered = [...chosen].sort(compareCandidate);
   return { targets, candidates: ordered.map((candidate, index) => ({ ...candidate, priority_position: index + 1 })) };
+}
+
+export function lightweightPriorityCandidate(candidate) {
+  const {
+    raw_payload: _rawPayload,
+    raw_provenance: _rawProvenance,
+    payload_hash: _payloadHash,
+    raw_source_sort: _rawSourceSort,
+    raw_source_position: _rawSourcePosition,
+    ...lightweight
+  } = candidate;
+  return lightweight;
 }
 
 export function markExistingCandidates(candidates, existingExternalIds, existingCodes) {

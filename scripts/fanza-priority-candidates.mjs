@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
+import { gzipSync, gunzipSync } from "node:zlib";
 import postgres from "postgres";
 import {
   FANZA_PRIORITY_POLICY,
@@ -10,8 +10,14 @@ import {
   mergePriorityCandidates,
   normalizePriorityCode,
   priorityCandidateFromRaw,
+  lightweightPriorityCandidate,
   selectPriorityCandidates,
 } from "./lib/fanza-priority.mjs";
+import {
+  buildPriorityFrozenArtifacts,
+  buildPriorityFrozenRecords,
+  buildPriorityFrozenSummary,
+} from "./lib/fanza-priority-provenance.mjs";
 
 const DEFAULT_FRONTIER = path.join(
   process.env.HOME ?? "",
@@ -123,7 +129,7 @@ function backfillCandidates(records) {
     return priorityCandidateFromRaw(raw, {
       asOf,
       sort: "backfill",
-      position: index + 1,
+      position: Number.isInteger(record.source_offset) ? record.source_offset : index + 1,
     });
   });
 }
@@ -137,17 +143,47 @@ async function exactExistingLookup(candidates) {
   try {
     return await sql.begin("read only", async (database) => {
       const videos = await database`
-        select external_product_id, product_code
+        select id, external_product_id, product_code, title, actress_name,
+          maker_name, series_name, genre
         from public.videos
         where external_product_id in ${database(externalIds)}
            or regexp_replace(upper(coalesce(product_code, '')), '[^A-Z0-9]', '', 'g') in ${database(codes)}
       `;
       const sources = await database`
-        select external_product_id, normalized_product_code
+        select id, external_product_id, normalized_product_code, normalized_data,
+          review_status, preview_status, attempt_count, promoted_video_id, duplicate_video_id
         from public.source_products
         where external_product_id in ${database(externalIds)}
            or normalized_product_code in ${database(codes)}
       `;
+      const existingRows = [
+        ...videos.map((row) => ({
+          id: row.id,
+          kind: "video",
+          externalProductId: row.external_product_id,
+          normalizedProductCode: normalizePriorityCode(row.product_code),
+          title: row.title,
+          actressNames: row.actress_name ? [row.actress_name] : [],
+          makerName: row.maker_name,
+          seriesName: row.series_name,
+          genres: row.genre ? [row.genre] : [],
+        })),
+        ...sources.map((row) => ({
+          id: row.id,
+          kind: "source",
+          externalProductId: row.external_product_id,
+          normalizedProductCode: row.normalized_product_code,
+          title: row.normalized_data?.title ?? null,
+          actressNames: row.normalized_data?.actressNames ?? [],
+          makerName: row.normalized_data?.makerName ?? null,
+          seriesName: row.normalized_data?.seriesName ?? null,
+          genres: row.normalized_data?.genres ?? [],
+          reviewStatus: row.review_status,
+          previewStatus: row.preview_status,
+          attemptCount: row.attempt_count,
+          linkedVideoId: row.promoted_video_id ?? row.duplicate_video_id,
+        })),
+      ];
       return {
         rowsFetched: videos.length + sources.length,
         externalIds: new Set([...videos, ...sources].map((row) => row.external_product_id).filter(Boolean)),
@@ -155,6 +191,17 @@ async function exactExistingLookup(candidates) {
           ...videos.map((row) => normalizePriorityCode(row.product_code)),
           ...sources.map((row) => row.normalized_product_code),
         ].filter(Boolean)),
+        lookup: {
+          async byExternalIds(ids) {
+            return new Map(ids.map((id) => [id, existingRows.filter((row) => row.externalProductId === id)]));
+          },
+          async byNormalizedCodes(normalizedCodes) {
+            return new Map(normalizedCodes.map((code) => [
+              code,
+              existingRows.filter((row) => row.normalizedProductCode === code),
+            ]));
+          },
+        },
       };
     });
   } finally {
@@ -191,6 +238,14 @@ const selected = selectPriorityCandidates({
 });
 const existing = await exactExistingLookup(selected.candidates);
 const candidates = markExistingCandidates(selected.candidates, existing.externalIds, existing.codes);
+const lightweightCandidates = candidates.map(lightweightPriorityCandidate);
+const runTimestamp = new Date().toISOString();
+const { records: frozenRecords, staged } = await buildPriorityFrozenRecords({
+  candidates,
+  lookup: existing.lookup,
+  runTimestamp,
+});
+const frozenArtifacts = buildPriorityFrozenArtifacts(frozenRecords);
 const oldComparable = markExistingCandidates(
   backfillCandidates(frontierRecords).slice(0, candidates.length),
   existing.externalIds,
@@ -205,11 +260,22 @@ const laneCounts = Object.fromEntries(FANZA_PRIORITY_POLICY.laneOrder.map((lane)
 const ageBuckets = Object.fromEntries(["0-7d", "8-30d", "31-90d", "91-180d", "180+d", "UNKNOWN"]
   .map((bucket) => [bucket, candidates.filter((row) => row.release_age_bucket === bucket).length]));
 const generatedAt = new Date();
+const validUntil = new Date(generatedAt.getTime() + 24 * 60 * 60 * 1000).toISOString();
+const frozenSummary = buildPriorityFrozenSummary({
+  records: frozenRecords,
+  artifacts: frozenArtifacts,
+  policyVersion: FANZA_PRIORITY_POLICY.version,
+  generatedAt: generatedAt.toISOString(),
+  validUntil,
+  asOf,
+  laneCounts,
+  metadataGets,
+});
 const summary = {
   status: "DRY_RUN_COMPLETE",
   policy_version: FANZA_PRIORITY_POLICY.version,
   generated_at: generatedAt.toISOString(),
-  valid_until: new Date(generatedAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+  valid_until: validUntil,
   as_of: asOf,
   candidate_target: targetSize,
   candidate_total: candidates.length,
@@ -253,12 +319,36 @@ const summary = {
   save: 0,
   promote: 0,
   publish: 0,
+  lossless_frozen: {
+    manifest: "candidate-priority-provenance.jsonl.gz",
+    summary: "frozen-summary.json",
+    safe_new_targets: "targets-safe-new.json",
+    manifest_sha256: frozenArtifacts.manifest_sha256,
+    membership_sha256: frozenArtifacts.membership_sha256,
+    payload_sha256: frozenArtifacts.payload_sha256,
+    classifications: frozenSummary.classifications,
+  },
 };
 
 await mkdir(outputDirectory, { recursive: true, mode: 0o700 });
+const safeNewTargets = frozenRecords.filter((record) => record.classification === "SAFE_NEW")
+  .map((record) => record.external_product_id);
 await Promise.all([
-  atomicWrite(path.join(outputDirectory, "candidate-priority.csv"), csv(candidates)),
-  atomicWrite(path.join(outputDirectory, "candidate-priority.json"), `${JSON.stringify(candidates, null, 2)}\n`),
+  atomicWrite(path.join(outputDirectory, "candidate-priority.csv"), csv(lightweightCandidates)),
+  atomicWrite(path.join(outputDirectory, "candidate-priority.json"), `${JSON.stringify(lightweightCandidates, null, 2)}\n`),
   atomicWrite(path.join(outputDirectory, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`),
+  atomicWrite(path.join(outputDirectory, "candidate-priority-provenance.jsonl.gz"), gzipSync(frozenArtifacts.jsonl, { level: 6 })),
+  atomicWrite(path.join(outputDirectory, "frozen-summary.json"), `${JSON.stringify(frozenSummary, null, 2)}\n`),
+  atomicWrite(path.join(outputDirectory, "targets-safe-new.json"), `${JSON.stringify(safeNewTargets, null, 2)}\n`),
 ]);
-console.log(JSON.stringify({ output_directory: outputDirectory, ...summary }));
+const verifiedJsonl = gunzipSync(await readFile(path.join(outputDirectory, "candidate-priority-provenance.jsonl.gz")))
+  .toString("utf8");
+if (sha256(verifiedJsonl) !== frozenArtifacts.manifest_sha256
+  || verifiedJsonl.trim().split("\n").filter(Boolean).length !== frozenRecords.length
+  || frozenSummary.raw_payload_count !== frozenRecords.length
+  || frozenSummary.normalized_count !== frozenRecords.length
+  || frozenSummary.payload_hash_verified_count !== frozenRecords.length
+  || staged.processed !== frozenRecords.length) {
+  throw new Error("PRIORITY_LOSSLESS_MANIFEST_DURABILITY_FAILURE");
+}
+console.log(JSON.stringify({ output_directory: outputDirectory, ...summary, frozen: frozenSummary }));

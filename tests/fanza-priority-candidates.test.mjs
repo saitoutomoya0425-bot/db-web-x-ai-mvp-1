@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   distributionMetrics,
+  lightweightPriorityCandidate,
   markExistingCandidates,
   mergePriorityCandidates,
   priorityCandidateFromRaw,
@@ -78,6 +79,65 @@ test("duplicate rank/date results merge once and retain the official rank signal
   assert.deepEqual(merged[0].query_sorts, ["date", "rank"]);
   assert.equal(merged[0].official_rank_position, 9);
   assert.match(merged[0].official_review_signal, /count:2/);
+});
+
+test("priority selection retains the exact canonical raw payload for each lane", () => {
+  const rankRaw = raw("ranked", "2026-08-20");
+  const dateRaw = raw("dated", "2026-08-29");
+  const backfillRaw = raw("backfill", "2025-01-01");
+  const selected = selectPriorityCandidates({
+    rankCandidates: [priorityCandidateFromRaw(rankRaw, { asOf: "2026-08-29", sort: "rank", position: 7 })],
+    latestCandidates: [priorityCandidateFromRaw(dateRaw, { asOf: "2026-08-29", sort: "date", position: 3 })],
+    backfillCandidates: [priorityCandidateFromRaw(backfillRaw, { asOf: "2026-08-29", sort: "backfill", position: 9001 })],
+    targetSize: 300,
+  });
+  const byId = new Map(selected.candidates.map((row) => [row.external_product_id, row]));
+  assert.equal(byId.get("ranked").raw_payload, rankRaw);
+  assert.equal(byId.get("ranked").raw_source_sort, "rank");
+  assert.equal(byId.get("ranked").raw_source_position, 7);
+  assert.equal(byId.get("dated").raw_payload, dateRaw);
+  assert.equal(byId.get("dated").raw_source_sort, "date");
+  assert.equal(byId.get("backfill").raw_payload, backfillRaw);
+  assert.equal(byId.get("backfill").raw_source_sort, "backfill");
+  assert.equal(byId.get("backfill").raw_source_position, 9001);
+});
+
+test("rank/date overlap chooses lane-specific raw provenance deterministically", () => {
+  const rankRaw = { ...raw("same", "2026-08-20"), title: "rank response" };
+  const dateRaw = { ...raw("same", "2026-08-20"), title: "date response" };
+  const merged = mergePriorityCandidates([
+    priorityCandidateFromRaw(dateRaw, { asOf: "2026-08-29", sort: "date", position: 1 }),
+    priorityCandidateFromRaw(rankRaw, { asOf: "2026-08-29", sort: "rank", position: 9 }),
+  ]);
+  const selected = selectPriorityCandidates({
+    rankCandidates: merged,
+    latestCandidates: merged,
+    backfillCandidates: [],
+    targetSize: 300,
+  });
+  assert.equal(selected.candidates[0].lane, "RECENT_POPULAR");
+  assert.equal(selected.candidates[0].raw_payload, rankRaw);
+  assert.deepEqual(selected.candidates[0].query_sorts, ["date", "rank"]);
+});
+
+test("same-sort conflicting raw provenance fails closed", () => {
+  const first = priorityCandidateFromRaw({ ...raw("conflict", "2026-08-20"), title: "first" },
+    { asOf: "2026-08-29", sort: "rank", position: 1 });
+  const second = priorityCandidateFromRaw({ ...raw("conflict", "2026-08-20"), title: "second" },
+    { asOf: "2026-08-29", sort: "rank", position: 1 });
+  assert.throws(() => mergePriorityCandidates([first, second]), /PROVENANCE_CONFLICT_RANK/);
+});
+
+test("lightweight candidate output never contains raw provenance", () => {
+  const selected = selectPriorityCandidates({
+    rankCandidates: [candidate("safe", "2026-08-20", "rank")],
+    latestCandidates: [], backfillCandidates: [], targetSize: 300,
+  }).candidates[0];
+  const lightweight = lightweightPriorityCandidate(selected);
+  assert.equal("raw_payload" in lightweight, false);
+  assert.equal("raw_provenance" in lightweight, false);
+  assert.equal("payload_hash" in lightweight, false);
+  assert.equal(JSON.stringify(lightweight).includes("raw_payload"), false);
 });
 
 test("exact DB identities are marked before any image processing", () => {
