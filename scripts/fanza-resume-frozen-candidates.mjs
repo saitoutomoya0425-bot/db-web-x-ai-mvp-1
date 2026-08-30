@@ -1,12 +1,20 @@
 import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { createClient } from "@supabase/supabase-js";
-import { stageFanzaItems } from "../src/lib/fanza/pipeline.ts";
+import {
+  fanzaSafetyReviewReasons,
+  stageFanzaItems,
+} from "../src/lib/fanza/pipeline.ts";
 import {
   buildStagedFanzaSourceRows,
   persistStagedFanzaProducts,
 } from "../src/lib/fanza/persistence.ts";
 import { frozenSafeNewProvenanceIssues } from "./lib/fanza-frozen-provenance.mjs";
+import {
+  assertDryRunTargetScopeUnchanged,
+  assertWriteTargetScope,
+  summarizeTargetScope,
+} from "./lib/fanza-frozen-resume-target-scope.mjs";
 
 const options = new Map();
 for (const argument of process.argv.slice(2)) {
@@ -56,26 +64,6 @@ const admin = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 
-async function tableCount(table, filters = []) {
-  let query = admin.from(table).select("id", { count: "exact", head: true });
-  for (const [column, value] of filters) query = query.eq(column, value);
-  const { count, error } = await query;
-  if (error) throw new Error(`COUNT_FAILED_${table}`);
-  return count ?? 0;
-}
-
-async function snapshot() {
-  const [videos, publicVideos, sourceProducts, pending, needsReview, jobs] = await Promise.all([
-    tableCount("videos"),
-    tableCount("videos", [["is_published", true]]),
-    tableCount("source_products"),
-    tableCount("source_products", [["review_status", "pending"]]),
-    tableCount("source_products", [["preview_status", "needs_review"]]),
-    tableCount("fanza_import_jobs"),
-  ]);
-  return { videos, public: publicVideos, source_products: sourceProducts, pending, needs_review: needsReview, jobs };
-}
-
 const targetExternalIds = await loadTargetExternalIds(targetsPath);
 if (targetExternalIds.length !== expectedCount) throw new Error(`TARGET_COUNT_MISMATCH_${targetExternalIds.length}`);
 const targetSet = new Set(targetExternalIds);
@@ -96,18 +84,36 @@ const { data: source, error: sourceError } = await admin.from("data_sources")
   .select("id").eq("name", "FANZA Webサービス").single();
 if (sourceError || !source) throw new Error("FANZA_DATA_SOURCE_NOT_FOUND");
 const normalizedCodes = frozen.map((candidate) => candidate.normalized_product_code);
-const [{ data: videos, error: videoError }, { data: externalSources, error: externalSourceError },
-  { data: codeSources, error: codeSourceError }] = await Promise.all([
-  admin.rpc("match_videos_for_import", {
-    external_ids: targetExternalIds,
-    normalized_codes: normalizedCodes.map((code) => code.toLowerCase()),
-  }),
-  admin.from("source_products").select("*").eq("data_source_id", source.id)
-    .in("external_product_id", targetExternalIds),
-  admin.from("source_products").select("*").eq("data_source_id", source.id)
-    .in("normalized_product_code", normalizedCodes),
-]);
-if (videoError || externalSourceError || codeSourceError) throw new Error("LATEST_DATABASE_LOOKUP_FAILED");
+const sourceFields = [
+  "id", "data_source_id", "external_product_id", "normalized_product_code", "normalized_data",
+  "payload_hash", "review_status", "preview_status", "attempt_count", "promoted_video_id",
+  "duplicate_video_id", "import_job_id",
+].join(",");
+
+async function fetchTargetScope() {
+  const [{ data: videos, error: videoError }, { data: externalSources, error: externalSourceError },
+    { data: codeSources, error: codeSourceError }] = await Promise.all([
+    admin.rpc("match_videos_for_import", {
+      external_ids: targetExternalIds,
+      normalized_codes: normalizedCodes.map((code) => code.toLowerCase()),
+    }),
+    admin.from("source_products").select(sourceFields).eq("data_source_id", source.id)
+      .in("external_product_id", targetExternalIds),
+    admin.from("source_products").select(sourceFields).eq("data_source_id", source.id)
+      .in("normalized_product_code", normalizedCodes),
+  ]);
+  if (videoError || externalSourceError || codeSourceError) {
+    throw new Error("LATEST_DATABASE_LOOKUP_FAILED");
+  }
+  return {
+    videos: videos ?? [],
+    sources: [...new Map([...(externalSources ?? []), ...(codeSources ?? [])]
+      .map((row) => [row.id, row])).values()],
+  };
+}
+
+const before = await fetchTargetScope();
+const { videos, sources: targetSources } = before;
 
 const normalizeCode = (value) => typeof value === "string"
   ? value.toUpperCase().replace(/[^A-Z0-9]/g, "")
@@ -123,8 +129,7 @@ const videoRows = (videos ?? []).map((row) => ({
   seriesName: row.series_name,
   genres: row.genre ? [row.genre] : [],
 }));
-const sourceRows = [...new Map([...(externalSources ?? []), ...(codeSources ?? [])]
-  .map((row) => [row.id, row])).values()].map((row) => ({
+const sourceRows = targetSources.map((row) => ({
   id: row.id,
   kind: "source",
   externalProductId: row.external_product_id,
@@ -184,7 +189,6 @@ const plannedRows = buildStagedFanzaSourceRows({
   products: productsToSave,
   fetchedAt,
 });
-const before = await snapshot();
 let saved = 0;
 if (write && plannedRows.length) {
   const result = await persistStagedFanzaProducts({
@@ -196,29 +200,19 @@ if (write && plannedRows.length) {
   });
   saved = result.saved;
 }
-const after = await snapshot();
+const after = await fetchTargetScope();
 
-if (!write && JSON.stringify(before) !== JSON.stringify(after)) throw new Error("DRY_RUN_DATABASE_CHANGED");
+let targetVerification;
+if (!write) {
+  assertDryRunTargetScopeUnchanged(before, after);
+  targetVerification = {
+    exact_target_rows_added: 0,
+    exact_target_rows_unchanged: before.sources.length,
+    unexpected_target_mutation: 0,
+  };
+}
 if (write) {
-  const expectedSourceDelta = productsToSave.length;
-  if (after.source_products - before.source_products !== expectedSourceDelta) throw new Error("SOURCE_PRODUCT_DELTA_MISMATCH");
-  if (after.pending - before.pending !== expectedSourceDelta) throw new Error("PENDING_DELTA_MISMATCH");
-  if (after.videos !== before.videos || after.public !== before.public || after.jobs !== before.jobs || after.needs_review !== before.needs_review) {
-    throw new Error("UNEXPECTED_DATABASE_DELTA");
-  }
-  const { data: savedRows, error: savedError } = await admin.from("source_products")
-    .select("external_product_id,normalized_product_code,payload_hash,review_status,preview_status,import_job_id")
-    .eq("data_source_id", source.id).in("external_product_id", classifications.STILL_SAFE_NEW);
-  if (savedError || (savedRows ?? []).length !== expectedSourceDelta) throw new Error("SAVED_ROWS_VERIFY_FAILED");
-  const plannedById = new Map(plannedRows.map((row) => [row.external_product_id, row]));
-  for (const row of savedRows ?? []) {
-    const planned = plannedById.get(row.external_product_id);
-    if (!planned || row.normalized_product_code !== planned.normalized_product_code
-      || row.payload_hash !== planned.payload_hash || row.review_status !== "pending"
-      || row.preview_status !== "new" || row.import_job_id !== importJobId) {
-      throw new Error(`SAVED_ROW_MISMATCH_${row.external_product_id}`);
-    }
-  }
+  targetVerification = assertWriteTargetScope({ before, after, plannedRows, importJobId });
 }
 
 const groups = [];
@@ -236,6 +230,8 @@ console.log(JSON.stringify({
   planned_promote_groups: groups.map((group) => group.length),
   planned_publication_count: plannedRows.length,
   saved,
-  database_before: before,
-  database_after: after,
+  target_scope_before: summarizeTargetScope(before),
+  target_scope_after: summarizeTargetScope(after),
+  target_scope_verification: targetVerification,
+  global_full_count_recheck: "SKIPPED_BY_POLICY",
 }, null, 2));
