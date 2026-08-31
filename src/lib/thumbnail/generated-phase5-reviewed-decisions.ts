@@ -186,6 +186,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G exact-617 adaptive visual review for 13DSVR01907: 全sampleとPACKAGE候補を比較し、縦長宣材のsample:1が人物・作品情報・カード構図を最も安定して保持するため確定する。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "13DSVR01917",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/13dsvr01917/13dsvr01917pl.jpg",
+    "source_hash": "27ef9e4a3f9c47fb4d938258160b57e6996579371e06cdc99124d63a79996977",
+    "output_path_or_url": "/card-thumbnails/13DSVR01917-auto-right.jpg",
+    "output_hash": "86c583d63a65a2de23317c73082175c7e41a16d24afa1423814be7ad9ff49909",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for 13DSVR01917: 13DSVR01917: RIGHT retains the featured performer and package title in a readable card crop; the added samples are scene frames or body closeups with lower representative value. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "13DSVR01944",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -6816,6 +6831,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G adaptive visual review for 1SEVEN00035: sample:1 is the strongest cached actual image because its subject, composition, and work context remain clear in card presentation; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "1SGKI00078B",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sgki00078b/1sgki00078bpl.jpg",
+    "source_hash": "d13c55fad5191f486cfe7b1e3b670e79b1cd2ac1075d328631251f1bcf41bbd7",
+    "output_path_or_url": "/card-thumbnails/1SGKI00078B-auto-right.jpg",
+    "output_hash": "ddcd6e9adef770ed2f1766f0a32bcc50d9976e25582dcbdfec3aed4cda0f2538",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for 1SGKI00078B: 1SGKI00078B: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample -33). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "1SGKI00089",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -7714,6 +7744,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "1SUN00068A: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "1SUN00069A",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sun00069a/1sun00069apl.jpg",
+    "source_hash": "69d14c5f9c3e84c0f6d7d8af3bb5f52a91d0ff0b8f738702da56422bd9f210af",
+    "output_path_or_url": "/card-thumbnails/1SUN00069A-auto-right.jpg",
+    "output_hash": "21d2e53741e0a4dfdd33a098c1a6503dc36b2c3716fd96af692697c3b37a0fbb",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for 1SUN00069A: 1SUN00069A: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 149, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "1SUN00070A",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/1sun00070a/1sun00070apl.jpg",
+    "source_hash": "8b064e30715c33386b10fd225ec6031bc2ff5cbae66405fef2cfd2cded9246d8",
+    "output_path_or_url": "/card-thumbnails/1SUN00070A-auto-right.jpg",
+    "output_hash": "10559e13754e54e85cfb0dd4b4468df964b01da28c804d07e05f485356047a88",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for 1SUN00070A: 1SUN00070A: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 163, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "1SVBGR00005",
@@ -10341,6 +10401,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "AARM00366: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "ACHJ00083",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/achj00083/achj00083pl.jpg",
+    "source_hash": "0d6cd65db4546400267b23624598d0a8067795297982d86bbad8cdc98d004dcb",
+    "output_path_or_url": "/card-thumbnails/ACHJ00083-auto-right.jpg",
+    "output_hash": "db5ea4ac7105cbaea5c8505bdd98403fc2979214b7e56fcd5f394c75bfccfc5f",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ACHJ00083: ACHJ00083: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 93, best sample -37). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "ACHJ00085",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -11541,6 +11616,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "APKH00198: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "APNS00405",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/apns00405/apns00405pl.jpg",
+    "source_hash": "fc036a279b19be008453b49a720671ae0116919a15fbcf2fa79231e754036b3b",
+    "output_path_or_url": "/card-thumbnails/APNS00405-auto-right.jpg",
+    "output_hash": "730f51e0b81dd796ad49172ce16e3f9a891ff5f68540351a534d35fcb5e50133",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for APNS00405: APNS00405: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 59, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "APNS00412",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -11734,6 +11824,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T15:22:13Z",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for AQUBL00027: sample:15は白い制服姿の主対象と顔を縦長に大きく見せ、8K・作品文字も保持し、細かな場面が密集するRIGHTより視線の焦点が明確である。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "AQUCO00170",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/aquco00170/aquco00170pl.jpg",
+    "source_hash": "6da9610a0922673acb3eaf2b42fed58be410149fc72bbae0f119c28330847445",
+    "output_path_or_url": "/card-thumbnails/AQUCO00170-auto-right.jpg",
+    "output_hash": "28fac5ef84de520f4149fae72266867965dd7ea4ffcd727f80e1f6b05977fbde",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for AQUCO00170: AQUCO00170: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 89, best sample -22). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "AQUCO00185",
@@ -12396,6 +12501,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "ATID00695: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "ATID00698",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/atid00698/atid00698pl.jpg",
+    "source_hash": "b2952b4701379a69bbe269f4effb5570543734f8ed62ef99a0fcfd58becddada",
+    "output_path_or_url": "/card-thumbnails/ATID00698-auto-right.jpg",
+    "output_hash": "9d2a0f733ef7372434e68e7c6c30dc82bcdaacec62729959c2ff0c2749e3dbf5",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ATID00698: ATID00698: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 131, best sample 43). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "ATID00702",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -12469,6 +12589,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "ATKD00438: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "ATKD00439",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/atkd00439/atkd00439pl.jpg",
+    "source_hash": "25defb503edf25c15a05748cfe364b595b8b344e63e873e24c3d74d9de00accf",
+    "output_path_or_url": "/card-thumbnails/ATKD00439-auto-right.jpg",
+    "output_hash": "96a43eafa19955d214f9739e6a8ebf8dd7ad4ba6a8b701127fe63a0153ae0c3b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ATKD00439: ATKD00439: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 145, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "ATKD00440",
@@ -13399,6 +13534,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "BBAN00601: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "BBAN00603",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/bban00603/bban00603pl.jpg",
+    "source_hash": "65a6825d8a1a9eee8d5d9b105cddbd32930a65f097d64805d02f04a9d8df1deb",
+    "output_path_or_url": "/card-thumbnails/BBAN00603-auto-right.jpg",
+    "output_hash": "ac4578291116eb89cf6c37b61f64fdef6cf1904bdc177e8b0aa4562a57e24f44",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for BBAN00603: BBAN00603: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 79, best sample -21). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "BBAN00604",
@@ -14466,6 +14616,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "CAWB00038: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "CAWB00039",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/cawb00039/cawb00039pl.jpg",
+    "source_hash": "8668efd3700b18b501e810e8e68a80f7c83d80e50af8b839c0eedd67247aef57",
+    "output_path_or_url": "/card-thumbnails/CAWB00039-auto-right.jpg",
+    "output_hash": "38dda5270edcaf3cc9f538bc55ab364be5fd625ccdec71ba6fe142ea8b519e41",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for CAWB00039: CAWB00039: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 137, best sample -25). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "CAWB00041",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -15111,6 +15276,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "CJOB00214: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "CJOB00217",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/cjob00217/cjob00217pl.jpg",
+    "source_hash": "1bdac70b94ed57f4e6073d3585f6a43f8cab32df298c90de3869bccc80674a95",
+    "output_path_or_url": "/card-thumbnails/CJOB00217-auto-right.jpg",
+    "output_hash": "e257cd4efd8b82fe1664a0fa810e31000706f759227f6d1c97c44a8c53428bc9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for CJOB00217: CJOB00217: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 125, best sample -13). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "CJOD00517",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -15229,6 +15409,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T15:22:13Z",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for CJOD00531: RIGHTは紫髪・黒衣装の主対象と作品タイトルが高コントラストで、バー場面中心のsampleより作品固有のビジュアルを強く保つ。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "CJOD00538",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/cjod00538/cjod00538pl.jpg",
+    "source_hash": "979c9b17c2ab296776b813a75881f1869fdf34cc91f9c0dc4ca4591dde93c4af",
+    "output_path_or_url": "/card-thumbnails/CJOD00538-auto-right.jpg",
+    "output_hash": "8bed059f0086e019b5c036a526b47338b2f31e579e772f3423cc7a72ea8d48e9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for CJOD00538: CJOD00538: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample -73). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "CJOD00591",
@@ -16056,6 +16251,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_CENTER is the only crop that preserves useful composition across the package seam without the weaker narrow RIGHT framing; the main subject remains readable; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "CRVR00413",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/crvr00413/crvr00413pl.jpg",
+    "source_hash": "c0bbc1431d9dbc6bcd53424ecb48f92acde5b7eb15256dc7ac5721a1d395e5b9",
+    "output_path_or_url": "/card-thumbnails/CRVR00413-auto-right.jpg",
+    "output_hash": "2af40fb15504a72e36cc8e6fe6e84af00c4974cd7c70e56e1dd18ec544c403c0",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for CRVR00413: CRVR00413: RIGHT is a clean poster-like package view with performer and VR identity intact; added samples are scene frames with weaker context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "CRVR00415",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -16101,6 +16311,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G exact-186 visual review for CRVR00423: the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "DASS00922",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/dass00922/dass00922pl.jpg",
+    "source_hash": "c3a6420b976872c46d36cd631fd8b351094664181da28962edc36f9f6b2d4d52",
+    "output_path_or_url": "/card-thumbnails/DASS00922-auto-right.jpg",
+    "output_hash": "2b5c72c7e88c09a3091f17a9e20fe1ef42e4ed890eeebafb5e5f77b0b44eb014",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for DASS00922: DASS00922: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 113, best sample -55). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "DASS00947",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -16114,6 +16339,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-29T00:00:00Z",
     "approval_batch": "phase5g-8822-9821",
     "reason": "Phase 5G exact-617 adaptive visual review for DASS00947: RIGHTは主演者・作品名・企画情報を縦長で保持し、sample群は途中場面に偏る。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "DASS00949",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/dass00949/dass00949pl.jpg",
+    "source_hash": "4de0c46abd1d598a3c391c41639fae7edd67ead7f65e45b41201a48ed93d98d2",
+    "output_path_or_url": "/card-thumbnails/DASS00949-auto-right.jpg",
+    "output_hash": "bb8faaa07e16b5c7f5561bb8207aad09a3242485c6e1ddf6bf8ca8ea07415329",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for DASS00949: DASS00949: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 155, best sample 11). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "DASS00951",
@@ -17256,6 +17496,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "DSOD00045: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "DSOD00046",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/dsod00046/dsod00046pl.jpg",
+    "source_hash": "464a57a215b017dbaa5b16e50240a542c2f968df3d48f9e1bbfc905e65df34cb",
+    "output_path_or_url": "/card-thumbnails/DSOD00046-auto-right.jpg",
+    "output_hash": "4fbb944b6e038db9d58ca733f5bb1f5bfef9cf3f0fee79e9818f40786e51a788",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for DSOD00046: DSOD00046: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 57). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "DSOD00047",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -17976,6 +18231,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "DVMM00392",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/dvmm00392/dvmm00392pl.jpg",
+    "source_hash": "d92a796838e2e8f944bf7b7471ff0fe719f227cdc57e73c53502f836f4f9353d",
+    "output_path_or_url": "/card-thumbnails/DVMM00392-auto-right.jpg",
+    "output_hash": "a9e48047b1a8700880058dc5a90f25e56a3f9067465ec774af4c3499b6e05bef",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for DVMM00392: DVMM00392: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 147, best sample 102). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "DVMM00396",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -18379,6 +18649,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Actual-source and 7:10 card previews visually reviewed; selected the clearest representative composition without substituting identical candidates. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "EBWH00357",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ebwh00357/ebwh00357pl.jpg",
+    "source_hash": "9da3c4959ed32bc0285774acfdd5365247584b96cec66edc63ff998d9c5f9274",
+    "output_path_or_url": "/card-thumbnails/EBWH00357-auto-right.jpg",
+    "output_hash": "07ca52224ca691ca94ac055504b6540baf67e7e23c4d9ea696b1ddd47b18180a",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for EBWH00357: EBWH00357: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 75, best sample -27). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "EKDV00820",
@@ -18801,6 +19086,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5F visual calibration candidate clearly matches visual truth; owner delegated proxy approval via ChatGPT; SAMPLE is excluded; this is not an auto-safe classification."
   },
   {
+    "code": "FCVR00064",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/fcvr00064/fcvr00064pl.jpg",
+    "source_hash": "2331bdccb04530c539a79553faa0709326724d1a3c453793d7bf83a0b194adda",
+    "output_path_or_url": "/card-thumbnails/FCVR00064-auto-right.jpg",
+    "output_hash": "5edf9218c16fb5f523ddc9e7e68f0357d8f96878de47e1be4e6e12bd12456814",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for FCVR00064: FCVR00064: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 159, best sample 57). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "FCVR00071",
     "mode": "PACKAGE_CENTER",
     "state": "RESOLVED",
@@ -18964,6 +19264,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "FEM00038: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "FEM00039",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/fem00039/fem00039pl.jpg",
+    "source_hash": "ce3fb2202d73e3437c8bcbb33d0a75a009eaf03788bb25ca9c6baa3987dc8405",
+    "output_path_or_url": "/card-thumbnails/FEM00039-auto-right.jpg",
+    "output_hash": "d2e85e2967bd02c5c255c26bd18fab8543d5d875b51560384cdd08f6da7ce886",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for FEM00039: FEM00039: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 71, best sample -65). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "FJIN00148",
@@ -19294,6 +19609,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "FLAV00427: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "FPRE00218",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/fpre00218/fpre00218pl.jpg",
+    "source_hash": "6f4ff820d6a7a71defaff07d5e489c81fecad0e7364556949567879b9f8be8b8",
+    "output_path_or_url": "/card-thumbnails/FPRE00218-auto-right.jpg",
+    "output_hash": "778bef9d074802d204764304f85e6d990611909a06b26a7fb7285f2d50483210",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for FPRE00218: FPRE00218: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 99, best sample -29). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "FPRE00235",
@@ -19791,6 +20121,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "GMEM00155",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/gmem00155/gmem00155pl.jpg",
+    "source_hash": "3d7fb1f754335a510570a2b2ffb4cf6dc41493242ae806a36c18978243fd2211",
+    "output_path_or_url": "/card-thumbnails/GMEM00155-auto-right.jpg",
+    "output_hash": "793a73d7789fefef16444793c984c262411c339978e3bb2a56cfc7adcc1c42fe",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for GMEM00155: GMEM00155: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 159, best sample 43). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "GML00714",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -19819,6 +20164,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-29T00:00:00Z",
     "approval_batch": "phase5g-8822-9821",
     "reason": "Phase 5G exact-617 adaptive visual review for GML00715: RIGHTは主要人物・作品タイトルを縦長で保持し、sample候補が存在しない。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "GQHB00024",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/gqhb00024/gqhb00024pl.jpg",
+    "source_hash": "742127e1aac837ed2e2bb370d328ec79add52f3d28e146e763d8ebd6ef6c7273",
+    "output_path_or_url": "/card-thumbnails/GQHB00024-auto-right.jpg",
+    "output_hash": "7c22de579d103514b1926dfbf05851039e8e64688b8be3417ca37c4f054e4edf",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for GQHB00024: GQHB00024: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 163, best sample -5). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "GQN00012",
@@ -20194,6 +20554,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "GVH00878: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "GVH00881",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/gvh00881/gvh00881pl.jpg",
+    "source_hash": "8826dfecd23de7e191d07deaeb35db4481e085e123aeef69efd7a3b0fffcdf6f",
+    "output_path_or_url": "/card-thumbnails/GVH00881-auto-right.jpg",
+    "output_hash": "032538fbdd8c4d676dcbcf5f349a0b8e1c2c109e043993b67f58d129497d3ecd",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for GVH00881: GVH00881: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 141, best sample -37). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "H_005RBC00154AI",
@@ -23331,6 +23706,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "H_1650EMBM00053: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_1650EMBM00054",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1650embm00054/h_1650embm00054pl.jpg",
+    "source_hash": "2ae1da4e44b3636581697ea5ff2db8b47f7c0b9a4f44a1b37fb302fddc13a19e",
+    "output_path_or_url": "/card-thumbnails/H_1650EMBM00054-auto-right.jpg",
+    "output_hash": "b2dc39d8d17b60b8fd69fb7f62a338296058256529c978d8d5c4334fbec3b20b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1650EMBM00054: H_1650EMBM00054: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample -86). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_1650EMBM00055",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1650embm00055/h_1650embm00055pl.jpg",
+    "source_hash": "911a1fc4535bc2d604ad7388a5bee7455aa0e2fe079ccd347c0952246bae0e26",
+    "output_path_or_url": "/card-thumbnails/H_1650EMBM00055-auto-right.jpg",
+    "output_hash": "e67909e824758a471327e11c80390220a5e5e9062b0ff0b10c9c3bb84853fcc5",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1650EMBM00055: H_1650EMBM00055: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 147, best sample 46). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_1651Y00390",
     "mode": "PACKAGE_FULL",
     "state": "RESOLVED",
@@ -23736,6 +24141,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_1664HNBR00015",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1664hnbr00015/h_1664hnbr00015pl.jpg",
+    "source_hash": "f46ef090babd194f3058eff4f3ef72145429b18c0fb4617ef2c82f6ff12949b4",
+    "output_path_or_url": "/card-thumbnails/H_1664HNBR00015-auto-right.jpg",
+    "output_hash": "21c6d5b7420bcd4662026410df957d084cba5936f0d190774f523dbbf53431e8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1664HNBR00015: H_1664HNBR00015: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 159, best sample -12). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_1664KANZ00351",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1664kanz00351/h_1664kanz00351pl.jpg",
+    "source_hash": "39dfc08e7edc11903b86ebf9744db30051fe16b9409f736f7768e519564d6a4e",
+    "output_path_or_url": "/card-thumbnails/H_1664KANZ00351-auto-right.jpg",
+    "output_hash": "9fdece45778d2f7f37885c0a132b4e12f3545ed19ff3aa601c444517cece60e3",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1664KANZ00351: H_1664KANZ00351: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 65). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_1664KIR00079",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -23796,6 +24231,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G exact-582 adaptive visual review for H_1664OFKU00247: RIGHTは主要人物の顔・衣装・作品タイトルを大きく示し、sample群は場面断片で代表性が弱い。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_1664OFKU00250",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1664ofku00250/h_1664ofku00250pl.jpg",
+    "source_hash": "b717098d575d3c95ef5630f0f2ab68f27d14ae3e8907681f1a41a386a53ee321",
+    "output_path_or_url": "/card-thumbnails/H_1664OFKU00250-auto-right.jpg",
+    "output_hash": "887f42d08b0a3bc3e3cb6f7dc9d2b461cfd7aae50f062df38d3f57dc51c0bb59",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1664OFKU00250: H_1664OFKU00250: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample -80). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_1664VNDS03441",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -23826,6 +24276,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "H_1664VNDS03443: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_1664VNDS03444",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1664vnds03444/h_1664vnds03444pl.jpg",
+    "source_hash": "b1289dcf446ba4a38a64ab3253ae7df211b9047fdeb8cd99f7e3c08f7acf5b5f",
+    "output_path_or_url": "/card-thumbnails/H_1664VNDS03444-auto-right.jpg",
+    "output_hash": "f25212666b682bc2556331e57e2317267222c9a545543c896f6bf5e57e5000b3",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1664VNDS03444: H_1664VNDS03444: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 139, best sample -22). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_1664VNDS05236",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -23854,6 +24319,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "H_1664VNDS05238: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_1664VNDS05239",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1664vnds05239/h_1664vnds05239pl.jpg",
+    "source_hash": "4f07eefc1d46a762d4901e70ad71c85df43492778b660b7381550c74df98a8ff",
+    "output_path_or_url": "/card-thumbnails/H_1664VNDS05239-auto-right.jpg",
+    "output_hash": "4391b3f0e81900ded3133860df2403aa88a9ddc84817c2140fdc05ef42def87f",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1664VNDS05239: H_1664VNDS05239: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 12). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_1664VNDS05240",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_1664vnds05240/h_1664vnds05240pl.jpg",
+    "source_hash": "d07e8cc29a890db1989c8cdfe0ec52de56e0d5351f8ec07699a151a1bb5d50b5",
+    "output_path_or_url": "/card-thumbnails/H_1664VNDS05240-auto-right.jpg",
+    "output_hash": "3dc111f515235f316580fe574152e4dac02feb62cfaaf8a870f48f5674e8d2b7",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_1664VNDS05240: H_1664VNDS05240: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 163, best sample -44). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "H_1711DEVR00037",
@@ -25971,6 +26466,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G exact-582 adaptive visual review for H_237AMBI00213: RIGHTは制服姿の主対象の顔、上半身、強い縦題字を明確に保ち、sample:6や16は全身が見えても作品固有のタイトルと企画性が薄い。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_237AMBI00214",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237ambi00214/h_237ambi00214pl.jpg",
+    "source_hash": "ab29045dc7c3cf5a008d67f1a5c8ad545b3edaa097f727609205ec73281b7a3f",
+    "output_path_or_url": "/card-thumbnails/H_237AMBI00214-auto-right.jpg",
+    "output_hash": "1001dbec7f1e53085a01b775a84037ffd7ff5adfbdf66119e32c203243c80106",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237AMBI00214: H_237AMBI00214: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample 100). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_237CLOT00041",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -26014,6 +26524,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the title, subject, and representative work context most clearly for card display. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237CLOT00044",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237clot00044/h_237clot00044pl.jpg",
+    "source_hash": "3716544fc267e5c40f7f282f03637a5530c2b69685f94acacb6eaf23e727f9fc",
+    "output_path_or_url": "/card-thumbnails/H_237CLOT00044-auto-right.jpg",
+    "output_hash": "18411aff5207d80e1880a9f561444d58a601a77e9d893b58e1e439a63b305218",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237CLOT00044: H_237CLOT00044: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 99, best sample 68). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "H_237NACT00133",
@@ -26526,6 +27051,96 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "H_237NACT00181: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "H_237NACT00183",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nact00183/h_237nact00183pl.jpg",
+    "source_hash": "3d070e8fe034b24206fbf3425a71dade5f4df308f150c1c4fe8a66bc64222856",
+    "output_path_or_url": "/card-thumbnails/H_237NACT00183-auto-right.jpg",
+    "output_hash": "83b81013d718d4a48d4e6b563efc6e2a8c0b5e693800191951e45fe7d86fede2",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACT00183: H_237NACT00183: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 141, best sample 100). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237NACT00184",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nact00184/h_237nact00184pl.jpg",
+    "source_hash": "c7e6c526d72c6cc77979ec50a23d576d164ea28468dbb76e7b27bd7c1745e39e",
+    "output_path_or_url": "/card-thumbnails/H_237NACT00184-auto-right.jpg",
+    "output_hash": "402e315cf03d82c02a716280d0c174cd88349dba8fc7ffc45758753020fab668",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACT00184: H_237NACT00184: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 149, best sample 100). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237NACT00185",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nact00185/h_237nact00185pl.jpg",
+    "source_hash": "ead213ef988894b39b3e3738922227e3e90288ee8369c4659f43a3052a202295",
+    "output_path_or_url": "/card-thumbnails/H_237NACT00185-auto-right.jpg",
+    "output_hash": "6f93d46ccfe7502f397e6fe28df839f2775d339df10c53bb099ec5824ae0fd0a",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACT00185: H_237NACT00185: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 71, best sample 82). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237NACT00186",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nact00186/h_237nact00186pl.jpg",
+    "source_hash": "4131a913c971d1d3f3b5b320908bda1e3c457bc5f75ccb40b3d31d42cfdae7b7",
+    "output_path_or_url": "/card-thumbnails/H_237NACT00186-auto-right.jpg",
+    "output_hash": "ef04ee269fd4c162adb164859b7fcc0246335d46e94657e7c9b09502dab933e1",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACT00186: H_237NACT00186: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 163, best sample 110). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237NACT00187",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nact00187/h_237nact00187pl.jpg",
+    "source_hash": "04877cbbfdf0da4a87a3965ba3545e7269aa99fd19a249b04b380460989c787e",
+    "output_path_or_url": "/card-thumbnails/H_237NACT00187-auto-right.jpg",
+    "output_hash": "7e4974ebd55f45e14d5add2823a01729c4ba2a55b64e9f7b363d7c7300dcda7b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACT00187: H_237NACT00187: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 161, best sample 108). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237NACT00188",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nact00188/h_237nact00188pl.jpg",
+    "source_hash": "5d51a165b43558d2c56a94ee70cb8e80f26d1feb5fab0683f649cf4d977d3efd",
+    "output_path_or_url": "/card-thumbnails/H_237NACT00188-auto-right.jpg",
+    "output_hash": "8ba78d7ec5bbcb7aeef657a14e97855d3bcac53f80bce6c277130fdec9398952",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACT00188: H_237NACT00188: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 163, best sample 114). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "H_237NACX00172",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -26584,6 +27199,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T10:30:00Z",
     "approval_batch": "phase5f-review-batch-02",
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237NACX00178",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237nacx00178/h_237nacx00178pl.jpg",
+    "source_hash": "471bd2d744e52cae2ea126cd9197eca3048f5490196b2090842471848daceace",
+    "output_path_or_url": "/card-thumbnails/H_237NACX00178-auto-right.jpg",
+    "output_hash": "4b983fe41610599bc1e702f34592d632c803d6402af340ab1ca07a0556c3e5a1",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237NACX00178: H_237NACX00178: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 129, best sample 88). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "H_237ZMAR00161",
@@ -26659,6 +27289,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the title, subject, and representative work context most clearly for card display. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "H_237ZMAR00168",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/h_237zmar00168/h_237zmar00168pl.jpg",
+    "source_hash": "ee655a2e136d055d6f563c7c492b19c4bd9f4393895bcea2b27cd422051c533a",
+    "output_path_or_url": "/card-thumbnails/H_237ZMAR00168-auto-right.jpg",
+    "output_hash": "18db20fd356e3787db044bed5a5cc17e27e6ce0ed017ccca8008bc987433e6aa",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for H_237ZMAR00168: H_237ZMAR00168: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 149, best sample 100). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "H_283PMFT00417",
@@ -27996,6 +28641,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "HALT00091: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "HALT00092",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/halt00092/halt00092pl.jpg",
+    "source_hash": "79069ecef04b719758ff6cb76edde4f5187f8782aa270f8e670c777139e16a4c",
+    "output_path_or_url": "/card-thumbnails/HALT00092-auto-right.jpg",
+    "output_hash": "30571c8165f6dfb5939e154feb7529236d9ef88e6b5a39255cc6027d2eccb752",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HALT00092: HALT00092: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample 54). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "HALT00093",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/halt00093/halt00093pl.jpg",
+    "source_hash": "c7ebd5fd7d13a2e9eeb12af25023534a0208c2077e42c24b67edb17f44bf3c1c",
+    "output_path_or_url": "/card-thumbnails/HALT00093-auto-right.jpg",
+    "output_hash": "68dc2b37bc1b5682bc5699abc4ec656c881682324c9f8da9363cb1347ce7a54d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HALT00093: HALT00093: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 131, best sample 42). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "HDRT00008",
     "mode": "PACKAGE_CENTER",
     "state": "RESOLVED",
@@ -28039,6 +28714,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "HERY00173: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "HERY00174",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/hery00174/hery00174pl.jpg",
+    "source_hash": "986f9bd2713cef44c4109287c0f1af946f7967a59a18e952484232c6edc8f0c4",
+    "output_path_or_url": "/card-thumbnails/HERY00174-auto-right.jpg",
+    "output_hash": "e1e2532c76402b5c6ec4cb0658f656defa8f7a37fcb9baa25c28f9306ea2196d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HERY00174: HERY00174: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 37, best sample -53). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "HHKL00243",
@@ -28176,6 +28866,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "HMIX00060",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/hmix00060/hmix00060pl.jpg",
+    "source_hash": "c5b1eb61c1882e9cb8bfec90c0cbe98d89a7632a789e329da2ecd67f28ed2e02",
+    "output_path_or_url": "/card-thumbnails/HMIX00060-auto-right.jpg",
+    "output_hash": "705f702bfce18c34c2d8a70b103f3670212025607cc1db6dc21b29637559e34c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HMIX00060: HMIX00060: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 169, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "HMN00812",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/hmn00812/hmn00812pl.jpg",
+    "source_hash": "fee3513ba84efdc05e29b0da8a105bfd85a25fedda6819a432aa9324c23a4674",
+    "output_path_or_url": "/card-thumbnails/HMN00812-auto-right.jpg",
+    "output_hash": "59484addd0a6fff3f35833cdcdc3207bc89ebb83e454f9dafce7165aa9688b2e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HMN00812: HMN00812: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 155, best sample 11). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "HMN00843",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -28219,6 +28939,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T23:00:03+09:00",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for HMN00848: RIGHTは主演者の座り姿・顔・タイトルを一枚で示し、sampleは行為場面に偏る。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "HMN00849",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/hmn00849/hmn00849pl.jpg",
+    "source_hash": "ad9904de10e535a31885d30a6c59535da3bc7a145646787792db868bb317894d",
+    "output_path_or_url": "/card-thumbnails/HMN00849-auto-right.jpg",
+    "output_hash": "259fe0b08be52ee3d2a4693d29c07a800cd209afd560d371d6b93666ee485467",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HMN00849: HMN00849: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 95, best sample -13). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "HMN00864",
@@ -28506,6 +29241,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the title, subject, and representative work context most clearly for card display. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "HMN00904",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/hmn00904/hmn00904pl.jpg",
+    "source_hash": "b3eda813c8d9812ec1b7d413a788956c1389221f6b9481f445a093904ea2673d",
+    "output_path_or_url": "/card-thumbnails/HMN00904-auto-right.jpg",
+    "output_hash": "42304a36199758ae86cd2769f8af7e8da2dd4dee4d614a86dac1239e44a5265f",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HMN00904: HMN00904: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample 75). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "HNDB00282",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -28761,6 +29511,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "HSODA00129: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "HSODA00133",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/hsoda00133/hsoda00133pl.jpg",
+    "source_hash": "b747feb56b472c22bf15d9ed0a83aa86f72b5fba64a8f0566cd5bacdc0aaa8cf",
+    "output_path_or_url": "/card-thumbnails/HSODA00133-auto-right.jpg",
+    "output_hash": "7cc74483cdf9e192ae025811d405d35e244e672597fcb21bd4d06831891474f6",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HSODA00133: HSODA00133: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 135, best sample 95). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "HSSP00001",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -28804,6 +29569,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-24T06:59:10Z",
     "approval_batch": "phase5g-4274-5273",
     "reason": "Phase 5G exact-186 visual review for HTMS00013AI: the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "HUNTC00623",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/huntc00623/huntc00623pl.jpg",
+    "source_hash": "2508a5da70854b940e3b503659d6ddd1895968c5f5234ea7792613ba2e275e8f",
+    "output_path_or_url": "/card-thumbnails/HUNTC00623-auto-right.jpg",
+    "output_hash": "eba7bd8b0af5c91415baf0d932dff82c5c9de078c1a3e7989093b66e5642f38c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for HUNTC00623: HUNTC00623: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 87, best sample 43). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "IGU00009AI",
@@ -28866,6 +29646,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G exact-617 adaptive visual review for IPBZ00023: RIGHTは主演者・作品名・表紙構成を縦長で保ち、sample群は作品情報のない場面画像である。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "IPOK00014",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ipok00014/ipok00014pl.jpg",
+    "source_hash": "833abc2aab6273a18aab311b8f81ddee2229f6c4c918c4dd7c30c385ee7906a9",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/ipok00014/ipok00014pl.jpg",
+    "output_hash": "833abc2aab6273a18aab311b8f81ddee2229f6c4c918c4dd7c30c385ee7906a9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for IPOK00014: IPOK00014: FULL is the only reviewed package view that preserves the work-wide cast/context; RIGHT/CENTER discard material information and Stage 1 samples do not replace it (best sample score 61). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "IPOK00025",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -28926,6 +29721,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the title, subject, and representative work context most clearly for card display. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "IPOK00031",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ipok00031/ipok00031pl.jpg",
+    "source_hash": "aa84347ac3cdaf97b90e66e10aa997a710abe9ae7f51e1ce0a44d58a21be89b2",
+    "output_path_or_url": "/card-thumbnails/IPOK00031-auto-right.jpg",
+    "output_hash": "826fde158d52256a7b037798b7a90c78ca34f2fe5307abf68cf527918c61bef9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for IPOK00031: IPOK00031: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 145, best sample 69). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "IPOK00032",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -28969,6 +29779,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the title, subject, and representative work context most clearly for card display. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "IPVR00361",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ipvr00361/ipvr00361pl.jpg",
+    "source_hash": "24e589ff972677926e47909f657a68c3273fe36d881808e2c92d589876862d29",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/ipvr00361/ipvr00361pl.jpg",
+    "output_hash": "24e589ff972677926e47909f657a68c3273fe36d881808e2c92d589876862d29",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for IPVR00361: IPVR00361: FULL best preserves the complete package collage and work identity; RIGHT/CENTER over-crop it and the added samples are generic or explicit scene frames. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "IPVR00376",
@@ -29074,6 +29899,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-24T06:59:10Z",
     "approval_batch": "phase5g-4274-5273",
     "reason": "Phase 5G exact-186 visual review for IPVR00387: the centered package composition preserves the main subject and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "IPZZ00811",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ipzz00811/ipzz00811pl.jpg",
+    "source_hash": "fd4b1f980b77811178346163a3c7b0348989f70c56a699bdab631761cf9a5a22",
+    "output_path_or_url": "/card-thumbnails/IPZZ00811-auto-right.jpg",
+    "output_hash": "be6a447c9f45c539fe2c9e3e3300d4be52bc6ec194bfd10b03177f1c72853f5c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for IPZZ00811: IPZZ00811: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 145, best sample -9). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "IPZZ00828",
@@ -29494,6 +30334,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "IPZZ00912",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ipzz00912/ipzz00912pl.jpg",
+    "source_hash": "cd9c6fe4a227d21f0525d4c7c3909567b25a999b655c5d4b0a3fa445a8573a64",
+    "output_path_or_url": "/card-thumbnails/IPZZ00912-auto-right.jpg",
+    "output_hash": "93b981aff92475f33e021bd96e942db5440606a6026dec186fcb6776802520d8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for IPZZ00912: IPZZ00912: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 79, best sample -19). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "IPZZ00913",
@@ -30501,6 +31356,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "JUMS00181: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "JUMS00182",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/jums00182/jums00182pl.jpg",
+    "source_hash": "394a6349c6cd587045f17ee73342aee068c49d759fec3fd761160b3ce6757ded",
+    "output_path_or_url": "/card-thumbnails/JUMS00182-auto-right.jpg",
+    "output_hash": "3051c55747c58bebfc36347f11b850199da441aafb91dffb429ae38e8d630701",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUMS00182: JUMS00182: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 85, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "JUMS00183",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/jums00183/jums00183pl.jpg",
+    "source_hash": "179139e4ab37489401b76c4521a6b3c4b99ae311e8961e6c5826cf669fefd87f",
+    "output_path_or_url": "/card-thumbnails/JUMS00183-auto-right.jpg",
+    "output_hash": "c767dc87317f39e2b052500b5ea7a5910e2bf68ed5160c2cc19b2db269965a4e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUMS00183: JUMS00183: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 169, best sample -5). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "JUMS00184",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -30769,6 +31654,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "JUR00654",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/jur00654/jur00654pl.jpg",
+    "source_hash": "e4a611733582bcada131a4543754a39862e373b44ddeaeebbcb64f19fffb2fef",
+    "output_path_or_url": "/card-thumbnails/JUR00654-auto-right.jpg",
+    "output_hash": "266c1791f0f6c8d37e00f3780df094804648be069983e2b1180a12c6fe8110b9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUR00654: JUR00654: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 123, best sample -49). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "JUR00664",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/jur00664/jur00664pl.jpg",
+    "source_hash": "b9853295c3a5a6128cb2feeb6cbedd2286dab084025547572856b7444c1d009e",
+    "output_path_or_url": "/card-thumbnails/JUR00664-auto-center.jpg",
+    "output_hash": "53cb1e2e4d522f201b6c5ed558a6f4ca1fbf5d693913e6104b84bdea705a6137",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUR00664: JUR00664: the CENTER crop keeps the principal performer and useful title/context together; RIGHT loses identifying content and the reviewed samples are weaker scene frames (best sample score -21). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "JUR00691",
@@ -31731,6 +32646,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "JUR00854",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/jur00854/jur00854pl.jpg",
+    "source_hash": "e7c7d96d9022290e1f7b888cfe06bcc971316befbd6f665e8ff2df7f8ca023c5",
+    "output_path_or_url": "/card-thumbnails/JUR00854-auto-right.jpg",
+    "output_hash": "5c420dd0069e092b2da7e9ac4c4a2f6d97b94261b5d4d65be38103d382219b34",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUR00854: JUR00854: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 49, best sample -13). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "JUR00860",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -31851,6 +32781,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "JUVR00277",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/juvr00277/juvr00277pl.jpg",
+    "source_hash": "4b38c0f528c1e7102a20ffd6456da7cc1160ade39b5bdf629cdbbdeab1cab8ca",
+    "output_path_or_url": "/card-thumbnails/JUVR00277-auto-right.jpg",
+    "output_hash": "d6ccca6b599a96c124bf5b57a1b5ea2ea960c191f0993d3e96d9d2580bccdfdf",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUVR00277: JUVR00277: RIGHT clearly presents the performer and title identity, while the added samples are generic or body-focused scene frames. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "JUVR00295",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -31926,6 +32871,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "JUVR00302: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "JUVR00303",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/juvr00303/juvr00303pl.jpg",
+    "source_hash": "f1513de362f79620a49d09985ef737f27531317c2907a56ca7b2ad897afe0790",
+    "output_path_or_url": "/card-thumbnails/JUVR00303-auto-right.jpg",
+    "output_hash": "c3f256e7e0e226d22cc53ae088a3cdbd11f7a54afe8ae97b0c6f6ca743ece11d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUVR00303: JUVR00303: RIGHT retains the featured performer and identifying package copy, while the six added samples are close/local scene frames with less work-level context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "JUYU00005",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -31954,6 +32914,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "JUYU00007: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "JUYU00008",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/juyu00008/juyu00008pl.jpg",
+    "source_hash": "2e2012bc43c1924390e369904630083823ed37cfd2708978cb32596d82ea29ff",
+    "output_path_or_url": "/card-thumbnails/JUYU00008-auto-right.jpg",
+    "output_hash": "eee66f1cd406bff64e89f7ff841d0299dee11cdfdf03de0446ccd8ce6984547d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for JUYU00008: JUYU00008: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 143, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "JYMA00107",
@@ -32194,6 +33169,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T19:00:00Z",
     "approval_batch": "phase5f-review-batch-04",
     "reason": "KAM00280: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "KAVR00481",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kavr00481/kavr00481pl.jpg",
+    "source_hash": "0c675176510a300887293bd58ed7a93b0cb88c6d55c769b9b200ef40c3b9d757",
+    "output_path_or_url": "/card-thumbnails/KAVR00481-auto-right.jpg",
+    "output_hash": "0a3cd40bcde75e065d1bef0f49a6ed95916102e308577018980360cfed676589",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KAVR00481: KAVR00481: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 155, best sample 5). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "KAVR00490",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kavr00490/kavr00490pl.jpg",
+    "source_hash": "fe40f247d04a6341293a659d0cc2a80127312b446fd878216cb46c2c2998fb5d",
+    "output_path_or_url": "/card-thumbnails/KAVR00490-auto-right.jpg",
+    "output_hash": "df68f169a164669076e7b01f9976535af41a311e1e4e055bd0a62e3ef24c03a5",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KAVR00490: KAVR00490: RIGHT preserves both featured performers and the package concept; the added samples are plain scene stills with less identity and context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "KAVR00501",
@@ -32721,6 +33726,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "KIWVR00914: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "KND00031",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/knd00031/knd00031pl.jpg",
+    "source_hash": "e83cbfc5260f08320b6d5885a5b05d2985f06475e3282f52a9c183792bc6c63f",
+    "output_path_or_url": "/card-thumbnails/KND00031-auto-right.jpg",
+    "output_hash": "c0ea0334c8f5e7ea8af937c310060a31055a82f27a5058a217ba775fc1cb5e8b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KND00031: KND00031: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 175, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "KNKS00001",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33021,6 +34041,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "KSBJ00444: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "KTB00115",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ktb00115/ktb00115pl.jpg",
+    "source_hash": "a93d507820476672875bd083ded5cbdadfad2c5c07b2a62fa1aadcc2bf6cea96",
+    "output_path_or_url": "/card-thumbnails/KTB00115-auto-right.jpg",
+    "output_hash": "ebd111a96136c03f5779a192afa3f8ef5da88a3c1ecdcd6eeb4c2c2721752a38",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KTB00115: KTB00115: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 147, best sample -27). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "KTB00116",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33231,6 +34266,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "KTRA00797: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "KTRA00798",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ktra00798/ktra00798pl.jpg",
+    "source_hash": "ce6cc8f6c1937929c5277ed05ca842e3ce2cab5e4288532cc8dc403fce840722",
+    "output_path_or_url": "/card-thumbnails/KTRA00798-auto-right.jpg",
+    "output_hash": "7ac9e80c4578f8203c4d59275fa5b9519184118e5bfc2ad1a97d79f1a96b82df",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KTRA00798: KTRA00798: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 149, best sample -45). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "KTVE00004",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33306,6 +34356,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "KWBD00441",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kwbd00441/kwbd00441pl.jpg",
+    "source_hash": "25ae7af441906c22f5c1dfeac89a9f2da0c745a152c10885e01ea2f69eee3c43",
+    "output_path_or_url": "/card-thumbnails/KWBD00441-auto-right.jpg",
+    "output_hash": "8b1ef6f37486aa55ae81d2bac8f0831057aa3df7022839a25ff003b31161624d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KWBD00441: KWBD00441: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample 11). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "KYMI00052",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kymi00052/kymi00052pl.jpg",
+    "source_hash": "e6f4dfece166c0a9329df2d775fd5b69726b7c86c7970a65979b24d251b7cb29",
+    "output_path_or_url": "/card-thumbnails/KYMI00052-auto-right.jpg",
+    "output_hash": "4bcae3ab083b24d053b5d2f5f125c77d90fe04dcd13e44477c5c43bfd3af53b6",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KYMI00052: KYMI00052: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 135, best sample -38). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "KYMI00055",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33336,6 +34416,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "KYMI00057: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "KYMI00058",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/kymi00058/kymi00058pl.jpg",
+    "source_hash": "d6cb7df8ddadf6a943eabb4889951c9601a220dbf7799e1381961a1cb9af7902",
+    "output_path_or_url": "/card-thumbnails/KYMI00058-auto-right.jpg",
+    "output_hash": "1b16f758d24f2473f48bbbc191ba7e80431bab6fe76073f7209167ada9978e69",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for KYMI00058: KYMI00058: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 107, best sample -33). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "LUCY00028",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33364,6 +34459,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "LUCY00030: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "LUCY00031",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/lucy00031/lucy00031pl.jpg",
+    "source_hash": "c06ca7716cbaf3938950816264da68fb42b1847249d2445c6b138c3dfd3a5648",
+    "output_path_or_url": "/card-thumbnails/LUCY00031-auto-right.jpg",
+    "output_hash": "3d9b7ad2c10e260849a2d24257fe6f5d9fb0c6cc736855a6de65c77fd6178d24",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for LUCY00031: LUCY00031: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 75, best sample 48). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "LULU00445",
@@ -33621,6 +34731,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MADV00641: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MADV00642",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/madv00642/madv00642pl.jpg",
+    "source_hash": "252a27ec09c53354bbe7e2269ed99dbde3b268807dd3715550232b4b6cce5896",
+    "output_path_or_url": "/card-thumbnails/MADV00642-auto-right.jpg",
+    "output_hash": "f4a16d341581336f9f76efa7e3b38311d0da2fd28e144fe2a6d36a18b1870e49",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MADV00642: MADV00642: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 175, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MANX00032",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33801,6 +34926,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MDBK00430",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mdbk00430/mdbk00430pl.jpg",
+    "source_hash": "1d7db1f0a4a6a781a238a0c96ee165eb31674747076579581f63525bd1359ea7",
+    "output_path_or_url": "/card-thumbnails/MDBK00430-auto-right.jpg",
+    "output_hash": "320bdcf7634482efd817a2a504324c6b693f7e89a601b2506b2399387a498e33",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MDBK00430: MDBK00430: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 167, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MDBK00431",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mdbk00431/mdbk00431pl.jpg",
+    "source_hash": "e55a0317479a1aa5fc2d8335d2dd50a7c8eaa5c7ef993cf5d23f0bddfd885bf8",
+    "output_path_or_url": "/card-thumbnails/MDBK00431-auto-right.jpg",
+    "output_hash": "df04deb284e0eb7e558f3fac8cf4d8a19aa50f8160dd479da0ba1719b56601d7",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MDBK00431: MDBK00431: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 121, best sample -45). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MDTM00880",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -33949,6 +35104,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "MDVR00434: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MFYD00105",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mfyd00105/mfyd00105pl.jpg",
+    "source_hash": "6ec1b7e92bbc93d7063c5966f810c7ac085f252518b41bd308c6087d1798b526",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/mfyd00105/mfyd00105pl.jpg",
+    "output_hash": "6ec1b7e92bbc93d7063c5966f810c7ac085f252518b41bd308c6087d1798b526",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MFYD00105: MFYD00105: FULL is the only reviewed package view that preserves the work-wide cast/context; RIGHT/CENTER discard material information and Stage 1 samples do not replace it (best sample score -33). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MFYD00128",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mfyd00128/mfyd00128pl.jpg",
+    "source_hash": "b57d9ee44253540bf096886fd88e23b99ee65a1c73264df214b82cbf4ebf7150",
+    "output_path_or_url": "/card-thumbnails/MFYD00128-auto-right.jpg",
+    "output_hash": "b2a234c0b18619e4515543dfb0607eb5ac58c2cac773b800c58a50657ee3386b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MFYD00128: MFYD00128: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 147, best sample 43). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MFYD00144",
@@ -34221,6 +35406,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MFYD00181",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mfyd00181/mfyd00181pl.jpg",
+    "source_hash": "c99a94f919eaef5d8f4ad5be66b76136231cefef345790cfeecabc9abcf41a86",
+    "output_path_or_url": "/card-thumbnails/MFYD00181-auto-right.jpg",
+    "output_hash": "91591cc014a62b9f8825b19b61421a23bce484de74d0fe3cb6282bbb55149174",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MFYD00181: MFYD00181: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 79, best sample -33). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MFYD00193",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -34416,6 +35616,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MGHT00399: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MGHT00400",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mght00400/mght00400pl.jpg",
+    "source_hash": "dc9a96047b09d320819550f5462f5b9ccea2b0a498fae13791f00242b85bda62",
+    "output_path_or_url": "/card-thumbnails/MGHT00400-auto-right.jpg",
+    "output_hash": "42f8af6db2e6ef17af0751de059f1b4e6a220ae2e58f9ef26835e189dd5030c5",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MGHT00400: MGHT00400: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MGHT00401",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mght00401/mght00401pl.jpg",
+    "source_hash": "517c697cfd5bfbef5e69e44adaa32a2885cdf15f2a77caf13c6bb834e896dac1",
+    "output_path_or_url": "/card-thumbnails/MGHT00401-auto-right.jpg",
+    "output_hash": "0ab2224644d54d4cf5eb0c9a39f975d1863523a43a81987031eb5d21f817e639",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MGHT00401: MGHT00401: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MGMK00004",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -34579,6 +35809,66 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MIBB00086",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mibb00086/mibb00086pl.jpg",
+    "source_hash": "75d919f177b126178d601af68bcad50e570f3b40c53676bfa52b846dce5bc32f",
+    "output_path_or_url": "/card-thumbnails/MIBB00086-auto-right.jpg",
+    "output_hash": "76faee05f8d60fffcf2169ce673ccaa36a1bf7c67b3955883b700feef209b726",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIBB00086: MIBB00086: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 147, best sample -19). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MIBB00087",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mibb00087/mibb00087pl.jpg",
+    "source_hash": "addc286237ad171ceaa8002bcc0054348a1aa43a0568329a96d71418c52ecf4f",
+    "output_path_or_url": "/card-thumbnails/MIBB00087-auto-right.jpg",
+    "output_hash": "f9adcb18c4ca60e0a4e5e1098706723849ba84008375a291a088cc264e555938",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIBB00087: MIBB00087: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 71, best sample -9). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MIDA00561",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mida00561/mida00561pl.jpg",
+    "source_hash": "c5421d58a913f448c5612e08a3c4435bba334789c62148772a85595964a2b38c",
+    "output_path_or_url": "/card-thumbnails/MIDA00561-auto-right.jpg",
+    "output_hash": "3fe13b9b4503a34e707d96a3afbb2a25d73a4eec7399ca13603a055e60293f68",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIDA00561: MIDA00561: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 127, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MIDA00604",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mida00604/mida00604pl.jpg",
+    "source_hash": "ad6a6e283ee571f20ecaf450525dbb8c15f65f4766ab5edbf9481b51170847f3",
+    "output_path_or_url": "/card-thumbnails/MIDA00604-auto-right.jpg",
+    "output_hash": "92bb936c9caf7eddd15c339f23e8a3bbd1a6b5102bede6aeb3090b4b51eaab79",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIDA00604: MIDA00604: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample -41). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MIDA00662",
@@ -35811,6 +37101,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MIMK00288",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mimk00288/mimk00288pl.jpg",
+    "source_hash": "a3720679b5ee988e058c6ef34d213942449f5ce1db2e60d58fa6171b547348d5",
+    "output_path_or_url": "/card-thumbnails/MIMK00288-auto-right.jpg",
+    "output_hash": "322008ba568a54ee8e3484b769617cb70755090c9d9e8bfcb109974adf2a93bb",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIMK00288: MIMK00288: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 127, best sample 89). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MIMK00292",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -35946,6 +37251,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MISM00457: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MISM00464",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mism00464/mism00464pl.jpg",
+    "source_hash": "37fe7590c251b0e13f8b253ee12d537777c8c682d49485684c19868d3ff851b4",
+    "output_path_or_url": "/card-thumbnails/MISM00464-auto-right.jpg",
+    "output_hash": "94c4e07cd38b4eda75cb1e7a8f10a3f55699b77037af7e6440704afa53814324",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MISM00464: MISM00464: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample 49). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MIVE00001",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -36004,6 +37324,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MIZD00536",
+    "mode": "SAMPLE",
+    "state": "RESOLVED",
+    "source_id": "sample:9",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mizd00536/mizd00536jp-9.jpg",
+    "source_hash": "4f0e8c1f44aad0ad42139ae20424e44ff70e9be737f7688f843375a9a427ba4e",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/mizd00536/mizd00536jp-9.jpg",
+    "output_hash": "4f0e8c1f44aad0ad42139ae20424e44ff70e9be737f7688f843375a9a427ba4e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:55:20.503Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIZD00536: MIZD00536: after all 18 unique samples were reviewed, sample:9 is the strongest truthful card image: it presents the performer as a complete promotional cover with readable work context, while RIGHT is an extreme face crop and CENTER/FULL are denser and less legible. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MIZD00538",
@@ -36126,6 +37461,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MIZD00553",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mizd00553/mizd00553pl.jpg",
+    "source_hash": "1349cdaf69c8d5997771f122846d627007a80a2f67b90db6ecd024588ef1d791",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/mizd00553/mizd00553pl.jpg",
+    "output_hash": "1349cdaf69c8d5997771f122846d627007a80a2f67b90db6ecd024588ef1d791",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MIZD00553: MIZD00553: FULL is the only reviewed package view that preserves the work-wide cast/context; RIGHT/CENTER discard material information and Stage 1 samples do not replace it (best sample score -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MKCK00421",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -36184,6 +37534,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MKCK00431",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkck00431/mkck00431pl.jpg",
+    "source_hash": "296b8476d815944c12260e6b5b304e83957088d0d2494b6f6db7e7b9c1f780a2",
+    "output_path_or_url": "/card-thumbnails/MKCK00431-auto-right.jpg",
+    "output_hash": "9ce7cefadf71ddf6214f41408ffd32a5df00e109558cd24669a51a9d67783e2e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKCK00431: MKCK00431: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 91, best sample -7). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MKCK00432",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkck00432/mkck00432pl.jpg",
+    "source_hash": "7bef44009c819270208a16aea011670080639cda103dcb92d8f97784c305d4f7",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/mkck00432/mkck00432pl.jpg",
+    "output_hash": "7bef44009c819270208a16aea011670080639cda103dcb92d8f97784c305d4f7",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKCK00432: MKCK00432: FULL is the only reviewed package view that preserves the work-wide cast/context; RIGHT/CENTER discard material information and Stage 1 samples do not replace it (best sample score -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MKD00259",
@@ -36456,6 +37836,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MKMP00752",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkmp00752/mkmp00752pl.jpg",
+    "source_hash": "40f31c2d920013a00b0dd2afb811b100c75f42a6c2d3d42dffbcbc1129b42f48",
+    "output_path_or_url": "/card-thumbnails/MKMP00752-auto-right.jpg",
+    "output_hash": "c431c72c146ad0761d6e920ea37812271b2fd2d63c76ead6c5b6f93d2e23e36a",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKMP00752: MKMP00752: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample -19). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MKMP00753",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -36471,6 +37866,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MKMP00753: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MKMP00754",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkmp00754/mkmp00754pl.jpg",
+    "source_hash": "fe35b801b48234919c37f529b3b6d787c3e7de7ab0b57ee006afdf1992710a1a",
+    "output_path_or_url": "/card-thumbnails/MKMP00754-auto-right.jpg",
+    "output_hash": "7bbe3d06210d1e257387c79783ae59f742e37eec8a2098b50e0a7984c1ea1f0d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKMP00754: MKMP00754: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 99, best sample -19). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MKMP00755",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -36484,6 +37894,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T10:30:00Z",
     "approval_batch": "phase5f-review-batch-02",
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MKMP00756",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkmp00756/mkmp00756pl.jpg",
+    "source_hash": "972fc12ab6aaa79714a07e27585a720812736681c40b7ea4d8c5551a0593b247",
+    "output_path_or_url": "/card-thumbnails/MKMP00756-auto-right.jpg",
+    "output_hash": "3f48ac73df403ab6b351a30c7ccef5c1c768b0997fbaed9c794dff8a3fa0c309",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKMP00756: MKMP00756: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 93, best sample 43). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MKMP00757",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkmp00757/mkmp00757pl.jpg",
+    "source_hash": "2a89640fdadeda82a35c0c76f49eebb923bdd8aeba5f3cdaa2f53dac2a07a72c",
+    "output_path_or_url": "/card-thumbnails/MKMP00757-auto-right.jpg",
+    "output_hash": "feff63e65cd0438aa9f89a751886d0388d3c2636a4b54aef1d39bffc9c955f01",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKMP00757: MKMP00757: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 169, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MKMP00758",
@@ -36574,6 +38014,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Selected sample is a clear, natural portrait of the principal subject and is more suitable for card display than the overly tight package crop. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MKON00149",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkon00149/mkon00149pl.jpg",
+    "source_hash": "7d685c479fc9cd4442570a8c537bd436fbb5bd1aa8f42aae79157f61f3716e35",
+    "output_path_or_url": "/card-thumbnails/MKON00149-auto-right.jpg",
+    "output_hash": "85f35bd67bb260ed0aa3ec87f777aa8865230210b24abc6250c0e2fcaa20055a",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKON00149: MKON00149: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 123, best sample -55). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MKON00150",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mkon00150/mkon00150pl.jpg",
+    "source_hash": "90d3c7956ba18d7cac4c3215650346c0d6bf782ddbfb14acfabbbee379b0f4c9",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/mkon00150/mkon00150pl.jpg",
+    "output_hash": "90d3c7956ba18d7cac4c3215650346c0d6bf782ddbfb14acfabbbee379b0f4c9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MKON00150: MKON00150: FULL is the only reviewed package view that preserves the work-wide cast/context; RIGHT/CENTER discard material information and Stage 1 samples do not replace it (best sample score -49). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MLMM00092",
@@ -37026,6 +38496,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MOIL00008: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MOIL00009",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/moil00009/moil00009pl.jpg",
+    "source_hash": "0ee3bbba104db0fd4a423ac38e019ca00427b5fbb36d88427b26204d509b6fcc",
+    "output_path_or_url": "/card-thumbnails/MOIL00009-auto-right.jpg",
+    "output_hash": "d5266169a36bf1b4815fe96d11b8e99197bcab1458e12e1ec18779a034b20354",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MOIL00009: MOIL00009: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 53, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MOND00307",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -37054,6 +38539,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "MOND00308: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MOND00309",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mond00309/mond00309pl.jpg",
+    "source_hash": "e7f6baa6769e2a84fcbe7a41ec1b6ce6d3028537a860edf7704ecee2533b3b7d",
+    "output_path_or_url": "/card-thumbnails/MOND00309-auto-right.jpg",
+    "output_hash": "28f3abb34b4cb34a6d910ee7b5b18a440e5fd720ea1b0caaa942ca9b67a43932",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MOND00309: MOND00309: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 161, best sample -33). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MOOC00023",
@@ -37219,6 +38719,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MOPT00054",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mopt00054/mopt00054pl.jpg",
+    "source_hash": "ae4734ce7300ff97a943bac71aedd0760befb05c67adea86b60bbc35f31cc7f2",
+    "output_path_or_url": "/card-thumbnails/MOPT00054-auto-right.jpg",
+    "output_hash": "912f84ed1a71382f55bfbe826a3d98f489d306d657709f0afd1afaffc35de534",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MOPT00054: MOPT00054: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 155, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MQNC00024",
@@ -37551,6 +39066,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MUDR00394: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MUDR00399",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mudr00399/mudr00399pl.jpg",
+    "source_hash": "68d9802ae41dd8974ad0ddd1f6e23dd8205c85541ab3d653dab32a5ffb1b52e1",
+    "output_path_or_url": "/card-thumbnails/MUDR00399-auto-right.jpg",
+    "output_hash": "689f4ff7b8ea789a387105e4068d1dc5b9c325258ced374cac4ff0c8f4eb65ab",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MUDR00399: MUDR00399: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 151, best sample 107). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MUDR00400",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -37609,6 +39139,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "MUKA00010: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "MUKC00120",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mukc00120/mukc00120pl.jpg",
+    "source_hash": "37833596ae4636cbe3f346e68c2725fcb0a6323b8407e6b898d09efcd95ecea7",
+    "output_path_or_url": "/card-thumbnails/MUKC00120-auto-center.jpg",
+    "output_hash": "be5bb06b3e1b31171dcf366fdcda0f843d29b73897ba123ff0a5c02e987a3384",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MUKC00120: MUKC00120: the CENTER crop keeps the principal performer and useful title/context together; RIGHT loses identifying content and the reviewed samples are weaker scene frames (best sample score -21). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "MUKC00127",
@@ -37791,6 +39336,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MVG00174",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mvg00174/mvg00174pl.jpg",
+    "source_hash": "168bdf78a47542bf0e366a6e9e45a12073c1a12edbda3474460c8dc269a57801",
+    "output_path_or_url": "/card-thumbnails/MVG00174-auto-right.jpg",
+    "output_hash": "d5bb7f2e1bc56b44c92fa7fb18ed62990592d95eb4b2c45bd1c6a6ca172da9d9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MVG00174: MVG00174: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample 61). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MVSD00686",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -37926,6 +39486,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "MVSH00001: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "MVSH00003",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/mvsh00003/mvsh00003pl.jpg",
+    "source_hash": "6a31d69d73a1b8e72551d3ca5803e0bb93bb554f233f426ba6b7220dbdedf315",
+    "output_path_or_url": "/card-thumbnails/MVSH00003-auto-right.jpg",
+    "output_hash": "0f989fbac4abf6e6373fc547085aeaea27ff6c42d69d863de0743b6915606783",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for MVSH00003: MVSH00003: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "MYBA00095",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -37969,6 +39544,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "NAGST00024: PACKAGE_FULL is required because RIGHT and CENTER remove material context or identifying information; the complete package remains the strongest representative image. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NAGST00026",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nagst00026/nagst00026pl.jpg",
+    "source_hash": "5e8e5624c3a2022c8585e1e434223066220a0d802c6bcfbf92acdfd2a20d6795",
+    "output_path_or_url": "/card-thumbnails/NAGST00026-auto-right.jpg",
+    "output_hash": "ae0b1a31f7cc8e1603aa8dd8f31c0385ab625244071415c11fca8d4b139c4fae",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NAGST00026: NAGST00026: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 63). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "NASK00407",
@@ -38016,6 +39606,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "NASK00432: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "NASK00439",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nask00439/nask00439pl.jpg",
+    "source_hash": "72e5c4a4bb1a88cb1684f043eea3d4c443a0874221a941a706692bc8eac56d18",
+    "output_path_or_url": "/card-thumbnails/NASK00439-auto-right.jpg",
+    "output_hash": "478456182146ed10ee2b8e6e59c8beeeded01823b27fbede678db70c390519c1",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NASK00439: NASK00439: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 161, best sample -13). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NASK00442",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nask00442/nask00442pl.jpg",
+    "source_hash": "d2fe5325d929ba6b7b869f93b2ba61e8e181c1b07bb0d44c557698b5d06f09a2",
+    "output_path_or_url": "/card-thumbnails/NASK00442-auto-right.jpg",
+    "output_hash": "a85c88de761afab645034b1810146a129641caaba85246485189ef7b45ae016b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NASK00442: NASK00442: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 108). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "NATR00770",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -38044,6 +39664,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T19:00:00Z",
     "approval_batch": "phase5f-review-batch-04",
     "reason": "NATR00772: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NATR00773",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/natr00773/natr00773pl.jpg",
+    "source_hash": "f384363d077e6ceb3ed72b462dc3e991ac82a6a224061cfeb4a40526c4deabdb",
+    "output_path_or_url": "/card-thumbnails/NATR00773-auto-right.jpg",
+    "output_hash": "ce0128fb285b18282d764c1784690908a28f14e3990603c68588fe0c20614d04",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NATR00773: NATR00773: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 169, best sample 112). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "NBES00113",
@@ -38346,6 +39981,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "NIMA00086",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nima00086/nima00086pl.jpg",
+    "source_hash": "1b8468a5a199ddd8f35ab0cc4c8e81f8da76799a9a0e4a375f672845db81fc6b",
+    "output_path_or_url": "/card-thumbnails/NIMA00086-auto-right.jpg",
+    "output_hash": "4e0343103200f7f4217c2abd7ac0579fa92638d398278b5a56838f55cd4804ba",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NIMA00086: NIMA00086: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample 93). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "NJD00010",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -38419,6 +40069,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "NKKVR00194: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NKKVR00196",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nkkvr00196/nkkvr00196pl.jpg",
+    "source_hash": "c36ac8b97322373a9db9eaa075386201a125152265d4b3696c1db0977a35094f",
+    "output_path_or_url": "/card-thumbnails/NKKVR00196-auto-right.jpg",
+    "output_hash": "70be5c537bd47cfe2a2c9c11334cb7a1b9d163d8cef0cdeaba30e1e056a37877",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NKKVR00196: NKKVR00196: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 71). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "NKWMR00022",
@@ -38796,6 +40461,51 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "NSFS00511: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "NSFS00512",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nsfs00512/nsfs00512pl.jpg",
+    "source_hash": "0adbefb2f52e526f9a3b0100a5156ec7dea1bc4b7bbb0ff7b78c429584841425",
+    "output_path_or_url": "/card-thumbnails/NSFS00512-auto-right.jpg",
+    "output_hash": "e4498864899df60c954f715c7e8c0e72cc8c8eda4de32d7c8d409c0002b08482",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NSFS00512: NSFS00512: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 135, best sample -21). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NSFS00514",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nsfs00514/nsfs00514pl.jpg",
+    "source_hash": "a65479f4f1bd6c92c98659b4ce1be670f01c1c1765154c993b4f9ca17159a709",
+    "output_path_or_url": "/card-thumbnails/NSFS00514-auto-right.jpg",
+    "output_hash": "934d39d05f1f9b724718b1880d5d8b5999be1fa9b97e0611b0b7b8fc4f880cba",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NSFS00514: NSFS00514: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 155, best sample 55). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NSFS00515",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/nsfs00515/nsfs00515pl.jpg",
+    "source_hash": "e0cefdc58ddaddacc9fd8039602af6c3293d454bb1baea5a36c4b6b521ec9b2d",
+    "output_path_or_url": "/card-thumbnails/NSFS00515-auto-right.jpg",
+    "output_hash": "704035710177d5cd3534fee89233e87bd5eaba839c5b0b9541201cd96829be19",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NSFS00515: NSFS00515: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 149, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "NSODN00023",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -38824,6 +40534,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "NSODN00025: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "NTRU00002",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ntru00002/ntru00002pl.jpg",
+    "source_hash": "e9efd3d5bb10c4178094a7844069bec804d784779a70d54f79f5f397f8f7a9a2",
+    "output_path_or_url": "/card-thumbnails/NTRU00002-auto-right.jpg",
+    "output_hash": "8814532977a11c8860ca3a83683d07e821e8d04fe00802575309af88929c9439",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for NTRU00002: NTRU00002: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 163, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "NTU00003AI",
@@ -39171,6 +40896,81 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "OFJE00662",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ofje00662/ofje00662pl.jpg",
+    "source_hash": "4cab9d50f042e6d6d9f0ea5c9c9c9b518eb9589af02c7408e7323271b4ba5aff",
+    "output_path_or_url": "/card-thumbnails/OFJE00662-auto-right.jpg",
+    "output_hash": "532729ac2001f9530c5a83326d19fe636f465876a4e710f5c1eed3e872c98623",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for OFJE00662: OFJE00662: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 159, best sample -13). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "OFJE00663",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ofje00663/ofje00663pl.jpg",
+    "source_hash": "0fc6c4f4afecdc9f5386935bec085af7f98300e3da7ec8ce7cc3455f3d96bcee",
+    "output_path_or_url": "/card-thumbnails/OFJE00663-auto-center.jpg",
+    "output_hash": "5d7529312685ca367fe61f05e52e8d34ca0143b97cfdada7c493b9f95ff9c93e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for OFJE00663: OFJE00663: the CENTER crop keeps the principal performer and useful title/context together; RIGHT loses identifying content and the reviewed samples are weaker scene frames (best sample score -7). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "OFJE00664",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ofje00664/ofje00664pl.jpg",
+    "source_hash": "4926c20fbdc49a395330cd7fe62c9ff396f9d115cda1b7bf44c2a2ab74cd839f",
+    "output_path_or_url": "/card-thumbnails/OFJE00664-auto-right.jpg",
+    "output_hash": "e279c9373a9ba6482eef6d92a362fa1db99f1abf98b4fa1e8316389afd0bca93",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for OFJE00664: OFJE00664: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 65, best sample 53). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "OFJE00712",
+    "mode": "PACKAGE_FULL",
+    "state": "RESOLVED",
+    "source_id": "dvd:full",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ofje00712/ofje00712pl.jpg",
+    "source_hash": "57bfe34b2e1999accb4fb6ca29d4746cc0fcd8eb4d5360a62e2c32e8a2a4fcc9",
+    "output_path_or_url": "https://pics.dmm.co.jp/digital/video/ofje00712/ofje00712pl.jpg",
+    "output_hash": "57bfe34b2e1999accb4fb6ca29d4746cc0fcd8eb4d5360a62e2c32e8a2a4fcc9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for OFJE00712: OFJE00712: FULL is the only reviewed package view that preserves the work-wide cast/context; RIGHT/CENTER discard material information and Stage 1 samples do not replace it (best sample score -17). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "OFJE00713",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/ofje00713/ofje00713pl.jpg",
+    "source_hash": "5ca5738a2312072efb331d9d57174c6089c64ed1dba4e4c4117a7b04f2b05c26",
+    "output_path_or_url": "/card-thumbnails/OFJE00713-auto-right.jpg",
+    "output_hash": "577d6b7c4f9cf26dad8e79e32376afd385dd789bf555597db12a4aea9cd3d574",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for OFJE00713: OFJE00713: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 117, best sample -37). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "ONAM00001AI",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -39214,6 +41014,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T13:59:44Z",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for ONSG00107: RIGHTは主要人物・顔・特徴的衣装と作品文字が明瞭で、sample群は接写や局所場面に偏る。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "ONSG00110",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/onsg00110/onsg00110pl.jpg",
+    "source_hash": "47f19db1ae10a6a95c3a8d5fe659a1dadc993e1346a3dc965dbbb6f316b0b493",
+    "output_path_or_url": "/card-thumbnails/ONSG00110-auto-right.jpg",
+    "output_hash": "708d5b47e27dbf20b4f80de350656ed34e3fd6d3bbf2913c68047f582c385899",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ONSG00110: ONSG00110: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 145, best sample -59). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "OPKT00037",
@@ -40401,6 +42216,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PPBD00322: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "PPPE00402",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/pppe00402/pppe00402pl.jpg",
+    "source_hash": "74578f05d727a79a52a54bf7601b23cb15ee3aea3ae7fbbd7056d04c661bd05e",
+    "output_path_or_url": "/card-thumbnails/PPPE00402-auto-right.jpg",
+    "output_hash": "0c6df7d4f63baf28b601c175a2cedd32af4c218e08301487e83171621f0c00f3",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for PPPE00402: PPPE00402: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample 57). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "PPPE00413",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/pppe00413/pppe00413pl.jpg",
+    "source_hash": "d93b545b99ade565821ba4950d9012a0a8c8a50083f6cdc1376eff4de5002198",
+    "output_path_or_url": "/card-thumbnails/PPPE00413-auto-right.jpg",
+    "output_hash": "940af7f59b34eee20f3be56a09c925033dcc7e295f9a587508a44db8508e37c9",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for PPPE00413: PPPE00413: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "PPPE00419",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -40459,6 +42304,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T14:47:07Z",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for PPPE00424: RIGHTは主演者の顔・座像・企画タイトルを保持し、sample群は接写や途中場面で作品全体の説明力が弱い。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "PPPE00427",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/pppe00427/pppe00427pl.jpg",
+    "source_hash": "09464d878b8997fcb18803b1358c925d65341b57e3a72f8d806fddf10b2da2cf",
+    "output_path_or_url": "/card-thumbnails/PPPE00427-auto-right.jpg",
+    "output_hash": "41461f0a5cb2ebaf7e5e31bcad9a8315a888d49f0e28a78812dcc0bb6f0ea140",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for PPPE00427: PPPE00427: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample -3). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "PPPE00431",
@@ -40579,6 +42439,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "PPPE00444: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "PRED00840",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/pred00840/pred00840pl.jpg",
+    "source_hash": "56597a3ab6cefc978ef9dc9ace3468778cc3f757a15dd627b2ee328d6d0d97b6",
+    "output_path_or_url": "/card-thumbnails/PRED00840-auto-right.jpg",
+    "output_hash": "4b19bc0586490d2e4f28c7a21ee4b478a83a9a3654c692ac88fe4e7fcdac7ccc",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for PRED00840: PRED00840: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 149, best sample 11). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "PRED00867",
@@ -40774,6 +42649,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "PRED00901",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/pred00901/pred00901pl.jpg",
+    "source_hash": "47bee994b347ce8302032711807814cf1bcbf32529a7f6f537cf0c769a9e74a2",
+    "output_path_or_url": "/card-thumbnails/PRED00901-auto-right.jpg",
+    "output_hash": "b6e3c6783946c9d530b43ec8fb88b926c6bbca774b3da59521f65a9c0929cfc2",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for PRED00901: PRED00901: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 103, best sample -23). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "PRWF00012",
@@ -41301,6 +43191,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "RAPD00014",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/rapd00014/rapd00014pl.jpg",
+    "source_hash": "7170145369c1a6f9ee4da9f27e480a5d94313a81ab470d51ddd0b1d16fae7f4e",
+    "output_path_or_url": "/card-thumbnails/RAPD00014-auto-right.jpg",
+    "output_hash": "2c70916c0048c0731b8e32db8dc3045a19ac1414fc9d77a092305f2d2123522d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for RAPD00014: RAPD00014: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 145, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "RBB00337",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -41571,6 +43476,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "RKI00763: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "RKI00765",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/rki00765/rki00765pl.jpg",
+    "source_hash": "3bfba40ede033e7b40fe3708c189e9446de4204ccf07180057e971a784aa62f9",
+    "output_path_or_url": "/card-thumbnails/RKI00765-auto-right.jpg",
+    "output_hash": "07b36b36ea89fbdc6a82bda98594590842d4b905f3dcd92b00c602eee1d4a931",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for RKI00765: RKI00765: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample 101). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "RLMP00005",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -41721,6 +43641,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "RLMP00015",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/rlmp00015/rlmp00015pl.jpg",
+    "source_hash": "5e09c33eff87b9218c6943ebb8f7120f0477ae1a207f361239d60ecf99a97cda",
+    "output_path_or_url": "/card-thumbnails/RLMP00015-auto-right.jpg",
+    "output_hash": "121adfe0ae12f4cb163493011fca4646336e4fdde987c7ebcce82f57af55d886",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for RLMP00015: RLMP00015: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 139, best sample 85). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "RLMP00016",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -41751,6 +43686,51 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "RLMP00018",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/rlmp00018/rlmp00018pl.jpg",
+    "source_hash": "de3611b64e04cdc97459cfea1c7d815a826aa9177eca9c654f15529c036c79ab",
+    "output_path_or_url": "/card-thumbnails/RLMP00018-auto-right.jpg",
+    "output_hash": "474e45280a4211e829f5029126beadc644c8e05aedb4b5b9804dcc156a56357e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for RLMP00018: RLMP00018: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 169, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "RLMP00019",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/rlmp00019/rlmp00019pl.jpg",
+    "source_hash": "e9702492e191a344a0396f1a3a4b92d88b2de5a6c72617316de20e560bd8cebb",
+    "output_path_or_url": "/card-thumbnails/RLMP00019-auto-right.jpg",
+    "output_hash": "d44c65dc33f1cdc13319615af1a4c599451a66ba8fe616baba8c80209a0ad0eb",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for RLMP00019: RLMP00019: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 175, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "RLMP00020",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/rlmp00020/rlmp00020pl.jpg",
+    "source_hash": "33130bd5eb9e09ef125fbb2f23afd63955b01db9c6379a888f8f8c022e0201e8",
+    "output_path_or_url": "/card-thumbnails/RLMP00020-auto-right.jpg",
+    "output_hash": "68a352d142d173deba33aab38cb45145a5d0c1e043e47fb7e45a2d9a20a241fd",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for RLMP00020: RLMP00020: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 169, best sample -51). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "RMER00056",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -41779,6 +43759,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "RMER00058: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "ROE00463",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/roe00463/roe00463pl.jpg",
+    "source_hash": "dcad6936580984a848d9a72ac17c27d9b6601e70e63834243fff864799c56ccc",
+    "output_path_or_url": "/card-thumbnails/ROE00463-auto-right.jpg",
+    "output_hash": "d3f7c227e917c2dd7863fb0a8e4b5157f80d51c679feb15ea228530a48f041bb",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ROE00463: ROE00463: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 79, best sample -21). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "ROE00482",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/roe00482/roe00482pl.jpg",
+    "source_hash": "2013c89f9a253cf6a2ab57cbd5a58d768814d55a96ba9b71f686b1e59ddccf94",
+    "output_path_or_url": "/card-thumbnails/ROE00482-auto-right.jpg",
+    "output_hash": "3a357c3bfe1a9ed40f1cfdd43cc7280a7a492801095df36bcc541972f1384226",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ROE00482: ROE00482: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample -17). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "ROE00498",
@@ -42696,6 +44706,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "ROYD00351: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "ROYD00353",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/royd00353/royd00353pl.jpg",
+    "source_hash": "ab45279b03df6f729ad8ca2a826173ad14429b93da376ec508790744c1a1f00a",
+    "output_path_or_url": "/card-thumbnails/ROYD00353-auto-right.jpg",
+    "output_hash": "a8c6c9334b22496379b78316d567e520b8fe803bb14c396e7a0076100915e9e4",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for ROYD00353: ROYD00353: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 71, best sample -30). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "ROYD00354",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -42981,6 +45006,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is too small and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SAVR01022",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01022/savr01022pl.jpg",
+    "source_hash": "4eba15631ef8f7c206387430c9f238ef2b81ad49135838cee9d94bb49da743a3",
+    "output_path_or_url": "/card-thumbnails/SAVR01022-auto-right.jpg",
+    "output_hash": "fb34fd7a3b840994df1b5b152b9120cafca3af64655a3b09ab68d43d67b6911d",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01022: SAVR01022: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 113, best sample 67). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SAVR01052",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -43039,6 +45079,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-29T00:00:00Z",
     "approval_batch": "phase5g-8822-9821",
     "reason": "Phase 5G exact-617 adaptive visual review for SAVR01057: 全sampleとPACKAGE候補を比較し、縦長宣材のsample:1が人物・作品情報・カード構図を最も安定して保持するため確定する。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SAVR01058",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01058/savr01058pl.jpg",
+    "source_hash": "d30a138d286bff5b886a042e0bd2eb8f825532e43256e3744f6caf50cc338a6c",
+    "output_path_or_url": "/card-thumbnails/SAVR01058-auto-right.jpg",
+    "output_hash": "2b5e6dff1f37443eede4864c17291b9be3b2f3cb9ed2cdb903342fe8db56f175",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01058: SAVR01058: RIGHT preserves the ensemble and explanatory package context; the added samples show only isolated scene moments and are less representative of the multi-person work. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "SAVR01061",
@@ -43686,6 +45741,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "SAVR01161: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SAVR01164",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01164/savr01164pl.jpg",
+    "source_hash": "0e8df2bb6af08cba756634911c13876d72fa47e0a1ad1c3b77f984462e2c63cb",
+    "output_path_or_url": "/card-thumbnails/SAVR01164-auto-center.jpg",
+    "output_hash": "861158e4674098207b666d592a1a1138744536815e73f49b5566c479ecdedd47",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01164: SAVR01164: the CENTER crop keeps the principal performer and useful title/context together; RIGHT loses identifying content and the reviewed samples are weaker scene frames (best sample score 95). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SAVR01165",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -43836,6 +45906,81 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "SAVR01176: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SAVR01179",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01179/savr01179pl.jpg",
+    "source_hash": "70833d4c3e6fbc3ca189ada2155ea7d4969f4f65203d6c508de01fe081d45eac",
+    "output_path_or_url": "/card-thumbnails/SAVR01179-auto-right.jpg",
+    "output_hash": "f189d297dd0993dd1bb7cc4a5b61657b6140da210f27ade6500b802fdd3da1d8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01179: SAVR01179: RIGHT keeps the featured performer and package identity together, whereas every added sample is a scene-level crop with materially less context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SAVR01184",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01184/savr01184pl.jpg",
+    "source_hash": "74082cc05a37bba88da6d31a9239931f6ed33e57ba769343cf7ed3d9a5fa304a",
+    "output_path_or_url": "/card-thumbnails/SAVR01184-auto-right.jpg",
+    "output_hash": "ad84855575db0424775c45bd7df67fe8f1ef33452024df7081cc04fe112dd287",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01184: SAVR01184: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 153, best sample 105). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SAVR01187",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01187/savr01187pl.jpg",
+    "source_hash": "6d6185384a651e4ead3f479e1701ded47d26d198fdcc59ff8feefa821bd13457",
+    "output_path_or_url": "/card-thumbnails/SAVR01187-auto-right.jpg",
+    "output_hash": "4d299499264c8e7aa288ecf0edbb84108f5182343fdfb60fc72d80d21964e8fa",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01187: SAVR01187: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 39, best sample -69). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SAVR01192",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01192/savr01192pl.jpg",
+    "source_hash": "7174ce84ffe3d63c960840c677944d21fcb1882c585c2006800dcf3fb414f853",
+    "output_path_or_url": "/card-thumbnails/SAVR01192-auto-right.jpg",
+    "output_hash": "aa7cae139d426db8a077e2443b6e0e8123f9a9ac7ad00f669d670cff088283f0",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01192: SAVR01192: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample 63). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SAVR01198",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/savr01198/savr01198pl.jpg",
+    "source_hash": "7b6faff932cf6c51d90aff18c41aee140e7c582faa15540d4718eac41c8e4345",
+    "output_path_or_url": "/card-thumbnails/SAVR01198-auto-right.jpg",
+    "output_hash": "7a5fb47353cecb3fe112ff9396598718e4afd2961a54a9ad1624e62996f0c37b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SAVR01198: SAVR01198: RIGHT is the clearest representative package view; the added samples are body-part closeups or intermediate scenes that lose title and work identity. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SBD00001AI",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -43894,6 +46039,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-29T00:00:00Z",
     "approval_batch": "phase5g-8822-9821",
     "reason": "Phase 5G exact-617 adaptive visual review for SIVR00479: 追加sampleを含めても作品情報と主要人物を同時に保つ候補がなく、縦長で完結するPACKAGE RIGHTを確定する。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SIVR00484",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/sivr00484/sivr00484pl.jpg",
+    "source_hash": "190c26a360c941fefdcdd3dd917c050fa3966eaeec0b925a2c9e34db8584679f",
+    "output_path_or_url": "/card-thumbnails/SIVR00484-auto-right.jpg",
+    "output_hash": "25021785226a06cf6c2492a52f3da1a59ea2e253e179bf381c2614881901064e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SIVR00484: SIVR00484: RIGHT remains the most legible package presentation of the performer and title; added samples are plain scene frames with no stronger representative signal. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "SIVR00485",
@@ -44226,6 +46386,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the available scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SMOM00010",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/smom00010/smom00010pl.jpg",
+    "source_hash": "2a40ac2a743a40ce91f00c8405ebb6f9bef8170b7f736efb8599c45a582d3ec2",
+    "output_path_or_url": "/card-thumbnails/SMOM00010-auto-right.jpg",
+    "output_hash": "3c8e9fcff60396a8409b7f1ff2fb40f42ec0732e48bfef270dc42a61400a3c27",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SMOM00010: SMOM00010: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 71, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SNOS00065",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -44256,6 +46431,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "SNOS00145: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SNOS00149",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/snos00149/snos00149pl.jpg",
+    "source_hash": "7acc739aa9b49f7ac82907794a0ae47936bab330bac537b346275f0fa4114de4",
+    "output_path_or_url": "/card-thumbnails/SNOS00149-auto-center.jpg",
+    "output_hash": "3051fda29b1002ebbd6062f940b3e44b7acc0f35cb7a3c8d79f93d50d33a2a4c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SNOS00149: SNOS00149: the CENTER crop keeps the principal performer and useful title/context together; RIGHT loses identifying content and the reviewed samples are weaker scene frames (best sample score 11). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SNOS00172",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -44269,6 +46459,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-29T00:00:00Z",
     "approval_batch": "phase5g-8822-9821",
     "reason": "Phase 5G exact-617 adaptive visual review for SNOS00172: RIGHTは主演者・作品タイトル・表紙情報を縦長で保持し、sample群は作品情報を欠く人物画像である。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SNOS00177",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/snos00177/snos00177pl.jpg",
+    "source_hash": "1d15ae735dc905b256c9464aca9bc4277c14b081f73aa305aec0f95c329e221d",
+    "output_path_or_url": "/card-thumbnails/SNOS00177-auto-right.jpg",
+    "output_hash": "329f47b879ee5040f7295ff92a78711ea3559bc8aaacbb0c853984b7fd5dd186",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SNOS00177: SNOS00177: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 169, best sample 11). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "SNOS00206",
@@ -44359,6 +46564,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-29T00:00:00Z",
     "approval_batch": "phase5g-8822-9821",
     "reason": "Phase 5G exact-617 adaptive visual review for SNOS00216: RIGHTは主演者・作品名・企画情報を明瞭に保持し、sample群は途中場面に偏る。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SNOS00225",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/snos00225/snos00225pl.jpg",
+    "source_hash": "7efa1d1bad9b122cc707a1e19a425c95edf0016ea1215b77e3466adba2737703",
+    "output_path_or_url": "/card-thumbnails/SNOS00225-auto-center.jpg",
+    "output_hash": "02022160bf2a2adcf5f8c9f6531f5aa07f7ad015f0f9aa8f141a89b47e5b708b",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SNOS00225: SNOS00225: the CENTER crop keeps the principal performer and useful title/context together; RIGHT loses identifying content and the reviewed samples are weaker scene frames (best sample score -17). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "SNOS00227",
@@ -45456,6 +47676,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "SNOS00374: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SNOS00385",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/snos00385/snos00385pl.jpg",
+    "source_hash": "f102d676ed64a678eadbb565661890f8a0b7a75023cc6dcf9e209edd7552a214",
+    "output_path_or_url": "/card-thumbnails/SNOS00385-auto-right.jpg",
+    "output_hash": "539b11da30f08f359f2b9b33935b75af6f83823c26ebfee4b24107087b02a2fa",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SNOS00385: SNOS00385: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample -17). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SNOS00388",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -46311,6 +48546,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the available scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "SVS00091",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/svs00091/svs00091pl.jpg",
+    "source_hash": "8c79936bec5d284f63d4dcad666512db09ed600eb53eb56df84a62aafa63d121",
+    "output_path_or_url": "/card-thumbnails/SVS00091-auto-right.jpg",
+    "output_hash": "6224c3f38fa4ecc00b092f6ad2f4f374710367608eb20a53a10003c82540ebad",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SVS00091: SVS00091: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 157, best sample -13). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "SYKH00180",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/sykh00180/sykh00180pl.jpg",
+    "source_hash": "ceeb40f26f6692cf38b39b8681bc4fdd7c6a0f6120ca9bb0011bc38528e321b7",
+    "output_path_or_url": "/card-thumbnails/SYKH00180-auto-right.jpg",
+    "output_hash": "e926bf72a104981718ff97a5a6d680ed776a908eb3c6bf3024a144a3ab00e738",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for SYKH00180: SYKH00180: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 137, best sample -21). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "SYKH00192",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -46551,6 +48816,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "TCD00347: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "TCD00350",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/tcd00350/tcd00350pl.jpg",
+    "source_hash": "48260e7a99d7570302cc4ff4c7472f9f8e60fc7d7e08e6fc1e09910b103db2cc",
+    "output_path_or_url": "/card-thumbnails/TCD00350-auto-right.jpg",
+    "output_hash": "5440cecc8ece7f89fdc313ffe1cbe71ae58a4343464c656242baa09613e4211e",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for TCD00350: TCD00350: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 85, best sample -33). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "TCD00351",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/tcd00351/tcd00351pl.jpg",
+    "source_hash": "39a16fd7b4fa12e5124d129189e0e5fcafc6c1ae77307d0ad04937746301ad86",
+    "output_path_or_url": "/card-thumbnails/TCD00351-auto-right.jpg",
+    "output_hash": "ae7b3ba1db796625a91c88826d11f291028fc3ca59579a793e503e0db1732110",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for TCD00351: TCD00351: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 155, best sample -65). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "TCDF00031",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -46639,6 +48934,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T14:47:07Z",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for TNJS00005: sample:1は屋外で着衣の主演者を顔から全身まで明るく収め、露出部中心のRIGHTより代表的で見やすい。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "TPIN00102",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/tpin00102/tpin00102pl.jpg",
+    "source_hash": "92f746a2753607647cdc4a1c4fefbe35be3e83df736e30d299eb35f3b6aa30a5",
+    "output_path_or_url": "/card-thumbnails/TPIN00102-auto-right.jpg",
+    "output_hash": "6ea60ae1d24a0fd816cb32b27061babfe0e41329d55f6dcb947126dc8a9bc1fa",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for TPIN00102: TPIN00102: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 0 reviewed samples are less representative (chosen score 143, best sample n/a). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "TYAN00009",
@@ -46866,6 +49176,51 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the available scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "UMSO00655",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00655/umso00655pl.jpg",
+    "source_hash": "a117bffb4c7601448518924a8b6132948da85703f45bd86e733475063256cf82",
+    "output_path_or_url": "/card-thumbnails/UMSO00655-auto-right.jpg",
+    "output_hash": "f898c94f16bdc4378a94316756fe3195505f05389c57e945a0b56b9587f26fdc",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for UMSO00655: UMSO00655: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 43, best sample 0). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "UMSO00656",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00656/umso00656pl.jpg",
+    "source_hash": "0a1a45f7f7e3094ad969825f521df10f43709b22143f93f3c4a0952c1a9f4b9e",
+    "output_path_or_url": "/card-thumbnails/UMSO00656-auto-right.jpg",
+    "output_hash": "83a139712faf555c80443ca603c86391ebc6e7a5ca51d9d838e0923bf2b566a5",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for UMSO00656: UMSO00656: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 141, best sample 50). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "UMSO00657",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/umso00657/umso00657pl.jpg",
+    "source_hash": "2a099f695a0456d5eae43a4a643f096e26a902f9e47b2e5cf6ee2f0c30af15fa",
+    "output_path_or_url": "/card-thumbnails/UMSO00657-auto-right.jpg",
+    "output_hash": "1cb2af282d7a5c9986ee92ea26583eb2299c5383a16d570ec97c45c6862981a8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for UMSO00657: UMSO00657: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 143, best sample 94). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "URE00139",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -46924,6 +49279,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-20T07:30:00Z",
     "approval_batch": "phase5f-review-batch-05",
     "reason": "URMT00008: PACKAGE_RIGHT visibly retains the natural front surface, primary subject, and identifying artwork; CENTER, FULL, and reviewed SAMPLE alternatives are less coherent in the actual 7:10 card frame. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "URVRSP00516",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00516/urvrsp00516pl.jpg",
+    "source_hash": "1ff0a2694a381d45ee4fe1c9291da7705582dfb013472ab05dac451ed68ca6e9",
+    "output_path_or_url": "/card-thumbnails/URVRSP00516-auto-right.jpg",
+    "output_hash": "c135477c8e5f2b58f8c08050b4db0f9ad7007180543c569dd112a64d911dff96",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for URVRSP00516: URVRSP00516: RIGHT preserves the school-theme identity and performer; the added samples are generic scene frames without enough work information. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "URVRSP00576",
@@ -47091,6 +49461,36 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "URVRSP00601: PACKAGE_RIGHT cleanly retains the natural front surface, primary subject, and identifying text; FULL is smaller and CENTER is less coherent. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "URVRSP00602",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00602/urvrsp00602pl.jpg",
+    "source_hash": "1172bdd9ec068a65c98fb72b8531620cdd56547e615c573264ffd28a34bb189b",
+    "output_path_or_url": "/card-thumbnails/URVRSP00602-auto-right.jpg",
+    "output_hash": "703911001dfdc0be49f6b353e6e1c9286d89a43fac6e9c9dc2742f984d1245cc",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for URVRSP00602: URVRSP00602: RIGHT retains the featured performer and work-specific package messaging; the added samples are local scenes or body-focused frames. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "URVRSP00605",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00605/urvrsp00605pl.jpg",
+    "source_hash": "289d845a19e17ad0bc063a5dc18380a40b4e39420e8ec17830cb3cc846e20722",
+    "output_path_or_url": "/card-thumbnails/URVRSP00605-auto-right.jpg",
+    "output_hash": "60bf51bdd97d8672ee13b13fbee9ebb34c48afb4f17b085856be49e45fff341c",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for URVRSP00605: URVRSP00605: RIGHT communicates the VR premise and principal performer in one card; the added samples are generic room scenes and do not carry the title context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "URVRSP00606",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -47121,6 +49521,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "URVRSP00608: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "URVRSP00610",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/urvrsp00610/urvrsp00610pl.jpg",
+    "source_hash": "20f42f4bc5e5de939fbfc5d6095a7b8c62f66930bbe3819b4a170a54fcc72028",
+    "output_path_or_url": "/card-thumbnails/URVRSP00610-auto-right.jpg",
+    "output_hash": "d46f25036b9014a9592d443ac3856bf18e792e3e9a9942dc78ac39823f2c7fec",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for URVRSP00610: URVRSP00610: RIGHT preserves the principal performer plus the work-specific concept text; the added samples are ordinary scene frames with weaker representative value. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "USBA00089",
     "mode": "PACKAGE_RIGHT",
     "state": "RESOLVED",
@@ -47149,6 +49564,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-26T14:47:07Z",
     "approval_batch": "phase5g-7605-8604",
     "reason": "Phase 5G exact-582 adaptive visual review for UZU00038: sample:1は主演者・衣装・作品タイトルを縦長の宣材として完結し、横長場面中心の他sampleより代表性が高い。; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "UZU00040",
+    "mode": "PACKAGE_CENTER",
+    "state": "RESOLVED",
+    "source_id": "dvd:center",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/uzu00040/uzu00040pl.jpg",
+    "source_hash": "44ee0f77d1c703e9efb5d71f0e11187ffb0a9ba048bf2ef79d6a9d63943d5f65",
+    "output_path_or_url": "/card-thumbnails/UZU00040-auto-center.jpg",
+    "output_hash": "54a1443f270027a4f09af1bc3f1509b6c0e5d9c102338a1b10f6d8f1a791b635",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for UZU00040: UZU00040: CENTER is the only compact package crop that keeps the identifiable performer and concept copy together; RIGHT is a weak local crop and the added samples lose context. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "VAGU00294",
@@ -47419,6 +49849,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-19T16:40:00Z",
     "approval_batch": "phase5f-review-batch-03",
     "reason": "VOD00064: PACKAGE_RIGHT cleanly isolates the natural front surface; the primary subject and identifying text remain legible, while FULL is smaller and CENTER mixes package surfaces; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "VRKM01776",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/vrkm01776/vrkm01776pl.jpg",
+    "source_hash": "cae95e84dcdd006cf2e5c418b9d1066e142da776652cab7a46090277e602c9e0",
+    "output_path_or_url": "/card-thumbnails/VRKM01776-auto-right.jpg",
+    "output_hash": "fe3d9676f0cd6429c91acad1a966097910242f381fa7493c2b23a93ec52495c8",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:55:20.503Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for VRKM01776: VRKM01776: after all 20 unique samples were reviewed, RIGHT remains the only candidate that represents the complete compilation with its featured cast and title; individual promotional sample covers describe only component scenes and would misrepresent the work as a whole. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "VRKM01806",
@@ -47961,6 +50406,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "reason": "Phase 5G exact-186 visual review for VRKM01891: the right package panel preserves the main subject, title, and representative work information; owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
+    "code": "VRPRD00180",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/vrprd00180/vrprd00180pl.jpg",
+    "source_hash": "c73e620813810c9750a7f93a788d1eebdd970fb535cf9e3eca8f7d562a75c32b",
+    "output_path_or_url": "/card-thumbnails/VRPRD00180-auto-right.jpg",
+    "output_hash": "34955c1ee33969ae2f23c8cb8e100d46297cb67687f38a234e0f2faf610657cf",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:52:21.564Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for VRPRD00180: VRPRD00180: RIGHT keeps the work title, performer grouping, and defining package information; the added samples are body-focused scenes and do not replace it. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
     "code": "VRPRD00186",
     "mode": "SAMPLE",
     "state": "RESOLVED",
@@ -48499,6 +50959,21 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
     "approved_at": "2026-08-22T06:04:45Z",
     "approval_batch": "phase5f-review-final",
     "reason": "Package right preserves the principal subject, title, and representative work context more reliably than the available scene samples. owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
+  },
+  {
+    "code": "WAAA00697",
+    "mode": "PACKAGE_RIGHT",
+    "state": "RESOLVED",
+    "source_id": "dvd:right",
+    "source_path_or_url": "https://pics.dmm.co.jp/digital/video/waaa00697/waaa00697pl.jpg",
+    "source_hash": "a4abdf4be895a847c95326bae8f08b7c292095c0aadc842cd2dbab16e6ca820d",
+    "output_path_or_url": "/card-thumbnails/WAAA00697-auto-right.jpg",
+    "output_hash": "d280e1ad4f790c7e4c0e871e5e590409e2f2b653d5ad1e8d49f17300a4cf60b7",
+    "crop_spec": null,
+    "approved_by": "owner_delegated_via_chatgpt",
+    "approved_at": "2026-08-31T05:42:34.955Z",
+    "approval_batch": "phase5g-priority-20260831",
+    "reason": "Phase 5G exact-171 Fresh/Popular adaptive visual review for WAAA00697: WAAA00697: the RIGHT crop clearly preserves the principal performer and representative package identity in the card frame; CENTER/FULL are less focused and all 6 reviewed samples are less representative (chosen score 81, best sample -37). owner delegated proxy approval via ChatGPT; this is not an auto-safe classification."
   },
   {
     "code": "XC01094AI",
@@ -49375,10 +51850,10 @@ export const GENERATED_PHASE5_REVIEWED_DECISION_RECORDS = Object.freeze(
 
 export const GENERATED_PHASE5_REVIEWED_STATS = Object.freeze(
   {
-  "input_total": 3291,
-  "eligible_total": 3291,
+  "input_total": 3456,
+  "eligible_total": 3456,
   "ignored_apply_false": 0
 } as const,
 );
 
-export const GENERATED_PHASE5_REVIEWED_INPUT_SHA256 = "11dffee231495ac2d77398de4fd1441ba9d55690e8f254f82dc5bbcaf143c42f";
+export const GENERATED_PHASE5_REVIEWED_INPUT_SHA256 = "e492237dbaca6c7f35d500188dcc95609963bf6211b6c797253e50b8f1f24e0c";
