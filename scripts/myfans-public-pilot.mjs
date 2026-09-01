@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 import path from "node:path";
 import process from "node:process";
+import { readFile } from "node:fs/promises";
 import {
+  MYFANS_ACCESS,
   MYFANS_CLASSIFICATIONS,
   MYFANS_ORIGIN,
+  assertFrozenSafeRecords,
   assertNoRawHtmlPersisted,
   createPublicHtmlFetcher,
   dedupeFrozenRecords,
   detectPublicPageAccess,
+  discoverCreatorCandidatesFromRanking,
   discoverPublicLinks,
   metadataHash,
   parseCreatorPage,
@@ -101,9 +105,10 @@ function exactLinkCandidates(records) {
   return results;
 }
 
-async function persistProbeArtifacts({ outputDir, creators, posts, requestSummary, listing, postDetailVerified }) {
+async function persistProbeArtifacts({ outputDir, discoveryCandidates, creators, posts, requestSummary, listing, postDetailVerified }) {
   const records = dedupeFrozenRecords([...creators, ...posts]);
   assertNoRawHtmlPersisted(records);
+  assertFrozenSafeRecords(records);
   const safeCreators = records.filter((record) => record.entity_type === "creator" && record.classification === MYFANS_CLASSIFICATIONS.SAFE);
   const safePosts = records.filter((record) => record.entity_type === "post" && record.classification === MYFANS_CLASSIFICATIONS.SAFE);
   const exactLinks = exactLinkCandidates(records);
@@ -117,7 +122,7 @@ async function persistProbeArtifacts({ outputDir, creators, posts, requestSummar
   };
   const frozenSummary = {
     generated_at: new Date().toISOString(),
-    parser_version: records[0]?.parser_version ?? "phase6c-v1",
+    parser_version: records[0]?.parser_version ?? "phase6c-v2",
     ...manifest,
     creators: creators.length,
     posts: posts.length,
@@ -137,9 +142,12 @@ async function persistProbeArtifacts({ outputDir, creators, posts, requestSummar
     creator_gets: requestSummary.requests.filter((entry) => entry.label?.startsWith("creator:")).length,
     post_gets: requestSummary.requests.filter((entry) => entry.label?.startsWith("post:")).length,
     listing_gets: requestSummary.requests.filter((entry) => entry.label === "listing").length,
+    creator_ranking_gets: requestSummary.requests.filter((entry) => entry.label === "creator_ranking").length,
+    post_ranking_gets: requestSummary.requests.filter((entry) => entry.label === "post_ranking").length,
     robots_terms_gets: 0,
   };
   await Promise.all([
+    writeJson(path.join(outputDir, "discovery-candidates.json"), { generated_at: frozenSummary.generated_at, apply: false, records: discoveryCandidates }),
     writeJson(path.join(outputDir, "creator-candidates.json"), { generated_at: frozenSummary.generated_at, apply: false, records: creators }),
     writeJson(path.join(outputDir, "post-candidates.json"), { generated_at: frozenSummary.generated_at, apply: false, records: posts }),
     writeJson(path.join(outputDir, "safe-creators.json"), { generated_at: frozenSummary.generated_at, apply: false, records: safeCreators }),
@@ -153,31 +161,61 @@ async function persistProbeArtifacts({ outputDir, creators, posts, requestSummar
   return { records, safeCreators, safePosts, exactLinks, frozenSummary, classification, requestSummary: summary };
 }
 
+async function previousNegativeCandidates(directory) {
+  try {
+    const value = JSON.parse(await readFile(path.join(directory, "creator-candidates.json"), "utf8"));
+    return (value.records ?? []).filter((record) => ["unlimited", "genres"].includes(record.external_id)).map((record) => ({
+      url: record.official_url ?? record.source_url,
+      candidate_slug: record.external_id,
+      discovered_from: "phase6c_previous_evidence",
+      discovery_method: "negative_regression_fixture",
+      ranking_position: null,
+      anchor_text_short: null,
+      positive_discovery_evidence: [],
+      rejected_reason: "KNOWN_NON_CREATOR_ROUTE",
+      fetched: false,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 async function runProbe(args) {
-  const outputDir = path.resolve(args["output-dir"] ?? "/Users/saitoutomoya/Documents/Codex/okazudb-state/myfans-research/phase6c-pilot");
-  const listingUrl = args["listing-url"] ?? MYFANS_ORIGIN;
+  const outputDir = path.resolve(args["output-dir"] ?? "/Users/saitoutomoya/Documents/Codex/okazudb-state/myfans-research/phase6c-route-hardening-20260901");
+  const previousEvidenceDir = path.resolve(args["previous-evidence-dir"] ?? "/Users/saitoutomoya/Documents/Codex/okazudb-state/myfans-research/phase6c-pilot");
+  const creatorRankingUrl = args["creator-ranking-url"] ?? `${MYFANS_ORIGIN}/ranking/creators/all?term=daily`;
+  const postRankingUrl = args["post-ranking-url"] ?? `${MYFANS_ORIGIN}/ranking/posts/all?term=daily`;
   const maxCreators = numberArg(args["max-creators"], 5, { min: 1, max: 5, name: "max_creators" });
   const maxPosts = numberArg(args["max-posts"], 30, { min: 1, max: 30, name: "max_posts" });
   const fetcher = createPublicHtmlFetcher({ maxRequests: 40, maxRetries: 1 });
   const creators = [];
   const posts = [];
+  const previousNegatives = await previousNegativeCandidates(previousEvidenceDir);
 
-  const listingResponse = await fetcher.fetchHtml(listingUrl, { label: "listing" });
+  const listingResponse = await fetcher.fetchHtml(creatorRankingUrl, { label: "creator_ranking" });
   const listingAccess = detectPublicPageAccess(listingResponse);
   const listing = { url: listingResponse.url, status: listingResponse.status, access: listingAccess };
+  let discoveryCandidates = [...previousNegatives];
   let postDetailVerified = false;
 
-  if (listingAccess.classification === MYFANS_CLASSIFICATIONS.SAFE) {
-    const listingLinks = discoverPublicLinks(listingResponse.html, listingResponse.url);
-    const creatorUrls = listingLinks.creator_urls.slice(0, maxCreators);
+  if (listingAccess.access === MYFANS_ACCESS.PUBLIC) {
+    const liveDiscovery = discoverCreatorCandidatesFromRanking(listingResponse.html, listingResponse.url);
+    const seenDiscovery = new Set(previousNegatives.map((candidate) => candidate.url));
+    discoveryCandidates.push(...liveDiscovery.filter((candidate) => !seenDiscovery.has(candidate.url)));
+    const acceptedCandidates = liveDiscovery.filter((candidate) => !candidate.rejected_reason).slice(0, maxCreators);
     const postUrlGroups = [];
-    for (const [index, creatorUrl] of creatorUrls.entries()) {
-      const response = await fetcher.fetchHtml(creatorUrl, { label: `creator:${index + 1}` });
-      const record = parseCreatorPage({ html: response.html, sourceUrl: creatorUrl, fetchedAt: response.fetched_at, status: response.status, location: response.location });
+    for (const [index, candidate] of acceptedCandidates.entries()) {
+      const response = await fetcher.fetchHtml(candidate.url, { label: `creator:${index + 1}` });
+      candidate.fetched = true;
+      const record = parseCreatorPage({ html: response.html, sourceUrl: candidate.url, discoveryEvidence: candidate.positive_discovery_evidence, fetchedAt: response.fetched_at, status: response.status, location: response.location });
       creators.push(record);
       postUrlGroups.push(response.status === 200 ? discoverPublicLinks(response.html, response.url).post_urls : []);
     }
-    if (listingLinks.post_urls.length) postUrlGroups.push(listingLinks.post_urls);
+    if (creators.some((record) => record.classification === MYFANS_CLASSIFICATIONS.SAFE) && !postUrlGroups.some((group) => group.length)) {
+      const postRankingResponse = await fetcher.fetchHtml(postRankingUrl, { label: "post_ranking" });
+      const postRankingAccess = detectPublicPageAccess(postRankingResponse);
+      if (postRankingAccess.access === MYFANS_ACCESS.PUBLIC) postUrlGroups.push(discoverPublicLinks(postRankingResponse.html, postRankingResponse.url).post_urls);
+    }
     const postUrls = roundRobin(postUrlGroups, maxPosts);
     const knownCreators = creators.filter((record) => record.classification === MYFANS_CLASSIFICATIONS.SAFE).map((record) => record.external_id);
     if (postUrls.length && knownCreators.length) {
@@ -194,10 +232,12 @@ async function runProbe(args) {
     }
   }
 
-  const artifacts = await persistProbeArtifacts({ outputDir, creators, posts, requestSummary: fetcher.summary(), listing, postDetailVerified });
+  const artifacts = await persistProbeArtifacts({ outputDir, discoveryCandidates, creators, posts, requestSummary: fetcher.summary(), listing, postDetailVerified });
   const result = {
     output_dir: outputDir,
-    listing_access: listingAccess.classification,
+    listing_access: listingAccess.access,
+    discovery_candidates: discoveryCandidates.length,
+    prefetch_rejected: discoveryCandidates.filter((candidate) => candidate.rejected_reason).length,
     creator_candidates: creators.length,
     post_candidates: posts.length,
     safe_creators: artifacts.safeCreators.length,
@@ -207,7 +247,8 @@ async function runProbe(args) {
     manifest: artifacts.frozenSummary,
   };
   console.log(JSON.stringify(result, null, 2));
-  if (listingAccess.classification !== MYFANS_CLASSIFICATIONS.SAFE) process.exitCode = 3;
+  if (listingAccess.access !== MYFANS_ACCESS.PUBLIC) process.exitCode = 3;
+  else if (!artifacts.safeCreators.length) process.exitCode = 5;
   else if (!postDetailVerified) process.exitCode = 4;
   return result;
 }
@@ -215,6 +256,7 @@ async function runProbe(args) {
 async function loadSafeRecords(outputDir) {
   const frozen = await readFrozenJsonlGzip(path.join(outputDir, "myfans-public-pilot.jsonl.gz"));
   assertNoRawHtmlPersisted(frozen);
+  assertFrozenSafeRecords(frozen);
   return {
     creators: frozen.filter((record) => record.entity_type === "creator" && record.classification === MYFANS_CLASSIFICATIONS.SAFE),
     posts: frozen.filter((record) => record.entity_type === "post" && record.classification === MYFANS_CLASSIFICATIONS.SAFE),

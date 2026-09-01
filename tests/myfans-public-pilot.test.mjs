@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  MYFANS_ACCESS,
   MYFANS_CLASSIFICATIONS,
+  MYFANS_ENTITY,
+  assertFrozenSafeRecords,
   assertNoRawHtmlPersisted,
+  canonicalizeMyFansRequestUrl,
   canonicalizeMyFansUrl,
   createPublicHtmlFetcher,
   creatorSlugFromUrl,
   dedupeFrozenRecords,
+  detectPublicPageAccess,
+  discoverCreatorCandidatesFromRanking,
   discoverPublicLinks,
   extractPublicMetadata,
   metadataHash,
@@ -20,9 +26,10 @@ import {
   readFrozenJsonlGzip,
   stableStringify,
   summarizeStagingPlan,
+  validateMetadataUrl,
   writeFrozenJsonlGzip,
 } from "../scripts/lib/myfans-public-metadata.mjs";
-import { DATA_SOURCE_CONTRACT, buildPlan, sourceContractState } from "../scripts/myfans-public-pilot.mjs";
+import { DATA_SOURCE_CONTRACT, buildPlan, main as runPilot, sourceContractState } from "../scripts/myfans-public-pilot.mjs";
 
 const postId = "123e4567-e89b-42d3-a456-426614174000";
 const creatorUrl = "https://myfans.jp/public_creator";
@@ -62,18 +69,54 @@ test("JSON-LD is preferred over OpenGraph", () => {
   assert.equal(record.raw_public_metadata.source_kind, "json_ld");
 });
 
-test("OpenGraph is a safe fallback when JSON-LD is absent", () => {
+test("OpenGraph can normalize only when ranking structural evidence is present", () => {
   const html = `<html><head><meta property="og:title" content="OG Public Creator"><meta property="og:url" content="${creatorUrl}"><meta property="og:description" content="Short public excerpt"></head></html>`;
-  const record = parseCreatorPage({ html, sourceUrl: creatorUrl, fetchedAt });
+  const record = parseCreatorPage({ html, sourceUrl: creatorUrl, discoveryEvidence: ["RANKING_CREATOR_ITEM_ENTITY_TYPE"], fetchedAt });
   assert.equal(record.classification, MYFANS_CLASSIFICATIONS.SAFE);
   assert.equal(record.normalized.display_name, "OG Public Creator");
   assert.equal(record.raw_public_metadata.source_kind, "open_graph");
 });
 
+test("OpenGraph title and self URL alone never establish a creator entity", () => {
+  const html = `<html><head><meta property="og:title" content="Generic Page"><meta property="og:url" content="${creatorUrl}"><meta property="og:description" content="Marketing"></head></html>`;
+  const record = parseCreatorPage({ html, sourceUrl: creatorUrl, fetchedAt });
+  assert.equal(record.access_classification, MYFANS_ACCESS.PUBLIC);
+  assert.equal(record.entity_classification, MYFANS_ENTITY.REVIEW);
+  assert.equal(record.classification, MYFANS_CLASSIFICATIONS.REVIEW);
+  assert.equal(record.normalized, null);
+});
+
 test("stable creator identity accepts a profile slug and rejects reserved routes", () => {
   assert.equal(creatorSlugFromUrl(creatorUrl), "public_creator");
   assert.equal(creatorSlugFromUrl("https://myfans.jp/posts"), null);
+  assert.equal(creatorSlugFromUrl("https://myfans.jp/unlimited"), null);
+  assert.equal(creatorSlugFromUrl("https://myfans.jp/genres"), null);
   assert.equal(creatorSlugFromUrl("https://myfans.jp/a/b"), null);
+});
+
+test("public access and creator entity safety are independent contracts", () => {
+  const access = detectPublicPageAccess({ status: 200, html: "<html><title>Generic</title></html>" });
+  assert.equal(access.access, MYFANS_ACCESS.PUBLIC);
+  const record = parseCreatorPage({ html: `<html><head><meta property="og:title" content="Generic"><meta property="og:url" content="${creatorUrl}"></head></html>`, sourceUrl: creatorUrl, fetchedAt });
+  assert.equal(record.access_classification, MYFANS_ACCESS.PUBLIC);
+  assert.notEqual(record.classification, MYFANS_CLASSIFICATIONS.SAFE);
+});
+
+test("known and generic navigation routes never become safe from HTTP 200 metadata", () => {
+  const routes = ["unlimited", "genres", "ranking", "search", "account", "messages", "feed", "help", "unknown-navigation"];
+  for (const route of routes) {
+    const url = `https://myfans.jp/${route}`;
+    const html = `<html><head><title>${route}</title><meta property="og:title" content="${route}"><meta property="og:description" content="Generic page"><meta property="og:url" content="${url}"></head></html>`;
+    const record = parseCreatorPage({ html, sourceUrl: url, fetchedAt });
+    assert.notEqual(record.classification, MYFANS_CLASSIFICATIONS.SAFE, route);
+    assert.equal(record.normalized, null, route);
+  }
+});
+
+test("generic marketing JSON-LD does not count as creator structural evidence", () => {
+  const html = `<html><head><script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "WebSite", name: "Marketing", url: creatorUrl })}</script><meta property="og:title" content="Marketing"><meta property="og:url" content="${creatorUrl}"></head></html>`;
+  const record = parseCreatorPage({ html, sourceUrl: creatorUrl, fetchedAt });
+  assert.equal(record.classification, MYFANS_CLASSIFICATIONS.REVIEW);
 });
 
 test("public post JSON-LD is normalized with stable UUID and known creator", () => {
@@ -95,6 +138,18 @@ test("official canonical URL strips query/hash and rejects credentials or ports"
   assert.equal(canonicalizeMyFansUrl(`${postUrl}?tracking=1#x`), postUrl);
   assert.equal(canonicalizeMyFansUrl("https://user@myfans.jp/public_creator"), null);
   assert.equal(canonicalizeMyFansUrl("https://myfans.jp:444/public_creator"), null);
+});
+
+test("ranking request URL preserves only the approved daily term", () => {
+  assert.equal(canonicalizeMyFansRequestUrl("https://myfans.jp/ranking/creators/all?term=daily"), "https://myfans.jp/ranking/creators/all?term=daily");
+  assert.equal(canonicalizeMyFansRequestUrl("https://myfans.jp/ranking/creators/all?term=weekly"), null);
+  assert.equal(canonicalizeMyFansRequestUrl("https://myfans.jp/ranking/creators/all?term=daily&token=x"), null);
+});
+
+test("signed metadata media URLs are not persisted", () => {
+  assert.equal(validateMetadataUrl("https://cdn.example.test/image.jpg?token=secret"), null);
+  assert.equal(validateMetadataUrl("https://cdn.example.test/image.jpg?X-Amz-Signature=secret"), null);
+  assert.equal(validateMetadataUrl("https://cdn.example.test/image.jpg?width=640"), "https://cdn.example.test/image.jpg?width=640");
 });
 
 test("relative time never fabricates an absolute timestamp", () => {
@@ -166,11 +221,83 @@ test("duplicate official URL with a different ID is classified", () => {
   assert.deepEqual(result[1].reason_codes, ["DUPLICATE_OFFICIAL_URL"]);
 });
 
-test("discovery only returns official creator and post HTML routes", () => {
-  const html = `<a href="${creatorUrl}">creator</a><a href="${postUrl}">post</a><a href="https://evil.example/x">external</a><a href="https://myfans.jp/image.jpg">image</a>`;
+test("generic public link discovery only accepts structurally marked creator links", () => {
+  const html = `<a data-entity-type="creator" href="${creatorUrl}">creator</a><a href="https://myfans.jp/plain_navigation">nav</a><a href="${postUrl}">post</a><a href="https://evil.example/x">external</a><a href="https://myfans.jp/image.jpg">image</a>`;
   const links = discoverPublicLinks(html);
   assert.deepEqual(links.creator_urls, [creatorUrl]);
   assert.deepEqual(links.post_urls, [postUrl]);
+});
+
+test("creator ranking discovery accepts item evidence and rejects navigation", () => {
+  const rankingUrl = "https://myfans.jp/ranking/creators/all?term=daily";
+  const html = `<html><head><script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "ItemList", itemListElement: [{ "@type": "ListItem", position: 1, item: { "@type": "Person", name: "Public Creator", url: creatorUrl } }] })}</script></head><body><a href="https://myfans.jp/unlimited">unlimited</a><a href="https://myfans.jp/plain_navigation">plain</a><a data-entity-type="creator" href="https://myfans.jp/second_creator">second</a><a data-creator-id="different" href="https://myfans.jp/mismatched_creator">mismatch</a></body></html>`;
+  const candidates = discoverCreatorCandidatesFromRanking(html, rankingUrl);
+  const bySlug = new Map(candidates.map((candidate) => [candidate.candidate_slug, candidate]));
+  assert.equal(bySlug.get("public_creator").rejected_reason, null);
+  assert.deepEqual(bySlug.get("public_creator").positive_discovery_evidence, ["RANKING_CREATOR_ITEM_JSON_LD"]);
+  assert.equal(bySlug.get("second_creator").rejected_reason, null);
+  assert.equal(bySlug.get("unlimited").rejected_reason, "KNOWN_NON_CREATOR_ROUTE");
+  assert.equal(bySlug.get("plain_navigation").rejected_reason, "RANKING_ITEM_STRUCTURAL_EVIDENCE_MISSING");
+  assert.equal(bySlug.get("mismatched_creator").rejected_reason, "RANKING_ITEM_STRUCTURAL_EVIDENCE_MISSING");
+});
+
+test("creator ranking candidates are deduplicated by exact URL", () => {
+  const rankingUrl = "https://myfans.jp/ranking/creators/all?term=daily";
+  const html = `<script type="application/ld+json">${JSON.stringify({ "@type": "ItemList", itemListElement: [{ position: 1, item: { "@type": "Person", url: creatorUrl } }] })}</script><a data-testid="creator-card" href="${creatorUrl}">same</a>`;
+  const candidates = discoverCreatorCandidatesFromRanking(html, rankingUrl);
+  assert.equal(candidates.filter((candidate) => candidate.url === creatorUrl).length, 1);
+});
+
+test("pilot uses ranking discovery and never refetches previous false-positive routes", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "myfans-route-hardening-test-"));
+  const outputDir = path.join(directory, "output");
+  const previousDir = path.join(directory, "previous");
+  const rankingUrl = "https://myfans.jp/ranking/creators/all?term=daily";
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  await mkdir(previousDir, { recursive: true });
+  await writeFile(path.join(previousDir, "creator-candidates.json"), JSON.stringify({ records: [
+    { external_id: "unlimited", official_url: "https://myfans.jp/unlimited" },
+    { external_id: "genres", official_url: "https://myfans.jp/genres" },
+  ] }));
+  const responses = new Map([
+    [rankingUrl, `<html><body><a href="https://myfans.jp/unlimited">not creator</a><a data-entity-type="creator" href="${creatorUrl}">creator</a></body></html>`],
+    [creatorUrl, `<html><head><meta property="og:title" content="Public Creator"><meta property="og:url" content="${creatorUrl}"></head><body><a href="${postUrl}">post</a></body></html>`],
+    [postUrl, postHtml()],
+  ]);
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    const html = responses.get(String(url));
+    assert.notEqual(html, undefined, `unexpected request: ${url}`);
+    return new Response(html, { status: 200, headers: { "content-type": "text/html" } });
+  };
+  try {
+    const result = await runPilot([
+      "--mode", "probe",
+      "--output-dir", outputDir,
+      "--previous-evidence-dir", previousDir,
+      "--max-creators", "1",
+      "--max-posts", "1",
+    ]);
+    assert.deepEqual(calls, [rankingUrl, creatorUrl, postUrl]);
+    assert.equal(result.safe_creators, 1);
+    assert.equal(result.safe_posts, 1);
+    assert.equal(result.post_detail_verified, true);
+    const discovery = JSON.parse(await readFile(path.join(outputDir, "discovery-candidates.json"), "utf8"));
+    assert.equal(discovery.records.find((record) => record.candidate_slug === "unlimited").fetched, false);
+    assert.equal(discovery.records.find((record) => record.candidate_slug === "genres").fetched, false);
+    assert.equal(discovery.records.find((record) => record.candidate_slug === "public_creator").fetched, true);
+    assert.doesNotMatch(await readFile(path.join(outputDir, "creator-candidates.json"), "utf8"), /<html/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("frozen SAFE assertions reject forged entity safety", () => {
+  const valid = parseCreatorPage({ html: creatorHtml(), sourceUrl: creatorUrl, fetchedAt });
+  assert.doesNotThrow(() => assertFrozenSafeRecords([valid]));
+  assert.throws(() => assertFrozenSafeRecords([{ ...valid, entity_evidence: [] }]), /FROZEN_SAFE_CREATOR_ASSERTION_FAILED/);
 });
 
 test("fetcher rejects media URL before making a request", async () => {

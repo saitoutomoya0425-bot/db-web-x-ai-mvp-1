@@ -5,8 +5,21 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
-export const MYFANS_PARSER_VERSION = "phase6c-v1";
+export const MYFANS_PARSER_VERSION = "phase6c-v2";
 export const MYFANS_ORIGIN = "https://myfans.jp";
+export const MYFANS_ACCESS = Object.freeze({
+  PUBLIC: "PUBLIC_ACCESSIBLE",
+  AUTH: "AUTH_REQUIRED",
+  BLOCKED: "SOURCE_BLOCKED",
+  ERROR: "HTTP_ERROR",
+});
+export const MYFANS_ENTITY = Object.freeze({
+  CREATOR: "VALID_CREATOR",
+  POST: "VALID_POST",
+  INVALID_ROUTE: "INVALID_ROUTE",
+  UNSUPPORTED: "UNSUPPORTED",
+  REVIEW: "NEEDS_REVIEW",
+});
 export const MYFANS_CLASSIFICATIONS = Object.freeze({
   SAFE: "PUBLIC_SAFE_METADATA",
   REVIEW: "PUBLIC_NEEDS_REVIEW",
@@ -20,9 +33,9 @@ export const MYFANS_CLASSIFICATIONS = Object.freeze({
 
 const RESERVED_CREATOR_SLUGS = new Set([
   "about", "account", "admin", "api", "auth", "categories", "category", "contact",
-  "creators", "discover", "faq", "help", "home", "login", "logout", "media", "plans",
-  "posts", "privacy", "ranking", "rankings", "register", "search", "settings", "signin",
-  "signup", "support", "terms", "users",
+  "creators", "discover", "faq", "feed", "genres", "help", "home", "login", "logout",
+  "media", "messages", "plans", "posts", "privacy", "ranking", "rankings", "register",
+  "search", "settings", "signin", "signup", "support", "terms", "unlimited", "users",
 ]);
 const LOGIN_MARKERS = [
   /<form[^>]+(?:login|sign[-_ ]?in)/i,
@@ -117,13 +130,23 @@ export function extractPublicMetadata(html, baseUrl = MYFANS_ORIGIN) {
   const titleMatch = String(html).match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i);
   if (titleMatch) meta.title = cleanText(titleMatch[1], 300);
 
-  const links = [];
-  for (const match of String(html).matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)) {
-    const value = match[1] ?? match[2] ?? match[3];
-    const url = canonicalizeMyFansUrl(decodeHtmlEntities(value), baseUrl, { allowRoot: true });
-    if (url) links.push(url);
+  const anchors = [];
+  for (const match of String(html).matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)) {
+    const attributes = parseTagAttributes(`<a ${match[1]}>`);
+    if (!attributes.href) continue;
+    const url = canonicalizeMyFansUrl(attributes.href, baseUrl, { allowRoot: true });
+    if (!url) continue;
+    anchors.push({
+      url,
+      text: cleanText(match[2].replace(/<[^>]+>/g, " "), 160),
+      rel: cleanText(attributes.rel, 100),
+      data_creator_id: cleanText(attributes["data-creator-id"], 100),
+      data_entity_type: cleanText(attributes["data-entity-type"] ?? attributes["data-type"] ?? attributes["data-kind"], 100),
+      data_testid: cleanText(attributes["data-testid"], 100),
+      class_name: cleanText(attributes.class, 200),
+    });
   }
-  return { jsonLd, meta, links: [...new Set(links)] };
+  return { jsonLd, meta, anchors, links: [...new Set(anchors.map((anchor) => anchor.url))] };
 }
 
 export function canonicalizeMyFansUrl(value, baseUrl = MYFANS_ORIGIN, { allowRoot = false } = {}) {
@@ -140,11 +163,31 @@ export function canonicalizeMyFansUrl(value, baseUrl = MYFANS_ORIGIN, { allowRoo
   }
 }
 
+export function canonicalizeMyFansRequestUrl(value, baseUrl = MYFANS_ORIGIN) {
+  try {
+    const url = new URL(String(value), baseUrl);
+    if (url.protocol !== "https:" || url.hostname !== "myfans.jp" || url.port || url.username || url.password) return null;
+    url.hash = "";
+    url.pathname = url.pathname.replace(/\/{2,}/g, "/").replace(/\/$/, "") || "/";
+    if (/^\/ranking\/(?:creators|posts)\/all$/.test(url.pathname)) {
+      if ([...url.searchParams.keys()].some((key) => key !== "term")) return null;
+      if (url.searchParams.get("term") !== "daily") return null;
+      url.search = "?term=daily";
+    } else {
+      url.search = "";
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function validateMetadataUrl(value, baseUrl = MYFANS_ORIGIN) {
   if (value == null) return null;
   try {
     const url = new URL(String(value), baseUrl);
     if (url.protocol !== "https:" || url.port || url.username || url.password) return null;
+    if ([...url.searchParams.keys()].some((key) => /^(?:token|signature|sig|expires|key|auth|policy|x-amz-)/i.test(key))) return null;
     url.hash = "";
     return url.toString();
   } catch {
@@ -162,6 +205,14 @@ export function creatorSlugFromUrl(value) {
   return slug;
 }
 
+export function isReservedCreatorRoute(value) {
+  const canonical = canonicalizeMyFansUrl(value);
+  if (!canonical) return true;
+  const parts = new URL(canonical).pathname.split("/").filter(Boolean);
+  if (parts.length !== 1) return true;
+  return RESERVED_CREATOR_SLUGS.has(parts[0].toLowerCase());
+}
+
 export function postIdFromUrl(value) {
   const canonical = canonicalizeMyFansUrl(value);
   if (!canonical) return null;
@@ -177,6 +228,27 @@ function firstJsonLd(jsonLd, types) {
   }) ?? jsonLd.find((entry) => entry.name || entry.headline || entry.description) ?? null;
 }
 
+function jsonLdByType(jsonLd, types) {
+  const expected = new Set(types.map((value) => value.toLowerCase()));
+  return jsonLd.filter((entry) => {
+    const raw = Array.isArray(entry?.["@type"]) ? entry["@type"] : [entry?.["@type"]];
+    return raw.some((value) => expected.has(String(value ?? "").toLowerCase()));
+  });
+}
+
+function selfConsistentUrl(value, sourceUrl) {
+  return canonicalizeMyFansUrl(value, sourceUrl) === sourceUrl;
+}
+
+function explicitCreatorIds(html) {
+  const ids = [];
+  for (const match of String(html).matchAll(/<[^>]+\bdata-creator-id\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>/gi)) {
+    const value = cleanText(match[1] ?? match[2] ?? match[3], 100);
+    if (value) ids.push(value);
+  }
+  return [...new Set(ids)];
+}
+
 function valueFromImage(image) {
   if (typeof image === "string") return image;
   if (Array.isArray(image)) return valueFromImage(image[0]);
@@ -185,22 +257,28 @@ function valueFromImage(image) {
 }
 
 function accessFailure({ status = 200, location = null, html = "" } = {}) {
-  if (status === 401) return { classification: MYFANS_CLASSIFICATIONS.AUTH, reason_codes: ["HTTP_401_AUTH_REQUIRED"] };
-  if (status === 403) return { classification: MYFANS_CLASSIFICATIONS.BLOCKED, reason_codes: ["HTTP_403_SOURCE_BLOCKED"] };
-  if (status === 429) return { classification: MYFANS_CLASSIFICATIONS.BLOCKED, reason_codes: ["HTTP_429_NO_RETRY"] };
-  if (status >= 500) return { classification: MYFANS_CLASSIFICATIONS.BLOCKED, reason_codes: [`HTTP_${status}_SOURCE_ERROR`] };
+  if (status === 401) return { access: MYFANS_ACCESS.AUTH, reason_codes: ["HTTP_401_AUTH_REQUIRED"] };
+  if (status === 403) return { access: MYFANS_ACCESS.BLOCKED, reason_codes: ["HTTP_403_SOURCE_BLOCKED"] };
+  if (status === 429) return { access: MYFANS_ACCESS.BLOCKED, reason_codes: ["HTTP_429_NO_RETRY"] };
+  if (status >= 500) return { access: MYFANS_ACCESS.ERROR, reason_codes: [`HTTP_${status}_SOURCE_ERROR`] };
   if (status >= 300 && status < 400) {
-    if (/\b(?:login|signin|auth)\b/i.test(String(location))) return { classification: MYFANS_CLASSIFICATIONS.AUTH, reason_codes: ["AUTH_REDIRECT_REJECTED"] };
-    return { classification: MYFANS_CLASSIFICATIONS.BLOCKED, reason_codes: ["REDIRECT_NOT_FOLLOWED"] };
+    if (/\b(?:login|signin|auth)\b/i.test(String(location))) return { access: MYFANS_ACCESS.AUTH, reason_codes: ["AUTH_REDIRECT_REJECTED"] };
+    return { access: MYFANS_ACCESS.BLOCKED, reason_codes: ["REDIRECT_NOT_FOLLOWED"] };
   }
-  if (status !== 200) return { classification: MYFANS_CLASSIFICATIONS.BLOCKED, reason_codes: [`HTTP_${status}_UNSUPPORTED`] };
-  if (LOGIN_MARKERS.some((pattern) => pattern.test(html))) return { classification: MYFANS_CLASSIFICATIONS.AUTH, reason_codes: ["LOGIN_WALL_REJECTED"] };
-  if (AGE_GATE_MARKERS.some((pattern) => pattern.test(html))) return { classification: MYFANS_CLASSIFICATIONS.BLOCKED, reason_codes: ["AGE_INTERSTITIAL_NOT_BYPASSED"] };
+  if (status !== 200) return { access: MYFANS_ACCESS.ERROR, reason_codes: [`HTTP_${status}_UNSUPPORTED`] };
+  if (LOGIN_MARKERS.some((pattern) => pattern.test(html))) return { access: MYFANS_ACCESS.AUTH, reason_codes: ["LOGIN_WALL_REJECTED"] };
+  if (AGE_GATE_MARKERS.some((pattern) => pattern.test(html))) return { access: MYFANS_ACCESS.BLOCKED, reason_codes: ["AGE_INTERSTITIAL_NOT_BYPASSED"] };
   return null;
 }
 
 export function detectPublicPageAccess(input) {
-  return accessFailure(input) ?? { classification: MYFANS_CLASSIFICATIONS.SAFE, reason_codes: ["ANONYMOUS_HTTP_200"] };
+  return accessFailure(input) ?? { access: MYFANS_ACCESS.PUBLIC, reason_codes: ["ANONYMOUS_HTTP_200"] };
+}
+
+function finalClassificationForAccess(access) {
+  if (access === MYFANS_ACCESS.AUTH) return MYFANS_CLASSIFICATIONS.AUTH;
+  if (access === MYFANS_ACCESS.BLOCKED || access === MYFANS_ACCESS.ERROR) return MYFANS_CLASSIFICATIONS.BLOCKED;
+  return null;
 }
 
 function restrictedVisibility(html, jsonLd) {
@@ -217,7 +295,7 @@ function absoluteTimestamp(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-function recordEnvelope({ entityType, externalId, creatorExternalId = null, sourceUrl, officialUrl, fetchedAt, visibility, normalized, rawPublicMetadata, sourcePageHash, classification, reasonCodes }) {
+function recordEnvelope({ entityType, externalId, creatorExternalId = null, sourceUrl, officialUrl, fetchedAt, visibility, normalized, rawPublicMetadata, sourcePageHash, classification, reasonCodes, accessClassification, entityClassification, entityEvidence = [], discoveryEvidence = [] }) {
   return {
     entity_type: entityType,
     external_id: externalId,
@@ -230,35 +308,59 @@ function recordEnvelope({ entityType, externalId, creatorExternalId = null, sour
     raw_public_metadata: rawPublicMetadata,
     metadata_hash: metadataHash(rawPublicMetadata),
     parser_version: MYFANS_PARSER_VERSION,
+    access_classification: accessClassification,
+    entity_classification: entityClassification,
+    entity_evidence: [...new Set(entityEvidence)].sort(),
+    discovery_evidence: [...new Set(discoveryEvidence)].sort(),
     classification,
     reason_codes: [...new Set(reasonCodes)].sort(),
     source_page_hash: sourcePageHash,
   };
 }
 
-export function parseCreatorPage({ html, sourceUrl, fetchedAt = new Date().toISOString(), status = 200, location = null }) {
+export function parseCreatorPage({ html, sourceUrl, discoveryEvidence = [], fetchedAt = new Date().toISOString(), status = 200, location = null }) {
   const canonicalSource = canonicalizeMyFansUrl(sourceUrl);
   const slug = creatorSlugFromUrl(canonicalSource);
   const pageHash = sha256(String(html));
-  const failure = accessFailure({ status, location, html });
-  if (failure || !slug) {
+  const access = detectPublicPageAccess({ status, location, html });
+  const accessFailureClassification = finalClassificationForAccess(access.access);
+  if (accessFailureClassification || !slug) {
     return recordEnvelope({
       entityType: "creator", externalId: slug, sourceUrl: canonicalSource ?? sourceUrl,
       officialUrl: canonicalSource, fetchedAt, visibility: "unknown", normalized: null,
       rawPublicMetadata: {}, sourcePageHash: pageHash,
-      classification: failure?.classification ?? MYFANS_CLASSIFICATIONS.UNSUPPORTED,
-      reasonCodes: failure?.reason_codes ?? ["STABLE_CREATOR_ID_MISSING"],
+      accessClassification: access.access,
+      entityClassification: slug ? MYFANS_ENTITY.REVIEW : MYFANS_ENTITY.INVALID_ROUTE,
+      discoveryEvidence,
+      classification: accessFailureClassification ?? MYFANS_CLASSIFICATIONS.INVALID,
+      reasonCodes: accessFailureClassification ? access.reason_codes : ["CREATOR_CANDIDATE_SLUG_MISSING_OR_RESERVED"],
     });
   }
 
   const extracted = extractPublicMetadata(html, canonicalSource);
-  const structured = firstJsonLd(extracted.jsonLd, ["Person", "ProfilePage"]);
+  const people = jsonLdByType(extracted.jsonLd, ["Person"]);
+  const profilePages = jsonLdByType(extracted.jsonLd, ["ProfilePage"]);
+  const structured = people[0] ?? profilePages[0] ?? null;
   const displayName = cleanText(structured?.name ?? extracted.meta["og:title"] ?? extracted.meta.title, 200);
   const description = cleanText(structured?.description ?? extracted.meta["og:description"], 500);
   const profileImageUrl = validateMetadataUrl(valueFromImage(structured?.image) ?? extracted.meta["og:image"], canonicalSource);
-  const claimedCanonical = canonicalizeMyFansUrl(structured?.url ?? extracted.meta["og:url"] ?? extracted.meta.canonical ?? canonicalSource);
-  const officialUrl = creatorSlugFromUrl(claimedCanonical) === slug ? claimedCanonical : canonicalSource;
-  const sourceKind = structured ? "json_ld" : "open_graph";
+  const identityClaims = [
+    ...people.flatMap((entry) => [entry.url, entry["@id"]]),
+    ...profilePages.flatMap((entry) => [entry.url, entry["@id"]]),
+    extracted.meta["og:url"],
+    extracted.meta.canonical,
+  ].filter(Boolean);
+  const identityConsistency = identityClaims.some((value) => selfConsistentUrl(value, canonicalSource));
+  const entityEvidence = [];
+  if (people.some((entry) => selfConsistentUrl(entry.url ?? entry["@id"], canonicalSource))) entityEvidence.push("JSON_LD_PERSON_SELF");
+  if (profilePages.some((entry) => selfConsistentUrl(entry.url ?? entry["@id"], canonicalSource))) entityEvidence.push("JSON_LD_PROFILE_SELF");
+  if (explicitCreatorIds(html).includes(slug)) entityEvidence.push("EXPLICIT_CREATOR_ID_SELF");
+  if (extracted.links.some((url) => postIdFromUrl(url))) entityEvidence.push("CREATOR_POST_RELATION");
+  if (discoveryEvidence.some((value) => /^RANKING_CREATOR_ITEM_/.test(value))) entityEvidence.push("RANKING_CREATOR_ITEM_LINK");
+  const structuralEvidence = entityEvidence.length > 0;
+  const claimedCanonical = identityClaims.map((value) => canonicalizeMyFansUrl(value, canonicalSource)).find((value) => value === canonicalSource) ?? null;
+  const officialUrl = claimedCanonical ?? canonicalSource;
+  const sourceKind = people.length || profilePages.length ? "json_ld" : "open_graph";
   const rawPublicMetadata = {
     source_kind: sourceKind,
     profile_slug: slug,
@@ -266,8 +368,11 @@ export function parseCreatorPage({ html, sourceUrl, fetchedAt = new Date().toISO
     official_url: officialUrl,
     profile_image_url: profileImageUrl,
     bio_excerpt: description,
+    identity_self_consistent: identityConsistency,
+    entity_evidence: [...new Set(entityEvidence)].sort(),
+    discovery_evidence: [...new Set(discoveryEvidence)].sort(),
   };
-  const safe = Boolean(displayName && officialUrl);
+  const safe = Boolean(displayName && identityConsistency && structuralEvidence && officialUrl);
   const normalized = safe ? {
     external_creator_id: slug,
     profile_slug: slug,
@@ -282,8 +387,14 @@ export function parseCreatorPage({ html, sourceUrl, fetchedAt = new Date().toISO
     entityType: "creator", externalId: slug, sourceUrl: canonicalSource, officialUrl,
     fetchedAt, visibility: safe ? "public" : "unknown", normalized,
     rawPublicMetadata, sourcePageHash: pageHash,
+    accessClassification: access.access,
+    entityClassification: safe ? MYFANS_ENTITY.CREATOR : MYFANS_ENTITY.REVIEW,
+    entityEvidence,
+    discoveryEvidence,
     classification: safe ? MYFANS_CLASSIFICATIONS.SAFE : MYFANS_CLASSIFICATIONS.REVIEW,
-    reasonCodes: safe ? ["ANONYMOUS_HTTP_200", "STABLE_CREATOR_ID", sourceKind.toUpperCase()] : ["PUBLIC_CREATOR_METADATA_INCOMPLETE"],
+    reasonCodes: safe
+      ? ["ANONYMOUS_HTTP_200", "CREATOR_IDENTITY_SELF_CONSISTENT", "CREATOR_STRUCTURAL_EVIDENCE", sourceKind.toUpperCase()]
+      : [!identityConsistency ? "CREATOR_SELF_IDENTITY_NOT_CONFIRMED" : "CREATOR_STRUCTURAL_EVIDENCE_MISSING"],
   });
 }
 
@@ -301,14 +412,17 @@ export function parsePostPage({ html, sourceUrl, knownCreatorExternalIds = [], f
   const canonicalSource = canonicalizeMyFansUrl(sourceUrl);
   const postId = postIdFromUrl(canonicalSource);
   const pageHash = sha256(String(html));
-  const failure = accessFailure({ status, location, html });
-  if (failure || !postId) {
+  const access = detectPublicPageAccess({ status, location, html });
+  const accessFailureClassification = finalClassificationForAccess(access.access);
+  if (accessFailureClassification || !postId) {
     return recordEnvelope({
       entityType: "post", externalId: postId, sourceUrl: canonicalSource ?? sourceUrl,
       officialUrl: canonicalSource, fetchedAt, visibility: "unknown", normalized: null,
       rawPublicMetadata: {}, sourcePageHash: pageHash,
-      classification: failure?.classification ?? MYFANS_CLASSIFICATIONS.UNSUPPORTED,
-      reasonCodes: failure?.reason_codes ?? ["STABLE_POST_ID_MISSING"],
+      accessClassification: access.access,
+      entityClassification: postId ? MYFANS_ENTITY.REVIEW : MYFANS_ENTITY.INVALID_ROUTE,
+      classification: accessFailureClassification ?? MYFANS_CLASSIFICATIONS.UNSUPPORTED,
+      reasonCodes: accessFailureClassification ? access.reason_codes : ["STABLE_POST_ID_MISSING"],
     });
   }
 
@@ -344,7 +458,8 @@ export function parsePostPage({ html, sourceUrl, knownCreatorExternalIds = [], f
     return recordEnvelope({
       entityType: "post", externalId: postId, creatorExternalId, sourceUrl: canonicalSource,
       officialUrl, fetchedAt, visibility, normalized: null, rawPublicMetadata,
-      sourcePageHash: pageHash, classification: MYFANS_CLASSIFICATIONS.PAID,
+      sourcePageHash: pageHash, accessClassification: access.access,
+      entityClassification: MYFANS_ENTITY.REVIEW, classification: MYFANS_CLASSIFICATIONS.PAID,
       reasonCodes: [visibility === "paid" ? "PAID_METADATA_EXCLUDED" : "LIMITED_METADATA_EXCLUDED"],
     });
   }
@@ -370,18 +485,108 @@ export function parsePostPage({ html, sourceUrl, knownCreatorExternalIds = [], f
   return recordEnvelope({
     entityType: "post", externalId: postId, creatorExternalId, sourceUrl: canonicalSource,
     officialUrl, fetchedAt, visibility: "public", normalized, rawPublicMetadata,
-    sourcePageHash: pageHash,
+    sourcePageHash: pageHash, accessClassification: access.access,
+    entityClassification: safe ? MYFANS_ENTITY.POST : MYFANS_ENTITY.REVIEW,
+    entityEvidence: safe ? ["STABLE_POST_UUID", "KNOWN_CREATOR_RELATION", sourceKind === "json_ld" ? "STRUCTURED_PUBLIC_METADATA" : "PUBLIC_METADATA"] : [],
     classification: safe ? MYFANS_CLASSIFICATIONS.SAFE : MYFANS_CLASSIFICATIONS.REVIEW,
     reasonCodes: safe ? ["ANONYMOUS_HTTP_200", "STABLE_POST_ID", "KNOWN_CREATOR", sourceKind.toUpperCase()] : [creatorKnown ? "PUBLIC_POST_METADATA_INCOMPLETE" : "CREATOR_IDENTITY_NOT_CONFIRMED"],
   });
 }
 
-export function discoverPublicLinks(html, baseUrl = MYFANS_ORIGIN) {
-  const { links } = extractPublicMetadata(html, baseUrl);
-  return {
-    creator_urls: links.filter((url) => creatorSlugFromUrl(url)),
-    post_urls: links.filter((url) => postIdFromUrl(url)),
+function rankingItemValues(jsonLd) {
+  const itemLists = jsonLdByType(jsonLd, ["ItemList"]);
+  return itemLists.flatMap((entry) => Array.isArray(entry.itemListElement) ? entry.itemListElement : [])
+    .map((entry, index) => ({
+      position: Number.isInteger(entry?.position) ? entry.position : index + 1,
+      item: entry?.item ?? entry,
+    }));
+}
+
+function structuralAnchorEvidence(anchor, candidateSlug = creatorSlugFromUrl(anchor.url)) {
+  const evidence = [];
+  if (/\bauthor\b/i.test(anchor.rel ?? "")) evidence.push("RANKING_CREATOR_ITEM_REL_AUTHOR");
+  if (/(^|[-_:])creator($|[-_:])/i.test(anchor.data_entity_type ?? "")) evidence.push("RANKING_CREATOR_ITEM_ENTITY_TYPE");
+  if (/(^|[-_:])creator($|[-_:])/i.test(anchor.data_testid ?? "")) evidence.push("RANKING_CREATOR_ITEM_TESTID");
+  if (candidateSlug && anchor.data_creator_id === candidateSlug) evidence.push("RANKING_CREATOR_ITEM_DATA_ID");
+  return evidence;
+}
+
+export function discoverCreatorCandidatesFromRanking(html, rankingUrl) {
+  const canonicalRanking = canonicalizeMyFansRequestUrl(rankingUrl);
+  if (!canonicalRanking || new URL(canonicalRanking).pathname !== "/ranking/creators/all") throw new Error("CREATOR_RANKING_URL_REQUIRED");
+  const extracted = extractPublicMetadata(html, canonicalRanking);
+  const byUrl = new Map();
+  const add = (value, details) => {
+    const url = canonicalizeMyFansUrl(value, canonicalRanking);
+    if (!url) return;
+    const rawParts = new URL(url).pathname.split("/").filter(Boolean);
+    if (rawParts.length !== 1) return;
+    const candidateSlug = rawParts[0];
+    const reserved = isReservedCreatorRoute(url);
+    const evidence = [...new Set(details.positive_discovery_evidence ?? [])].sort();
+    const rejectedReason = reserved
+      ? "KNOWN_NON_CREATOR_ROUTE"
+      : evidence.length === 0 ? "RANKING_ITEM_STRUCTURAL_EVIDENCE_MISSING" : null;
+    const candidate = {
+      url,
+      candidate_slug: candidateSlug,
+      discovered_from: canonicalRanking,
+      discovery_method: details.discovery_method,
+      ranking_position: details.ranking_position ?? null,
+      anchor_text_short: cleanText(details.anchor_text_short, 160),
+      positive_discovery_evidence: evidence,
+      rejected_reason: rejectedReason,
+      fetched: false,
+    };
+    const existing = byUrl.get(url);
+    if (!existing || (existing.rejected_reason && !candidate.rejected_reason)) byUrl.set(url, candidate);
   };
+
+  for (const { item, position } of rankingItemValues(extracted.jsonLd)) {
+    const types = (Array.isArray(item?.["@type"]) ? item["@type"] : [item?.["@type"]]).map((value) => String(value ?? "").toLowerCase());
+    if (!types.some((value) => value === "person" || value === "profilepage")) continue;
+    add(item?.url ?? item?.["@id"], {
+      discovery_method: "json_ld_item_list",
+      ranking_position: position,
+      anchor_text_short: item?.name,
+      positive_discovery_evidence: ["RANKING_CREATOR_ITEM_JSON_LD"],
+    });
+  }
+  for (const anchor of extracted.anchors) {
+    const evidence = structuralAnchorEvidence(anchor, creatorSlugFromUrl(anchor.url));
+    add(anchor.url, {
+      discovery_method: "ranking_anchor",
+      ranking_position: null,
+      anchor_text_short: anchor.text,
+      positive_discovery_evidence: evidence,
+    });
+  }
+  return [...byUrl.values()];
+}
+
+export function discoverPublicLinks(html, baseUrl = MYFANS_ORIGIN) {
+  const { anchors } = extractPublicMetadata(html, baseUrl);
+  return {
+    creator_urls: anchors.filter((anchor) => structuralAnchorEvidence(anchor).length > 0).map((anchor) => anchor.url).filter((url) => creatorSlugFromUrl(url)),
+    post_urls: [...new Set(anchors.map((anchor) => anchor.url).filter((url) => postIdFromUrl(url)))],
+  };
+}
+
+export function assertFrozenSafeRecords(records) {
+  for (const record of records) {
+    if (record.classification !== MYFANS_CLASSIFICATIONS.SAFE) continue;
+    if (record.access_classification !== MYFANS_ACCESS.PUBLIC) throw new Error("FROZEN_SAFE_ACCESS_ASSERTION_FAILED");
+    if (!record.official_url || record.normalized?.official_url !== record.official_url) throw new Error("FROZEN_SAFE_IDENTITY_ASSERTION_FAILED");
+    if (record.entity_type === "creator") {
+      if (record.entity_classification !== MYFANS_ENTITY.CREATOR || isReservedCreatorRoute(record.official_url)) throw new Error("FROZEN_SAFE_CREATOR_ASSERTION_FAILED");
+      if (!record.raw_public_metadata?.identity_self_consistent || !record.entity_evidence?.length) throw new Error("FROZEN_SAFE_CREATOR_ASSERTION_FAILED");
+    } else if (record.entity_type === "post") {
+      if (record.entity_classification !== MYFANS_ENTITY.POST || !postIdFromUrl(record.official_url) || !record.creator_external_id) throw new Error("FROZEN_SAFE_POST_ASSERTION_FAILED");
+    } else {
+      throw new Error("FROZEN_SAFE_ENTITY_ASSERTION_FAILED");
+    }
+  }
+  return records;
 }
 
 export function dedupeFrozenRecords(records) {
@@ -399,7 +604,7 @@ export function dedupeFrozenRecords(records) {
 }
 
 function isOfficialHtmlUrl(value) {
-  const canonical = canonicalizeMyFansUrl(value, MYFANS_ORIGIN, { allowRoot: true });
+  const canonical = canonicalizeMyFansRequestUrl(value, MYFANS_ORIGIN);
   if (!canonical) return false;
   const pathname = new URL(canonical).pathname.toLowerCase();
   return !/\.(?:avif|gif|jpe?g|png|svg|webp|mp4|m3u8|mov|webm)(?:$|\/)/.test(pathname);
@@ -443,7 +648,7 @@ export function createPublicHtmlFetcher({ fetchImpl = globalThis.fetch, maxReque
   let retryRequests = 0;
 
   async function fetchHtml(value, { label = null } = {}) {
-    const url = canonicalizeMyFansUrl(value, MYFANS_ORIGIN, { allowRoot: true });
+    const url = canonicalizeMyFansRequestUrl(value, MYFANS_ORIGIN);
     if (!url || !isOfficialHtmlUrl(url)) throw new Error("NON_PUBLIC_HTML_URL_REJECTED");
     if (completedUrls.has(url) || inFlightUrls.has(url)) throw new Error(`DUPLICATE_REQUEST_URL_BLOCKED:${url}`);
     inFlightUrls.add(url);
