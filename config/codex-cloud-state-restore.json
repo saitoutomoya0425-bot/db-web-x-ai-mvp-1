@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "source": "myfans-research/phase6a/source-capabilities.json",
+      "logical_path": "myfans-research/phase6a/source-capabilities.json",
+      "category": "HISTORICAL_SUMMARY",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6a"
+    },
+    {
+      "source": "myfans-research/phase6a/field-mapping.json",
+      "logical_path": "myfans-research/phase6a/field-mapping.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6a"
+    },
+    {
+      "source": "myfans-research/phase6a/integration-plan.md",
+      "logical_path": "myfans-research/phase6a/integration-plan.md",
+      "category": "HISTORICAL_SUMMARY",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6a"
+    },
+    {
+      "source": "myfans-research/phase6a/request-summary.json",
+      "logical_path": "myfans-research/phase6a/request-summary.json",
+      "category": "HISTORICAL_SUMMARY",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6a"
+    },
+    {
+      "source": "myfans-research/phase6b/schema-summary.json",
+      "logical_path": "myfans-research/phase6b/schema-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": true,
+      "status": "active",
+      "source_phase": "phase6b"
+    },
+    {
+      "source": "myfans-research/phase6b/phase6c-ingestion-contract.json",
+      "logical_path": "myfans-research/phase6b/phase6c-ingestion-contract.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "active",
+      "source_phase": "phase6b"
+    },
+    {
+      "source": "myfans-research/phase6c-pilot/request-summary.json",
+      "logical_path": "myfans-research/phase6c-pilot/request-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-pilot"
+    },
+    {
+      "source": "myfans-research/phase6c-pilot/frozen-summary.json",
+      "logical_path": "myfans-research/phase6c-pilot/frozen-summary.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "stopped",
+      "source_phase": "phase6c-pilot"
+    },
+    {
+      "source": "myfans-research/phase6c-pilot/classification-summary.json",
+      "logical_path": "myfans-research/phase6c-pilot/classification-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-pilot"
+    },
+    {
+      "source": "myfans-research/phase6c-pilot/creator-candidates.json",
+      "logical_path": "myfans-research/phase6c-pilot/creator-candidates.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-pilot"
+    },
+    {
+      "source": "myfans-research/phase6c-route-hardening-20260901/request-summary.json",
+      "logical_path": "myfans-research/phase6c-route-hardening-20260901/request-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-route-hardening"
+    },
+    {
+      "source": "myfans-research/phase6c-route-hardening-20260901/frozen-summary.json",
+      "logical_path": "myfans-research/phase6c-route-hardening-20260901/frozen-summary.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "stopped",
+      "source_phase": "phase6c-route-hardening"
+    },
+    {
+      "source": "myfans-research/phase6c-route-hardening-20260901/classification-summary.json",
+      "logical_path": "myfans-research/phase6c-route-hardening-20260901/classification-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-route-hardening"
+    },
+    {
+      "source": "myfans-research/phase6c-route-hardening-20260901/discovery-candidates.json",
+      "logical_path": "myfans-research/phase6c-route-hardening-20260901/discovery-candidates.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-route-hardening"
+    },
+    {
+      "source": "myfans-research/phase6c-rendered-dom-20260901/request-summary.json",
+      "logical_path": "myfans-research/phase6c-rendered-dom-20260901/request-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "myfans-research/phase6c-rendered-dom-20260901/frozen-summary.json",
+      "logical_path": "myfans-research/phase6c-rendered-dom-20260901/frozen-summary.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "stopped",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "myfans-research/phase6c-rendered-dom-20260901/classification-summary.json",
+      "logical_path": "myfans-research/phase6c-rendered-dom-20260901/classification-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "myfans-research/phase6c-rendered-dom-20260901/discovery-candidates.json",
+      "logical_path": "myfans-research/phase6c-rendered-dom-20260901/discovery-candidates.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "myfans-research/phase6c-rendered-dom-20260901/rendered-ranking-observation.json",
+      "logical_path": "myfans-research/phase6c-rendered-dom-20260901/rendered-ranking-observation.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "active",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "myfans-research/phase6c-rendered-dom-20260901/static-hydration-observation.json",
+      "logical_path": "myfans-research/phase6c-rendered-dom-20260901/static-hydration-observation.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "active",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "myfans-research/phase6c-browser-transport-20260901/browser-capabilities.json",
+      "logical_path": "myfans-research/phase6c-browser-transport-20260901/browser-capabilities.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "stopped",
+      "source_phase": "phase6c-browser-transport"
+    },
+    {
+      "source": "myfans-research/phase6c-browser-transport-20260901/prior-error-summary.json",
+      "logical_path": "myfans-research/phase6c-browser-transport-20260901/prior-error-summary.json",
+      "category": "HISTORICAL_SUMMARY",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6c-browser-transport"
+    },
+    {
+      "source": "myfans-research/phase6c-browser-transport-20260901/render-transport-observation.json",
+      "logical_path": "myfans-research/phase6c-browser-transport-20260901/render-transport-observation.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "stopped",
+      "source_phase": "phase6c-browser-transport"
+    },
+    {
+      "source": "myfans-research/phase6c-browser-transport-20260901/transport-self-test.json",
+      "logical_path": "myfans-research/phase6c-browser-transport-20260901/transport-self-test.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "stopped",
+      "source_phase": "phase6c-browser-transport"
+    },
+    {
+      "source": "fanza-priority/priority-v1-production-20260831/summary.json",
+      "logical_path": "fanza-priority/priority-v1-production-20260831/summary.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "active",
+      "source_phase": "phase5g-priority"
+    },
+    {
+      "source": "fanza-priority/priority-v1-production-20260831/frozen-summary.json",
+      "logical_path": "fanza-priority/priority-v1-production-20260831/frozen-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "complete",
+      "source_phase": "phase5g-priority"
+    },
+    {
+      "source": "fanza-frontiers/phase5d-8822-9821-0495c283/summary.json",
+      "logical_path": "fanza-frontiers/phase5d-8822-9821-0495c283/summary.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "frontier",
+      "source_phase": "phase5g-frontier"
+    },
+    {
+      "source": "fanza-frontiers/phase5d-8822-9821-0495c283/promotion-runner-summary.json",
+      "logical_path": "fanza-frontiers/phase5d-8822-9821-0495c283/promotion-runner-summary.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "complete",
+      "source_phase": "phase5g-frontier"
+    },
+    {
+      "source": "thumbnail-reviews/phase5g-priority-20260831/final-review-summary.json",
+      "logical_path": "thumbnail-reviews/phase5g-priority-20260831/final-review-summary.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "approved",
+      "source_phase": "phase5g-thumbnail"
+    },
+    {
+      "source": "thumbnail-reviews/phase5g-priority-20260831/exact-handoff.csv",
+      "logical_path": "thumbnail-reviews/phase5g-priority-20260831/exact-handoff.csv",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": true,
+      "status": "approved",
+      "source_phase": "phase5g-thumbnail"
+    },
+    {
+      "source": "runtime-metrics/phase6a-myfans-foundation.json",
+      "logical_path": "runtime-metrics/phase6a-myfans-foundation.json",
+      "category": "HISTORICAL_SUMMARY",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6a"
+    },
+    {
+      "source": "runtime-metrics/phase6b-myfans-schema-foundation.json",
+      "logical_path": "runtime-metrics/phase6b-myfans-schema-foundation.json",
+      "category": "HISTORICAL_SUMMARY",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6b"
+    },
+    {
+      "source": "runtime-metrics/phase6c-myfans-public-pilot.json",
+      "logical_path": "runtime-metrics/phase6c-myfans-public-pilot.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6c-pilot"
+    },
+    {
+      "source": "runtime-metrics/phase6c-myfans-route-hardening.json",
+      "logical_path": "runtime-metrics/phase6c-myfans-route-hardening.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6c-route-hardening"
+    },
+    {
+      "source": "runtime-metrics/phase6c-myfans-rendered-dom.json",
+      "logical_path": "runtime-metrics/phase6c-myfans-rendered-dom.json",
+      "category": "ACTIVE_SUPPORTING",
+      "canonical": false,
+      "status": "supporting",
+      "source_phase": "phase6c-rendered-dom"
+    },
+    {
+      "source": "runtime-metrics/phase6c-myfans-browser-transport.json",
+      "logical_path": "runtime-metrics/phase6c-myfans-browser-transport.json",
+      "category": "ACTIVE_CANONICAL",
+      "canonical": true,
+      "status": "stopped",
+      "source_phase": "phase6c-browser-transport"
+    }
+  ]
+}

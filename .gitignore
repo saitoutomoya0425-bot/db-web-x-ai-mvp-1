@@ -6,3 +6,5 @@ out
 *.log
 .DS_Store
 .import-state/*.json
+.codex-cloud-cache/
+.codex-state/

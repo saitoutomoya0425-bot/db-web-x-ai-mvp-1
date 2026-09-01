@@ -45,3 +45,14 @@
 - 本番確認はローカル確認後の最小代表件数に限定する。
 - 大量確認はDBスナップショット、ローカルキャッシュ、ローカルプレビューで行う。
 - production access guardの上限とDRY_RUNを優先し、上限超過時は停止する。
+
+## Codex Cloud運用
+
+- 通常開発はCodex Web / Codex Cloudを第一候補とし、GitHub `main`をcodeのsource of truthとする。Cloud taskはGitHubから開始し、変更はCodexのnative branch / PR flowでGitHubへ戻す。
+- GitHub Actionsを通常のcode read、edit、test、review、commitの必須中継点にしない。ActionsはCI、長時間の定型job、または厳密なapproval gateが必要なProduction operationだけに限定する。
+- Local Codex CLI、Mac repo、local stateはfallbackとして保持し、Cloud移行を理由に削除しない。
+- secret valueをcommit、repo file、state object、artifact、stdout、log、reportへ出さない。Cloudで必要なsecretは用途別に最小限だけ設定する。
+- persistent stateはprivate backendのallowlist済みexact fileだけを対象にする。repo、public URL、Actions artifact、container cacheをcanonical long-term stateにしない。画像、media、raw HTML、cache、browser profile、secret path、recursive HOME uploadは禁止する。
+- Production operationは通常開発から分離し、dry-run、exact manifest hash、expected count、approval provenance、target-scoped verify、checkpointを必須とする。arbitrary SQL、free-form shell、blind retryは禁止する。
+- FANZA / MyFansの既存safety gateをCloudでも維持する。certificate bypass、anti-bot bypass、private API、未承認promotion / publishは禁止する。
+- 変更に直接関係するtargeted testだけを実行する。依存、build設定、runtime codeを変更していない場合はfull lint、full suite、build、vercel-buildを実行しない。
