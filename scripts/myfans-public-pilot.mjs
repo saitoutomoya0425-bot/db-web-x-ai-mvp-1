@@ -2,10 +2,12 @@
 import path from "node:path";
 import process from "node:process";
 import { readFile } from "node:fs/promises";
+import { createSafariWebDriverRenderer, SAFARI_RENDER_MODE } from "./lib/myfans-safari-renderer.mjs";
 import {
   MYFANS_ACCESS,
   MYFANS_CLASSIFICATIONS,
   MYFANS_ORIGIN,
+  MYFANS_PARSER_VERSION,
   assertFrozenSafeRecords,
   assertNoRawHtmlPersisted,
   createPublicHtmlFetcher,
@@ -122,7 +124,7 @@ async function persistProbeArtifacts({ outputDir, discoveryCandidates, creators,
   };
   const frozenSummary = {
     generated_at: new Date().toISOString(),
-    parser_version: records[0]?.parser_version ?? "phase6c-v2",
+    parser_version: records[0]?.parser_version ?? MYFANS_PARSER_VERSION,
     ...manifest,
     creators: creators.length,
     posts: posts.length,
@@ -187,10 +189,22 @@ async function runProbe(args) {
   const postRankingUrl = args["post-ranking-url"] ?? `${MYFANS_ORIGIN}/ranking/posts/all?term=daily`;
   const maxCreators = numberArg(args["max-creators"], 5, { min: 1, max: 5, name: "max_creators" });
   const maxPosts = numberArg(args["max-posts"], 30, { min: 1, max: 30, name: "max_posts" });
-  const fetcher = createPublicHtmlFetcher({ maxRequests: 40, maxRetries: 1 });
+  const renderMode = args["render-mode"] ?? "off";
+  if (!["off", SAFARI_RENDER_MODE].includes(renderMode)) throw new Error("INVALID_RENDER_MODE");
+  let renderer = null;
+  let fetcher = null;
   const creators = [];
   const posts = [];
   const previousNegatives = await previousNegativeCandidates(previousEvidenceDir);
+
+  try {
+    if (renderMode === SAFARI_RENDER_MODE) {
+      renderer = createSafariWebDriverRenderer({ maxNavigations: 40, maxWaitMs: 15_000 });
+      await renderer.start();
+      fetcher = { fetchHtml: renderer.render, summary: renderer.summary };
+    } else {
+      fetcher = createPublicHtmlFetcher({ maxRequests: 40, maxRetries: 1 });
+    }
 
   const listingResponse = await fetcher.fetchHtml(creatorRankingUrl, { label: "creator_ranking" });
   const listingAccess = detectPublicPageAccess(listingResponse);
@@ -199,7 +213,7 @@ async function runProbe(args) {
   let postDetailVerified = false;
 
   if (listingAccess.access === MYFANS_ACCESS.PUBLIC) {
-    const liveDiscovery = discoverCreatorCandidatesFromRanking(listingResponse.html, listingResponse.url);
+    const liveDiscovery = discoverCreatorCandidatesFromRanking(listingResponse.html, listingResponse.url, { renderedUnits: listingResponse.rendered_units ?? [] });
     const seenDiscovery = new Set(previousNegatives.map((candidate) => candidate.url));
     discoveryCandidates.push(...liveDiscovery.filter((candidate) => !seenDiscovery.has(candidate.url)));
     const acceptedCandidates = liveDiscovery.filter((candidate) => !candidate.rejected_reason).slice(0, maxCreators);
@@ -235,6 +249,7 @@ async function runProbe(args) {
   const artifacts = await persistProbeArtifacts({ outputDir, discoveryCandidates, creators, posts, requestSummary: fetcher.summary(), listing, postDetailVerified });
   const result = {
     output_dir: outputDir,
+    render_mode: renderMode,
     listing_access: listingAccess.access,
     discovery_candidates: discoveryCandidates.length,
     prefetch_rejected: discoveryCandidates.filter((candidate) => candidate.rejected_reason).length,
@@ -251,6 +266,21 @@ async function runProbe(args) {
   else if (!artifacts.safeCreators.length) process.exitCode = 5;
   else if (!postDetailVerified) process.exitCode = 4;
   return result;
+  } finally {
+    if (renderer) {
+      const transport = await renderer.close();
+      await writeJson(path.join(outputDir, "safari-transport.json"), {
+        generated_at: new Date().toISOString(),
+        render_mode: SAFARI_RENDER_MODE,
+        certificate_bypass: false,
+        cookie_export: false,
+        auth_token_export: false,
+        private_api: false,
+        intentional_media: 0,
+        ...transport,
+      });
+    }
+  }
 }
 
 async function loadSafeRecords(outputDir) {
@@ -466,7 +496,7 @@ async function runDbMode(args, mode) {
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   if (args.help) {
-    console.log("Usage: myfans-public-pilot.mjs --mode probe|dry-run|write|verify --output-dir <path>");
+    console.log("Usage: myfans-public-pilot.mjs --mode probe|dry-run|write|verify --output-dir <path> [--render-mode off|safari-webdriver]");
     return;
   }
   const mode = args.mode ?? "probe";
