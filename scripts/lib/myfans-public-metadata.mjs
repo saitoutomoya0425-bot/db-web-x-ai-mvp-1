@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
-export const MYFANS_PARSER_VERSION = "phase6c-v3-safari";
+export const MYFANS_PARSER_VERSION = "phase6c-v4-modern-browser";
 export const MYFANS_ORIGIN = "https://myfans.jp";
 export const MYFANS_ACCESS = Object.freeze({
   PUBLIC: "PUBLIC_ACCESSIBLE",
@@ -511,7 +511,11 @@ function structuralAnchorEvidence(anchor, candidateSlug = creatorSlugFromUrl(anc
   return evidence;
 }
 
-export function discoverCreatorCandidatesFromRanking(html, rankingUrl, { renderedUnits = [] } = {}) {
+export function discoverCreatorCandidatesFromRanking(html, rankingUrl, {
+  renderedUnits = [],
+  renderedSource = "safari",
+  includeGenericAnchors = true,
+} = {}) {
   const canonicalRanking = canonicalizeMyFansRequestUrl(rankingUrl);
   if (!canonicalRanking || new URL(canonicalRanking).pathname !== "/ranking/creators/all") throw new Error("CREATOR_RANKING_URL_REQUIRED");
   const extracted = extractPublicMetadata(html, canonicalRanking);
@@ -552,14 +556,16 @@ export function discoverCreatorCandidatesFromRanking(html, rankingUrl, { rendere
       positive_discovery_evidence: ["RANKING_CREATOR_ITEM_JSON_LD"],
     });
   }
-  for (const anchor of extracted.anchors) {
-    const evidence = structuralAnchorEvidence(anchor, creatorSlugFromUrl(anchor.url));
-    add(anchor.url, {
-      discovery_method: "ranking_anchor",
-      ranking_position: null,
-      anchor_text_short: anchor.text,
-      positive_discovery_evidence: evidence,
-    });
+  if (includeGenericAnchors) {
+    for (const anchor of extracted.anchors) {
+      const evidence = structuralAnchorEvidence(anchor, creatorSlugFromUrl(anchor.url));
+      add(anchor.url, {
+        discovery_method: "ranking_anchor",
+        ranking_position: null,
+        anchor_text_short: anchor.text,
+        positive_discovery_evidence: evidence,
+      });
+    }
   }
   for (const unit of renderedUnits) {
     if (!Number.isInteger(unit?.rank) || unit.rank < 1 || unit.rank > 999 || !Array.isArray(unit.links)) continue;
@@ -572,7 +578,9 @@ export function discoverCreatorCandidatesFromRanking(html, rankingUrl, { rendere
     const unique = [...new Map(eligible.map((candidate) => [candidate.url, candidate])).values()];
     if (unique.length !== 1) continue;
     add(unique[0].url, {
-      discovery_method: "safari_rendered_ranking_unit",
+      discovery_method: renderedSource === "modern_browser"
+        ? "modern_browser_rendered_ranking_unit"
+        : "safari_rendered_ranking_unit",
       ranking_position: unit.rank,
       anchor_text_short: unique[0].displayName,
       positive_discovery_evidence: ["RANKING_CREATOR_ITEM_RENDERED_STRUCTURAL_UNIT"],
