@@ -95,7 +95,7 @@ function rendererHarness({ navigateError = null, observed = null, endpointError 
   };
   const renderer = createModernBrowserRenderer({
     browser: {
-      path: "/usr/bin/google-chrome",
+      browser_path: "/usr/bin/google-chrome",
       browser_version: "Google Chrome 140.0.0.0",
       browser_major: 140,
       modern_browser_available: true,

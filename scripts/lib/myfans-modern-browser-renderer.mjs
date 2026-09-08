@@ -284,7 +284,8 @@ export function createModernBrowserRenderer({
   maxWaitMs = 15_000,
   maxHtmlBytes = 2_000_000,
 } = {}) {
-  if (!browser?.path || !browser.modern_browser_available) throw codedError("MODERN_BROWSER_RUNNER_UNAVAILABLE");
+  const browserPath = browser?.browser_path ?? browser?.path ?? null;
+  if (!browserPath || !browser.modern_browser_available) throw codedError("MODERN_BROWSER_RUNNER_UNAVAILABLE");
   if (!Number.isInteger(maxNavigations) || maxNavigations < 1 || maxNavigations > 38) throw codedError("MODERN_BROWSER_NAVIGATION_BUDGET_INVALID");
   if (!Number.isInteger(maxWaitMs) || maxWaitMs < 1 || maxWaitMs > 15_000) throw codedError("MODERN_BROWSER_WAIT_BOUND_INVALID");
   const requestedUrls = new Set();
@@ -326,7 +327,7 @@ export function createModernBrowserRenderer({
         "--blink-settings=imagesEnabled=false",
         "about:blank",
       ];
-      child = spawnImpl(browser.path, args, { stdio: ["ignore", "ignore", "pipe"] });
+      child = spawnImpl(browserPath, args, { stdio: ["ignore", "ignore", "pipe"] });
       if (!child?.pid) throw codedError("MODERN_BROWSER_SPAWN_FAILED");
       child.stderr?.on?.("data", (chunk) => {
         stderrLineCount += chunk.toString().split(/\r?\n/).filter(Boolean).length;
@@ -465,7 +466,7 @@ export function createModernBrowserRenderer({
       browser_generated_request_types: { ...networkCounts },
       requests: requests.map(({ started_at, ended_at, ...request }) => request),
       browser: {
-        path: browser.path,
+        path: browserPath,
         version: browser.browser_version,
         major: browser.browser_major,
         preinstalled: true,
