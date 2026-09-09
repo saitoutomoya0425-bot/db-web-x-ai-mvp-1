@@ -1,4 +1,6 @@
-name: MyFans public modern browser pilot
+# DIAGNOSTIC ONLY - NOT PRODUCTION INGESTION.
+# MYFANS DISCOVERY CURRENTLY PAUSED. Do not dispatch for routine discovery.
+name: MyFans diagnostic browser probe (discovery paused)
 
 on:
   workflow_dispatch:
@@ -8,6 +10,7 @@ permissions:
 
 jobs:
   public-browser-pilot:
+    name: Diagnostic only - no production ingestion
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -34,7 +37,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Run fixed public metadata pilot
+      - name: Run fixed diagnostic public metadata probe
         env:
           PILOT_OUTPUT_DIR: ${{ runner.temp }}/myfans-pilot
         run: node scripts/myfans-cloud-public-pilot.mjs --output-dir "$PILOT_OUTPUT_DIR"
