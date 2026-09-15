@@ -19,6 +19,8 @@ Phase 6D の `AUTOMATION_PAUSED` は、`myfans.jp` の未認証ranking / sitemap
 
 oshiscopeが毎日約1,572 creatorを観測できていることは、affiliate対象集合を継続取得できるproof-of-feasibilityである。しかし同サイトのpolicyはautomated scraping、bulk copy、DB replicationを明示的に禁止するため、`THIRD_PARTY_PROOF_ONLY` でありingestion sourceにはならない。[^2]
 
+Phase 6G（2026-09-15）のcurrent public asset再調査では、Next.js 16.2.6/Turbopackの現行route manifestとgenerated clientから、creator/search/post/genre/generated-link/report/CSVのroute・GET wrapperを静的に確認した。特に `/affiliates/generated` はcurrent manifest、route helper、`/api/links`系read clientが一致するため、route/build levelで `CURRENT_ACTIVE` と判定した。exact query parameter、response property、authenticated navigationは未確認であり、API requestは0のままである。詳細は [MYFANS_AFFILIATE_FRONTEND_ARCHITECTURE.md](./MYFANS_AFFILIATE_FRONTEND_ARCHITECTURE.md) を参照。
+
 ## 1. Scope and safety boundary
 
 実施したこと:
@@ -75,6 +77,8 @@ Termsは2026-03-13発効、2026-08-31、09-02、09-04改定と表示される。
 - response schemaが判明した
 
 API requestは0件。responseは0件。認証方式、rate limit、pagination、利用条件はいずれも `UNKNOWN` である。
+
+Phase 6G current-build update: route manifest上で `/affiliates/generated`、`/affiliates/generated/creators/:username`、creator/genre/search/report/media routesの存在を確認した。client wrapperは `/api/creators/:username`、`/api/users/:userId/posts`、`/api/genres`、`/api/genres/search`、`/api/summary` も含み、catalog/report queryはcaller objectを`URLSearchParams`へ変換する。ただしcaller側のauthenticated page chunkがpublic entry pageから参照されていないため、key名、sort enum、page size、response fieldは `UNKNOWN` のままである。
 
 ## 3. Official Affiliate Center function map
 

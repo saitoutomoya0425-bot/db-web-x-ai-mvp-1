@@ -33,10 +33,10 @@
 | creator detail/profile | `CONFIRMED` | authenticated | posts、sort by reward rate / reward amount | creator name、post title、price、thumbnail | follower/likes/date、plan rate display columns |
 | post search/detail | `CONFIRMED` | authenticated | eligible post、post URL input、price、rate | title、thumbnail、creator、estimated reward | post ID、like/date fields |
 | URL generator | `CONFIRMED` | authenticated | creator/post public URL input、affiliate URL output、ineligible error | target type | content metadata、bulk mode |
-| generated URL list | `CONFIRMED` | authenticated | affiliate URL、description、coupon marker | target title/thumbnail | export |
+| generated URL list | `CONFIRMED_CURRENT_BUILD` | authenticated | current routes、`/api/links`/`creators` GET clients、affiliate URL、description、coupon marker | target title/thumbnail | current nav、response property、export |
 | sales detail | `CONFIRMED` | authenticated | thumbnail、creator、sale price、reward rate、estimated reward、single/plan type | title | post URL/ID、buyer detail |
-| sales report | `CONFIRMED` | authenticated | clicks、CVR、purchases、reward、period | date aggregation | exact current granularity (`DOC_CONFLICT`) |
-| creator-level sales CSV | `CONFIRMED` | authenticated export | creator-level sales detail | creator、sale/reward aggregates | exact header/schema、catalog coverage |
+| sales report | `CONFIRMED` | authenticated | clicks、CVR、purchases、reward、today/yesterday/this month/last month/custom period | date aggregation | exact query keys、current granularity (`DOC_CONFLICT`) |
+| creator-level sales CSV | `CONFIRMED` | authenticated export | creator-level sales detail、sales CSV click-count column added 2026-09-04 | creator、sale/reward aggregates | remaining exact header/schema、catalog coverage |
 | coupon | `CONFIRMED` | selected authenticated affiliates | campaign、period、post affiliate URL、coupon attached | discount/value | CSV/API |
 | registration/media | `CONFIRMED` | authenticated | media name/type/URL、Approved/Pending/Rejected、affiliate ID、bank/invoice/account | rejection reason | media API terms |
 
@@ -49,7 +49,7 @@ Classification here answers only whether the field is evidenced on an official A
 | Field | Search/list | Creator detail | Post detail/search | Sales/report/CSV | Generator | Overall |
 | --- | --- | --- | --- | --- | --- | --- |
 | creator ID (internal) | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` |
-| creator username/slug | `LIKELY` | `LIKELY` | `LIKELY` | `UNKNOWN` | `LIKELY` | `LIKELY` (static `:username` route) |
+| creator username/slug | `CONFIRMED_STATIC_CONTRACT` | `CONFIRMED_STATIC_CONTRACT` | `LIKELY` | `UNKNOWN` | `LIKELY` | `CONFIRMED_STATIC_CONTRACT` for route/path parameter; response fieldは`UNKNOWN` |
 | creator name | `CONFIRMED` | `CONFIRMED` | `LIKELY` | `CONFIRMED` | `UNKNOWN` | `CONFIRMED` |
 | profile URL | `CONFIRMED` as input/target | `LIKELY` | n/a | `UNKNOWN` | `CONFIRMED` input | `CONFIRMED` |
 | post ID | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` |
@@ -81,27 +81,42 @@ Notes:
 
 ## 4. Public architecture evidence
 
-Observed relevant path literals only:
+Phase 6Gで、2026-09-14更新のcurrent route manifestと、public HTMLから参照されたgenerated clientを再確認した。以下はすべてstatic declarationであり、API response schemaまたは利用許諾ではない。
 
 ```text
 /api/creators
 /api/creators/registered
+/api/creators/:username
+/api/users/:userId/posts
 /api/search/creators
 /api/search/posts
 /api/search/gachas
+/api/genres
+/api/genres/search
 /api/links
 /api/links/creators
 /api/sales
 /api/sales/creators
 /api/sales/csv
 /api/sales/creators/csv
+/api/summary
 /api/summary/csv
+/api/affiliate_reward_rates
 /api/medias
 ```
 
-Evidence level: `LIKELY_INTERNAL_FIRST_PARTY_ARCHITECTURE`.  
-Allowed next step: official documentation/support answer, or manual UI mapping in a user-signed-in browser.  
+確認できたcontract: API origin、GET method、React Query hook/query key、`:username`/`:userId` path parameter、generic `URLSearchParams` serialization。
+
+`UNKNOWN`: exact filter/sort/pagination key、default/max limit、response property、link-generation mutation。
+
+Generated URL list: route/build/read-model levelで `CURRENT_ACTIVE`; authenticated navは `NO_PUBLIC_EVIDENCE`。
+
+Evidence level: `CONFIRMED_CURRENT_PUBLIC_FRONTEND_DECLARATION / OFFICIAL_AUTHENTICATED_RUNTIME_NOT_PROBED`。
+
+Allowed next step: official documentation/support answer。
 Disallowed step: direct request/replay, credential/token extraction, automated enumeration.
+
+Full architecture map: [MYFANS_AFFILIATE_FRONTEND_ARCHITECTURE.md](./MYFANS_AFFILIATE_FRONTEND_ARCHITECTURE.md)。
 
 ## 5. Ranked path by target
 
