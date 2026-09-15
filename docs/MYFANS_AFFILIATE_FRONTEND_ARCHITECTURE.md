@@ -11,6 +11,8 @@ Affiliate Centerは、Next.js 16.2.6 App Router + Turbopack、TanStack React Que
 
 静的に確定したのは、endpoint path、HTTP method、route parameter、React Query hook、generic query serializationまでである。exact query parameter名、sort enum値、page/limit名、catalog rowのresponse property名は、公開pageから参照されたassetには含まれていなかった。推測で埋めず `UNKNOWN` とした。
 
+Phase6Hでは、ユーザーが2026-09-15に認証済み実画面で確認済みのroute、field、sort label、browser URL queryを `CONFIRMED_USER_AUTH_UI` として統合した。これによりUI schemaは大きく確定したが、UI上のbrowser URL queryとbackend API query、visible fieldとAPI response propertyは同一視していない。current public build metadataからauth route固有chunkを安全に導出できなかったため、exact API runtime contractは引き続き `UNKNOWN` である。[^20]
+
 ## 1. Boundary and method
 
 取得対象は、Affiliate Centerのpublic landing、signin、register、terms、privacy、robots、sitemapと、それらのHTMLが実際に参照したcurrent static JS/CSS/webmanifestだけである。7 public page/fileと40 unique assetを各1回取得し、同一URLのduplicate GETは0、chunk名のbrute-force enumerationは0だった。sitemapの`lastmod`は `2026-09-14T09:00:46.200Z`、asset deployment識別子は `dpl_381BzSYTpyqKpbE9FHiEEna8tp3a` だった。[^1][^5]
@@ -78,13 +80,13 @@ route helperには `/affiliates/search/suggest`、`/affiliates/search/result`、
 | past official existence | `YES` | 2026-04-21 official update |
 | route still in current build | `YES` | static + dynamic current route manifest |
 | current read model | `YES` | `/api/links`, `/api/links/creators` GET hooks |
-| current nav | `NO_PUBLIC_EVIDENCE` | authenticated navigation chunkはpublic refsに不在 |
+| current nav | `USER_VISIBLE_NAV: NOT_OBSERVED` | 認証済みbottom navigationでgenerated専用entryは観測されず、public refsにもnavigation componentなし |
 | dead/legacy | `UNLIKELY`, runtime未証明 | current manifest + helper + read hooksの三点一致 |
 | conditional | `UNKNOWN` | authenticated UIを開いていない |
 | generation後のみ使う | `UNKNOWN` | page component不在 |
 | renamed | `NO EVIDENCE` | current path/helper名はgeneratedのまま |
 
-最終分類: **`CURRENT_ACTIVE`**。ただし、これはcurrent compiled route/read modelに対する判定であり、UI entry pointが全accountで常時表示されるという判定ではない。
+最終分類: **`CURRENT_ACTIVE_ROUTE_READ_MODEL_CONFIRMED`**。ただし、これはcurrent compiled route/read modelに対する判定であり、UI entry pointが全accountで常時表示されるという判定ではない。route固有page chunkを決定的に導出できなかったため、`CURRENT_ACTIVE_STATIC_PAGE_IMPLEMENTATION_CONFIRMED` へは昇格しない。
 
 ## 5. Static request-contract map
 
@@ -183,6 +185,30 @@ Search targetはcreator/post/gacha、genre collection/searchまで `CONFIRMED_ST
 
 generic `Object.entries(params) → URLSearchParams` implementationは、任意のkeyを受けるためparameter名の証拠にはならない。minified third-party library中の`page`や`limit`という文字列もapplication contractとして採用しなかった。
 
+### 8.1 Authenticated UI evidence consolidated in Phase6H
+
+次はユーザー本人が認証済みAffiliate Centerの通常UIで確認済みのschema factsであり、API responseの観測ではない。個別creator名、作品名、報酬率、売上、affiliate URL、account情報は保存していない。[^20]
+
+| Surface | `CONFIRMED_USER_AUTH_UI` | API/runtime boundary |
+| --- | --- | --- |
+| bottom navigation | ホーム、アフィ検索、クリエイター検索、レポート | navigation component propertyは`UNKNOWN` |
+| dashboard | 前日の実績、週間パフォーマンス、見込報酬、購入、click、CVR | `/api/summary` response propertyは`UNKNOWN` |
+| affiliate search | TOP、投稿検索、ガチャ、URL貼付。TOPにaffiliate URL表示 | tab/runtime valueは`UNKNOWN` |
+| browser URL query | `sexual_orientation=woman`、genre resultの`genre_name` | backend API query名としては`UNKNOWN` |
+| genre category | 見た目、プレイ、タイプ、シチュエーション、コスチューム | genre response propertyは`UNKNOWN` |
+| post search card | thumbnail、video duration、single sale price、reward rate、estimated reward、title、creator、relative published time、profile action、affiliate URL copy | exact response propertyはすべて`UNKNOWN` |
+| post search control | All/video/image、popular sort、次へ | runtime enumとpagination keyは`UNKNOWN` |
+| creator search | 一般/承認済み、`/affiliates/search/creators`、`/affiliates/search/creators/tab/registered` | registered row schemaは`UNKNOWN` |
+| creator list | name、avatar、likes、followers、affiliate-enabled post count、SNS icons、single/plan-initial reward rate | exact response propertyは`UNKNOWN` |
+| creator detail | `@username`、post/like/follower/following counts、plan initial/continuation rates、plan name/monthly price/post count/description | internal creator IDとproperty名は`UNKNOWN` |
+| creator post card | thumbnail、duration、title、access icon、likes、relative time、price、single reward rate、affiliate action | exact response propertyは`UNKNOWN` |
+| public post URL | `https://myfans.jp/posts/<UUID>` | stable UUID-like route identifierは確認、backend property名は`UNKNOWN` |
+| report | 今日/昨日/今月/先月/期間、gross/confirmed/estimated/click/purchase、sale/creator views、全/見込/確定/否認、CSV control | date/status runtime value、query key、response propertyは`UNKNOWN` |
+
+Creator listの表示sort labelは、新規登録順、アフィ設定作品の公開件数が多い順、報酬単価（単品販売）が高い順、報酬単価（プラン加入）が高い順、フォロワー数が多い順。Creator detail post listは、新しい順、古い順、いいね数、報酬率が高い順、報酬額が高い順。意味概念へのmappingは可能だが、runtime enum valueはすべて `UNKNOWN` のままである。
+
+Creator detailに表示された `1-20/91件` は、当該UI instanceが20件を表示したことを確認する。APIのdefault `limit=20`、parameter名、maximumを確認する証拠ではない。
+
 ## 9. Affiliate link-generation model
 
 公式guideでは、creator profileまたはpost URLをURL生成画面へpasteし、対象外ならerror、対象ならaffiliate URLを生成し、自動でclipboardへcopyする。search resultからaffiliate参加済みpost/profileを直接生成する導線も2026-04-16に追加された。[^7][^9]
@@ -250,13 +276,17 @@ oshiscopeのpolicyはautomated scraping、bulk copy、database replicationを禁
 
 | Counter | Value |
 | --- | ---: |
-| public first-party HTML/file GET | 7 |
-| unique HTML-referenced static asset GET | 40 |
+| Phase6G public first-party HTML/file GET | 7 |
+| Phase6G unique HTML-referenced static asset GET | 40 |
+| Phase6H public landing drift-check GET | 1 |
+| Phase6H public static asset GET | 0 |
 | same-URL duplicate GET | 0 |
 | brute-force chunk enumeration | 0 |
+| authenticated page/RSC GET | 0 |
 | authenticated API request | 0 |
 | raw/private API response saved | 0 |
 | cookie/token/session/localStorage access | 0 |
+| browser/user UI action by Codex | 0 |
 | affiliate link created | 0 |
 | CSV downloaded | 0 |
 | competitor raw dataset | 0 |
@@ -265,6 +295,35 @@ oshiscopeのpolicyはautomated scraping、bulk copy、database replicationを禁
 Machine-readable evidence is frozen under:
 
 `/Users/saitoutomoya/Documents/Codex/okazudb-state/myfans-research/phase6g-public-frontend-architecture-20260915/`
+
+Phase6H evidence:
+
+`/Users/saitoutomoya/Documents/Codex/okazudb-state/myfans-research/phase6h-auth-route-static-20260915/`
+
+## 15. Phase6H auth route static-resolution boundary
+
+Phase6Hのpublic landing drift checkはPhase6Gと同じdeployment `dpl_381BzSYTpyqKpbE9FHiEEna8tp3a` を返した。このため同一static assetを再取得せず、Phase6Gで保存済みの40 asset、route manifest、Turbopack runtime、route helper、generated client evidenceを再利用した。public landing GETは1、追加static asset GETは0である。[^1][^2][^3][^4]
+
+現在のroute manifestはauth route patternを列挙するが、各patternにpage/client chunk URLを割り当てない。Turbopack runtimeはroute responseから渡されたexact chunk pathをloadするが、調査済みpublic entry assetに全auth routeのglobal route-to-chunk tableはない。App Routerのroute-specific client referencesは対象routeのHTML/RSC response側で得られるが、auth page/RSC GETは禁止範囲である。
+
+従って結果は次の通り。
+
+| Item | Result |
+| --- | --- |
+| exact auth route static assets derived | `0` |
+| additional public static asset GET | `0 / 20` |
+| `CONFIRMED_STATIC_CALLSITE` contract | `0` |
+| filename/hash guessing、404探索 | `0` |
+| exact backend query keys | `UNKNOWN` |
+| sort runtime enum | `UNKNOWN` |
+| pagination key/default | `UNKNOWN` |
+| response property names | `UNKNOWN` |
+| generated-link mutation/error shape | `UNKNOWN` |
+| report runtime contract | `UNKNOWN` |
+
+これは「route/page implementationが存在しない」という結論ではない。許可されたpublic-static chainだけではchunk URLを決定的に導出できない、という取得境界である。次の技術的gateは抜け道ではなく、MyFansの書面許可またはofficial integration guidanceである。`MYFANS_PERMISSION_REQUIRED` を維持する。
+
+`PHASE6H_AUTH_ROUTE_STATIC_BOUNDARY_REACHED`
 
 ## Sources
 
@@ -287,3 +346,4 @@ Machine-readable evidence is frozen under:
 [^17]: [FansLabo creator discovery](https://fanslabo.com/articles/how-to-find-myfans-affiliate-creators).
 [^18]: [けんけん@myfansアフィ — manual URL generation](https://note.com/ken_myfans_affi/n/n7af5bcae9aaa).
 [^19]: [Current Affiliate Terms](https://www.affiliate.myfans.jp/terms).
+[^20]: User-provided authenticated Affiliate Center UI observations, 2026-09-15. No screenshot, raw DOM, catalog row, affiliate URL, account identifier, cookie, token, or session value was collected or stored.
