@@ -34,8 +34,8 @@ function fakeClock() {
   };
 }
 
-test("reports collector version 0.1.1", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.1");
+test("reports collector version 0.1.2", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.2");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -98,6 +98,32 @@ test("extracts the synthetic post title, creator, prices, rate, duration, likes,
   assert.equal(record.parser_confidence, "HIGH");
 });
 
+test("removes only a trailing relative time from creator_name", () => {
+  assert.equal(core.cleanCreatorName("烈 5か月前"), "烈");
+  assert.equal(
+    core.cleanCreatorName("P活専門動画 サマースカイ（2日に1回投稿中） 3か月前"),
+    "P活専門動画 サマースカイ（2日に1回投稿中）"
+  );
+  assert.equal(core.cleanCreatorName("Creator 2026"), "Creator 2026");
+  assert.equal(core.cleanCreatorName("昨日も投稿する人"), "昨日も投稿する人");
+
+  for (const example of [
+    { raw: "烈 5か月前", expected: "烈" },
+    {
+      raw: "P活専門動画 サマースカイ（2日に1回投稿中） 3か月前",
+      expected: "P活専門動画 サマースカイ（2日に1回投稿中）"
+    }
+  ]) {
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        creator_name_candidates: [example.raw]
+      })
+    );
+    assert.equal(record.creator_name, example.expected);
+  }
+});
+
 test("extracts a title from semantic nearby text while excluding creator, date, price, and actions", () => {
   const record = plain(core.extractPostFromDescriptor(syntheticPostDescriptor));
   assert.equal(record.title, "Synthetic Post Title");
@@ -119,6 +145,63 @@ test("extracts a title from semantic nearby text while excluding creator, date, 
     })
   );
   assert.equal(metadataOnly.title, null);
+});
+
+test("rejects profile affiliate actions and never falls back to creator name", () => {
+  const actionOnly = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      title_candidates: [
+        "プロフィールのアフィURLのコピー",
+        "投稿のアフィURLのコピー",
+        "Synthetic Creator",
+        "@synthetic_creator"
+      ]
+    })
+  );
+  assert.equal(actionOnly.title, null);
+  assert.equal(actionOnly.creator_name, "Synthetic Creator");
+  assert.equal(actionOnly.parser_confidence, "MEDIUM");
+});
+
+test("keeps a real long post text after rejecting surrounding metadata", () => {
+  const longTitle = "A deliberately long synthetic post text ".repeat(12).trim();
+  assert.ok(longTitle.length > 300);
+  const record = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      title_candidates: [
+        "Synthetic Creator 3か月前",
+        "プロフィールのアフィURLのコピー",
+        "12:34",
+        longTitle
+      ]
+    })
+  );
+  assert.equal(record.title, longTitle);
+});
+
+test("does not interpret a reward amount as likes without explicit like semantics", () => {
+  const rewardOnly = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      text: "Synthetic Post Title Synthetic Creator いいね アフィ報酬率:50%（¥1,592）",
+      likes_candidates: ["いいね"]
+    })
+  );
+  assert.equal(rewardOnly.estimated_reward_jpy, 1592);
+  assert.equal(rewardOnly.likes, null);
+
+  const explicitHeart = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      text: "Synthetic Post Title Synthetic Creator アフィ報酬率:50%（¥1,592）",
+      likes_candidates: ["heart 27"]
+    })
+  );
+  assert.equal(explicitHeart.estimated_reward_jpy, 1592);
+  assert.equal(explicitHeart.likes, 27);
+  assert.equal(core.parseLikes(["いいねする 31"]), 31);
 });
 
 test("parses reward percentage and parenthesized yen amount independently", () => {

@@ -19,10 +19,12 @@ export const syntheticPostDescriptor = Object.freeze({
     "単品販売価格 5,980円",
     "アフィ報酬率:50%（¥2,511）",
     "プロフィールURL",
+    "プロフィールのアフィURLのコピー",
     "投稿のアフィURLのコピー",
     "Synthetic Post Title"
   ],
-  creator_name_candidates: ["Synthetic Creator"],
+  creator_name_candidates: ["Synthetic Creator 3か月前"],
+  likes_candidates: ["いいね 321"],
   links: [
     { href: "https://myfans.jp/synthetic_creator", text: "Synthetic Creator", visible: true },
     { href: "https://link.affiliate.myfans.jp/synthetic-visible-link", text: "表示済みURL", visible: true }

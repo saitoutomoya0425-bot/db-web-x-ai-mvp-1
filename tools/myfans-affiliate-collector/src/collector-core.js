@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.1";
+  const COLLECTOR_VERSION = "0.1.2";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -210,6 +210,16 @@
     return match ? normalizeSpace(match[0]) : null;
   }
 
+  function cleanCreatorName(value) {
+    const normalized = normalizeSpace(value);
+    if (!normalized) return null;
+    const cleaned = normalized.replace(
+      /\s+(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)$/,
+      ""
+    ).trim();
+    return cleaned || null;
+  }
+
   function firstMeaningfulTitle(candidates) {
     const blocked = /^(?:@|次へ$|コピー$|投稿のアフィURL$|プロフィールURL$|\d{1,2}:\d{2}(?::\d{2})?$)/;
     for (const candidate of candidates || []) {
@@ -222,7 +232,8 @@
   function isPostMetadataText(value) {
     if (!value) return true;
     if (/^(?:@|動画$|画像$|video$|image$)/i.test(value)) return true;
-    if (/^(?:プロフィールURL|投稿のアフィURL(?:のコピー)?|アフィURL(?:のコピー)?|コピー)$/.test(value)) return true;
+    if (/^(?:プロフィールURL|(?:プロフィール|投稿|作品)(?:の)?アフィ(?:リエイト)?URL(?:の|を)?コピー|投稿のアフィURL|アフィURL(?:のコピー)?|コピー)$/.test(value)) return true;
+    if (/^(?:詳細を見る|もっと見る|プロフィールを見る|作品を見る|購入(?:する)?|開く|閉じる|戻る|次へ|前へ|検索|シェア|共有|保存|登録|作成)$/.test(value)) return true;
     if (/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value)) return true;
     if (/(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?:\s|$)/.test(value)) return true;
     if (/^[（(]?\s*[¥￥]\s*[0-9][0-9,，]*\s*円?\s*[）)]?$/.test(value)) return true;
@@ -239,10 +250,27 @@
     )];
     for (const candidate of candidates || []) {
       const value = normalizeSpace(candidate);
-      if (value.length < 2 || value.length > 300) continue;
+      if (value.length < 2 || value.length > 1000) continue;
       if (excluded.some((excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue))) continue;
       if (isPostMetadataText(value)) continue;
       return value;
+    }
+    return null;
+  }
+
+  function parseLikes(candidates) {
+    for (const candidate of candidates || []) {
+      const value = normalizeSpace(candidate);
+      const labeledAfter = value.match(
+        /(?:^|\s)(?:いいね(?:数|する)?|likes?|hearts?)\s*[:：]?\s*([0-9][0-9,，]*)\s*(?:件)?(?=$|\s)/i
+      );
+      if (labeledAfter) return parseInteger(labeledAfter[1]);
+      const labeledBefore = value.match(
+        /(?:^|\s)([0-9][0-9,，]*)\s*(?:件\s*)?(?:いいね(?:数)?|likes?|hearts?)(?=$|\s)/i
+      );
+      if (labeledBefore) return parseInteger(labeledBefore[1]);
+      const heart = value.match(/(?:^|\s)[♡♥❤]\uFE0F?\s*([0-9][0-9,，]*)(?=$|\s)/);
+      if (heart) return parseInteger(heart[1]);
     }
     return null;
   }
@@ -292,17 +320,25 @@
     const profile = links.map((link) => parseCreatorProfileUrl(link.href)).find(Boolean) || null;
     const affiliateCreatorRoute = links.map((link) => parseAffiliateCreatorRoute(link.href)).find(Boolean) || null;
     const duration = parseDuration(text);
+    const rawCreatorName = firstMeaningfulTitle(descriptor.creator_name_candidates || []);
+    const creatorName = cleanCreatorName(rawCreatorName);
+    const username = profile?.username || affiliateCreatorRoute?.username || parseUsernameFromText(text);
     const title = firstPostTitle(
       descriptor.title_candidates || [descriptor.anchor_text],
-      descriptor.creator_name_candidates || []
+      [
+        ...(descriptor.creator_name_candidates || []),
+        creatorName,
+        username,
+        username ? `@${username}` : null
+      ].filter(Boolean)
     );
-    const creatorName = firstMeaningfulTitle(descriptor.creator_name_candidates || []);
-    const username = profile?.username || affiliateCreatorRoute?.username || parseUsernameFromText(text);
     const displayedAffiliateUrl = links.map((link) => parseDisplayedAffiliateUrl(link.href)).find(Boolean) || null;
     const price = parseLabeledYen(text, ["単品販売価格", "販売価格", "単品販売", "価格"]);
     const estimatedReward = parseEstimatedReward(text);
     const rewardRate = parseLabeledRate(text, ["アフィリエイト報酬率", "アフィ報酬率", "報酬率", "報酬単価"]);
-    const likes = parseLabeledNumber(text, ["いいね"]);
+    const likes = parseLikes(
+      Array.isArray(descriptor.likes_candidates) ? descriptor.likes_candidates : [text]
+    );
     const relativePublishedText = parseRelativePublishedText(text);
     const record = {
       post_uuid: identity.post_uuid,
@@ -323,10 +359,12 @@
       source_surface: descriptor.source_surface,
       source_page_url: descriptor.source_page_url,
       collected_at: descriptor.collected_at,
-      parser_confidence: confidenceFromEvidence(
-        [identity.post_uuid, descriptor.source_surface],
-        [title, creatorName || username, price !== null, rewardRate !== null]
-      )
+      parser_confidence: title
+        ? confidenceFromEvidence(
+            [identity.post_uuid, descriptor.source_surface],
+            [title, creatorName || username, price !== null, rewardRate !== null]
+          )
+        : "MEDIUM"
     };
     if (displayedAffiliateUrl) record.displayed_affiliate_url = displayedAffiliateUrl;
     return record;
@@ -361,7 +399,7 @@
       null;
     const username = profile?.username || affiliateCreatorRoute?.username || parseUsernameFromText(text);
     if (!username && !profile) return null;
-    const creatorName = firstMeaningfulTitle(descriptor.name_candidates || []);
+    const creatorName = cleanCreatorName(firstMeaningfulTitle(descriptor.name_candidates || []));
     const plans = (descriptor.plan_candidates || []).map(extractPlanFromDescriptor).filter(Boolean);
     const record = {
       creator_name: creatorName,
@@ -765,6 +803,7 @@
     assertSafeExport,
     buildExport,
     buildPrivateStagingPlan,
+    cleanCreatorName,
     creatorKey,
     detectStopCondition,
     extractCreatorFromDescriptor,
@@ -781,6 +820,7 @@
     parseDuration,
     parseEstimatedReward,
     parseInteger,
+    parseLikes,
     parseLabeledNumber,
     parseLabeledRate,
     parseLabeledYen,

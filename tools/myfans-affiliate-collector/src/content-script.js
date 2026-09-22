@@ -89,16 +89,50 @@
     );
   }
 
+  function nearbyPostTextCandidates(anchor, container) {
+    const candidates = [];
+    let current = anchor;
+    for (let depth = 0; current && current !== container && depth < 3; depth += 1, current = current.parentElement) {
+      for (const sibling of [current.previousElementSibling, current.nextElementSibling]) {
+        if (sibling && isVisible(sibling) && !sibling.matches("button, [role='button']")) {
+          candidates.push(visibleText(sibling));
+        }
+      }
+    }
+    return candidates;
+  }
+
   function postTitleCandidates(container, anchor) {
     const candidates = [
-      ...headingCandidates(container),
       anchor.getAttribute("aria-label"),
-      visibleText(anchor)
+      visibleText(anchor),
+      ...nearbyPostTextCandidates(anchor, container),
+      ...headingCandidates(container)
     ];
     for (const element of allVisible(container, "p, span, div, a[href], [role='heading'], [aria-label]")) {
+      if (element.matches("button, [role='button']")) continue;
       candidates.push(element.getAttribute("aria-label"), directText(element));
     }
     return [...new Set(candidates.map(core.normalizeSpace).filter(Boolean))].slice(0, 120);
+  }
+
+  function likeCandidates(container) {
+    const candidates = [];
+    for (const element of allVisible(
+      container,
+      "[aria-label], [title], button, [role='button'], p, span, div"
+    )) {
+      const context = core.normalizeSpace(
+        `${element.getAttribute("aria-label") || ""} ${element.getAttribute("title") || ""} ${directText(element)}`
+      );
+      if (!/(?:いいね|likes?|hearts?|[♡♥❤])/i.test(context)) continue;
+      candidates.push(context);
+      for (const sibling of [element.previousElementSibling, element.nextElementSibling]) {
+        const siblingText = visibleText(sibling);
+        if (/^[0-9][0-9,，]*$/.test(siblingText)) candidates.push(`${context} ${siblingText}`);
+      }
+    }
+    return [...new Set(candidates.filter(Boolean))].slice(0, 40);
   }
 
   function creatorNameCandidates(container) {
@@ -135,6 +169,7 @@
       text: visibleText(container),
       title_candidates: postTitleCandidates(container, anchor),
       creator_name_candidates: creatorCandidates,
+      likes_candidates: likeCandidates(container),
       links: linkDescriptors(container),
       source_surface: sourceSurface,
       source_page_url: sourcePageUrl,
