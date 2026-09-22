@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "MyFans Affiliate Catalog Local Collector",
+  "version": "0.1.0",
+  "description": "Exports visible text catalog fields from supported MyFans Affiliate Center pages to a local JSON file.",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.affiliate.myfans.jp/*"
+  ],
+  "action": {
+    "default_title": "MyFans catalog collector",
+    "default_popup": "src/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.affiliate.myfans.jp/affiliates/search*",
+        "https://www.affiliate.myfans.jp/affiliates/generated*"
+      ],
+      "js": [
+        "src/collector-core.js",
+        "src/content-script.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

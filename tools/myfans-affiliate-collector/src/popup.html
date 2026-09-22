@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFans catalog collector</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">LOCAL EXPORT ONLY</p>
+        <h1>MyFans catalog collector</h1>
+        <p class="lede">表示中のcatalog文字情報だけをJSONへ保存します。画像・認証情報・通信内容は取得しません。</p>
+      </header>
+
+      <section class="actions" aria-label="収集操作">
+        <button id="collect-current" type="button">現在ページを取得</button>
+        <button id="collect-list" class="primary" type="button">一覧を収集（最大5ページ）</button>
+        <button id="collect-probe" class="quiet" type="button">Diagnostic / Probe</button>
+      </section>
+
+      <p id="status" role="status" aria-live="polite">対応するAffiliate Center画面を開いてください。</p>
+
+      <section id="results" hidden aria-label="収集結果">
+        <dl class="metrics">
+          <div><dt>Detected posts</dt><dd id="post-count">0</dd></div>
+          <div><dt>Detected creators</dt><dd id="creator-count">0</dd></div>
+          <div><dt>Pages scanned</dt><dd id="page-count">0</dd></div>
+          <div><dt>Warnings</dt><dd id="warning-count">0</dd></div>
+        </dl>
+        <div id="samples" class="samples" aria-label="最大3件のsample"></div>
+      </section>
+
+      <footer>Phase 1: affiliate URL生成・DB更新・画像取得は行いません。</footer>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
