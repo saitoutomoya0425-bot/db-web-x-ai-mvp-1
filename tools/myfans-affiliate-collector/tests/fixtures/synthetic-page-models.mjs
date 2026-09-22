@@ -34,6 +34,50 @@ export const syntheticPostDescriptor = Object.freeze({
   collected_at: "2026-09-22T00:00:00.000Z"
 });
 
+export const syntheticPostTitleCases = Object.freeze([
+  {
+    name: "normal title",
+    title_candidates: ["Synthetic normal post title"],
+    expected: "Synthetic normal post title"
+  },
+  {
+    name: "multiline title",
+    title_candidates: ["Synthetic first line\nSynthetic second line"],
+    expected: "Synthetic first line Synthetic second line"
+  },
+  {
+    name: "ellipsis title",
+    title_candidates: ["Synthetic title continues…"],
+    expected: "Synthetic title continues…"
+  },
+  {
+    name: "title outside the post anchor",
+    anchor_text: "",
+    title_candidates: ["投稿のアフィURLのコピー", "Synthetic sibling title"],
+    expected: "Synthetic sibling title"
+  },
+  {
+    name: "creator and date beside the title",
+    title_candidates: ["Synthetic Creator", "3日前", "Synthetic nearby title"],
+    expected: "Synthetic nearby title"
+  },
+  {
+    name: "no title",
+    title_candidates: [
+      "Synthetic Creator",
+      "@synthetic_creator",
+      "3日前",
+      "12:34",
+      "321",
+      "単品販売価格 5,980円",
+      "アフィ報酬率:50%（¥2,511）",
+      "プロフィールURL",
+      "投稿のアフィURLのコピー"
+    ],
+    expected: null
+  }
+]);
+
 export const syntheticCreatorDescriptor = Object.freeze({
   profile_href: "https://myfans.jp/synthetic_creator",
   text: [

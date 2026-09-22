@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.2";
+  const COLLECTOR_VERSION = "0.1.3";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -237,6 +237,7 @@
     if (/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value)) return true;
     if (/(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?:\s|$)/.test(value)) return true;
     if (/^[（(]?\s*[¥￥]\s*[0-9][0-9,，]*\s*円?\s*[）)]?$/.test(value)) return true;
+    if (/^[0-9][0-9,，]*\s*(?:件)?$/.test(value)) return true;
     if (/^[0-9]+(?:\.[0-9]+)?\s*%$/.test(value)) return true;
     return /(?:単品販売価格|販売価格|アフィ(?:リエイト)?報酬率|報酬率|報酬単価|推定報酬|見込報酬|報酬額|いいね)/.test(value);
   }

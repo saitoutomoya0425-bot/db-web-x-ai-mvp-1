@@ -89,31 +89,90 @@
     );
   }
 
+  function visibleTextSegments(element) {
+    if (!(element instanceof Element) || !isVisible(element)) return [];
+    const raw = String(element.innerText || element.textContent || "");
+    return raw
+      .split(/[\r\n]+/)
+      .map(core.normalizeSpace)
+      .filter(Boolean);
+  }
+
+  function accessibleTextCandidates(element) {
+    if (!(element instanceof Element) || !isVisible(element)) return [];
+    return [
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      visibleText(element),
+      ...visibleTextSegments(element),
+      directText(element)
+    ];
+  }
+
+  function uniqueLongestFirst(candidates) {
+    return [...new Set(candidates.map(core.normalizeSpace).filter(Boolean))]
+      .sort((left, right) => right.length - left.length);
+  }
+
+  function semanticTextCandidates(root) {
+    if (!(root instanceof Element)) return [];
+    const candidates = [];
+    for (const element of allVisible(
+      root,
+      "h1, h2, h3, h4, h5, h6, [role='heading'], p, a[href*='myfans.jp/posts/'], [aria-label], [title]"
+    )) {
+      if (element.matches("button, [role='button']")) continue;
+      candidates.push(...accessibleTextCandidates(element));
+    }
+    return uniqueLongestFirst(candidates);
+  }
+
   function nearbyPostTextCandidates(anchor, container) {
     const candidates = [];
     let current = anchor;
     for (let depth = 0; current && current !== container && depth < 3; depth += 1, current = current.parentElement) {
       for (const sibling of [current.previousElementSibling, current.nextElementSibling]) {
         if (sibling && isVisible(sibling) && !sibling.matches("button, [role='button']")) {
-          candidates.push(visibleText(sibling));
+          candidates.push(...accessibleTextCandidates(sibling), ...semanticTextCandidates(sibling));
         }
       }
     }
-    return candidates;
+    return uniqueLongestFirst(candidates);
   }
 
   function postTitleCandidates(container, anchor) {
-    const candidates = [
+    const explicitAnchorCandidates = [
       anchor.getAttribute("aria-label"),
-      visibleText(anchor),
-      ...nearbyPostTextCandidates(anchor, container),
-      ...headingCandidates(container)
+      anchor.getAttribute("title")
     ];
-    for (const element of allVisible(container, "p, span, div, a[href], [role='heading'], [aria-label]")) {
-      if (element.matches("button, [role='button']")) continue;
-      candidates.push(element.getAttribute("aria-label"), directText(element));
+    const headingAndParagraphCandidates = [];
+    for (const element of allVisible(container, "h1, h2, h3, h4, h5, h6, [role='heading'], p")) {
+      headingAndParagraphCandidates.push(...accessibleTextCandidates(element));
     }
-    return [...new Set(candidates.map(core.normalizeSpace).filter(Boolean))].slice(0, 120);
+    const postLinkCandidates = accessibleTextCandidates(anchor);
+    const nearbyCandidates = nearbyPostTextCandidates(anchor, container);
+    const semanticCandidates = semanticTextCandidates(container);
+    const leafCandidates = [];
+    for (const element of allVisible(container, "span, div, a[href], [aria-label], [title]")) {
+      if (element.matches("button, [role='button']")) continue;
+      const nestedText = visibleText(element);
+      leafCandidates.push(
+        element.getAttribute("aria-label"),
+        element.getAttribute("title"),
+        directText(element),
+        ...(element.childElementCount <= 3 && nestedText.length <= 1000
+          ? [nestedText, ...visibleTextSegments(element)]
+          : [])
+      );
+    }
+    return [...new Set([
+      ...explicitAnchorCandidates,
+      ...uniqueLongestFirst(headingAndParagraphCandidates),
+      ...uniqueLongestFirst(postLinkCandidates),
+      ...nearbyCandidates,
+      ...semanticCandidates,
+      ...uniqueLongestFirst(leafCandidates)
+    ].map(core.normalizeSpace).filter(Boolean))].slice(0, 180);
   }
 
   function likeCandidates(container) {

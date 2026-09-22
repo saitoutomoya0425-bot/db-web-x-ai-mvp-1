@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import {
   snapshot,
   syntheticCreatorDescriptor,
-  syntheticPostDescriptor
+  syntheticPostDescriptor,
+  syntheticPostTitleCases
 } from "./fixtures/synthetic-page-models.mjs";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -34,8 +35,8 @@ function fakeClock() {
   };
 }
 
-test("reports collector version 0.1.2", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.2");
+test("reports collector version 0.1.3", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.3");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -179,6 +180,19 @@ test("keeps a real long post text after rejecting surrounding metadata", () => {
     })
   );
   assert.equal(record.title, longTitle);
+});
+
+test("extracts normal, multiline, ellipsis, and nearby synthetic titles without guessing", () => {
+  for (const titleCase of syntheticPostTitleCases) {
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        anchor_text: titleCase.anchor_text ?? syntheticPostDescriptor.anchor_text,
+        title_candidates: titleCase.title_candidates
+      })
+    );
+    assert.equal(record.title, titleCase.expected, titleCase.name);
+  }
 });
 
 test("does not interpret a reward amount as likes without explicit like semantics", () => {
