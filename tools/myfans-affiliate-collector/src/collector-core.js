@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.0";
+  const COLLECTOR_VERSION = "0.1.1";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -167,6 +167,26 @@
     return null;
   }
 
+  function parseEstimatedReward(text) {
+    const normalized = normalizeSpace(text);
+    const parentheticalAmount = normalized.match(
+      /(?:アフィ(?:リエイト)?報酬率|報酬率|報酬単価)[^0-9%]{0,20}[0-9]+(?:\.[0-9]+)?\s*%\s*[（(]\s*[¥￥]\s*([0-9][0-9,，]*)\s*円?\s*[）)]/
+    );
+    if (parentheticalAmount) return parseInteger(parentheticalAmount[1]);
+
+    for (const label of ["推定報酬", "見込報酬", "報酬額"]) {
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const explicitAmount = normalized.match(
+        new RegExp(
+          `${escaped}[^0-9¥￥%]{0,12}(?:[（(]\\s*)?(?:[¥￥]\\s*([0-9][0-9,，]*)|([0-9][0-9,，]*)\\s*円)`,
+          "i"
+        )
+      );
+      if (explicitAmount) return parseInteger(explicitAmount[1] || explicitAmount[2]);
+    }
+    return null;
+  }
+
   function parseDuration(text) {
     const matches = normalizeSpace(text).match(/(?:^|\s)(\d{1,2}:\d{2}(?::\d{2})?)(?=\s|$)/g);
     if (!matches || matches.length === 0) return null;
@@ -195,6 +215,34 @@
     for (const candidate of candidates || []) {
       const value = normalizeSpace(candidate);
       if (value.length >= 2 && value.length <= 300 && !blocked.test(value)) return value;
+    }
+    return null;
+  }
+
+  function isPostMetadataText(value) {
+    if (!value) return true;
+    if (/^(?:@|動画$|画像$|video$|image$)/i.test(value)) return true;
+    if (/^(?:プロフィールURL|投稿のアフィURL(?:のコピー)?|アフィURL(?:のコピー)?|コピー)$/.test(value)) return true;
+    if (/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value)) return true;
+    if (/(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?:\s|$)/.test(value)) return true;
+    if (/^[（(]?\s*[¥￥]\s*[0-9][0-9,，]*\s*円?\s*[）)]?$/.test(value)) return true;
+    if (/^[0-9]+(?:\.[0-9]+)?\s*%$/.test(value)) return true;
+    return /(?:単品販売価格|販売価格|アフィ(?:リエイト)?報酬率|報酬率|報酬単価|推定報酬|見込報酬|報酬額|いいね)/.test(value);
+  }
+
+  function firstPostTitle(candidates, excludedCandidates) {
+    const excluded = [...new Set(
+      (excludedCandidates || [])
+        .map(normalizeSpace)
+        .filter(Boolean)
+        .flatMap((value) => [value, value.startsWith("@") ? value.slice(1) : value])
+    )];
+    for (const candidate of candidates || []) {
+      const value = normalizeSpace(candidate);
+      if (value.length < 2 || value.length > 300) continue;
+      if (excluded.some((excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue))) continue;
+      if (isPostMetadataText(value)) continue;
+      return value;
     }
     return null;
   }
@@ -244,13 +292,16 @@
     const profile = links.map((link) => parseCreatorProfileUrl(link.href)).find(Boolean) || null;
     const affiliateCreatorRoute = links.map((link) => parseAffiliateCreatorRoute(link.href)).find(Boolean) || null;
     const duration = parseDuration(text);
-    const title = firstMeaningfulTitle(descriptor.title_candidates || [descriptor.anchor_text]);
+    const title = firstPostTitle(
+      descriptor.title_candidates || [descriptor.anchor_text],
+      descriptor.creator_name_candidates || []
+    );
     const creatorName = firstMeaningfulTitle(descriptor.creator_name_candidates || []);
     const username = profile?.username || affiliateCreatorRoute?.username || parseUsernameFromText(text);
     const displayedAffiliateUrl = links.map((link) => parseDisplayedAffiliateUrl(link.href)).find(Boolean) || null;
     const price = parseLabeledYen(text, ["単品販売価格", "販売価格", "単品販売", "価格"]);
-    const estimatedReward = parseLabeledYen(text, ["推定報酬", "見込報酬", "報酬額", "報酬"]);
-    const rewardRate = parseLabeledRate(text, ["アフィリエイト報酬率", "報酬率", "報酬単価"]);
+    const estimatedReward = parseEstimatedReward(text);
+    const rewardRate = parseLabeledRate(text, ["アフィリエイト報酬率", "アフィ報酬率", "報酬率", "報酬単価"]);
     const likes = parseLabeledNumber(text, ["いいね"]);
     const relativePublishedText = parseRelativePublishedText(text);
     const record = {
@@ -600,14 +651,72 @@
     };
   }
 
+  function hasExpectedCatalogRecords(snapshot, previousSnapshot) {
+    if ((previousSnapshot.posts || []).length > 0) return (snapshot.posts || []).length > 0;
+    if ((previousSnapshot.creators || []).length > 0) return (snapshot.creators || []).length > 0;
+    return (snapshot.posts || []).length > 0 || (snapshot.creators || []).length > 0;
+  }
+
+  async function waitForDistinctPage(options) {
+    const timeoutMs = Math.max(0, Number(options.timeout_ms) || 10000);
+    const pollIntervalMs = Math.max(1, Number(options.poll_interval_ms) || 250);
+    const now = options.now || (() => Date.now());
+    const sleep = options.sleep || ((milliseconds) => new Promise((resolve) => global.setTimeout(resolve, milliseconds)));
+    const startedAt = now();
+    let sawChangedUrl = false;
+    let sawDuplicateWithRecords = false;
+
+    while (true) {
+      const snapshot = await options.collect_current();
+      snapshot.fingerprint = snapshot.fingerprint || fingerprintPage(snapshot);
+      if (snapshot.stop_reason) {
+        return {
+          status: "SAFETY_STOP",
+          reason: snapshot.stop_reason,
+          snapshot
+        };
+      }
+
+      const urlChanged = snapshot.source_page_url !== options.previous_url;
+      if (urlChanged) {
+        sawChangedUrl = true;
+        if (hasExpectedCatalogRecords(snapshot, options.previous_snapshot)) {
+          if (snapshot.fingerprint !== options.previous_fingerprint) {
+            return { status: "READY", reason: null, snapshot };
+          }
+          sawDuplicateWithRecords = true;
+        }
+      }
+
+      const elapsed = now() - startedAt;
+      if (elapsed >= timeoutMs) break;
+      await sleep(Math.min(pollIntervalMs, timeoutMs - elapsed));
+    }
+
+    return {
+      status: "TIMEOUT",
+      reason: sawChangedUrl && sawDuplicateWithRecords
+        ? "DUPLICATE_PAGE_FINGERPRINT"
+        : "PAGE_TRANSITION_TIMEOUT",
+      snapshot: null
+    };
+  }
+
   async function runPagination(options) {
     const maxPages = Math.max(1, Math.min(5, Number(options.max_pages) || 5));
     const pages = [];
     const seen = new Set();
     const warnings = [];
     let stopReason = "NEXT_CONTROL_ABSENT_OR_DISABLED";
+    let pendingSnapshot = null;
     for (let pageIndex = 0; pageIndex < maxPages; pageIndex += 1) {
-      const snapshot = await options.collect_current();
+      const snapshot = pendingSnapshot || await options.collect_current();
+      pendingSnapshot = null;
+      if (snapshot.stop_reason) {
+        warnings.push(`SAFETY_STOP:${snapshot.stop_reason}`);
+        stopReason = snapshot.stop_reason;
+        break;
+      }
       const fingerprint = snapshot.fingerprint || fingerprintPage(snapshot);
       snapshot.fingerprint = fingerprint;
       if (seen.has(fingerprint)) {
@@ -617,10 +726,6 @@
       }
       seen.add(fingerprint);
       pages.push(snapshot);
-      if (snapshot.stop_reason) {
-        stopReason = snapshot.stop_reason;
-        break;
-      }
       if (pages.length >= maxPages) {
         stopReason = "MAX_PAGE_LIMIT_REACHED";
         break;
@@ -631,12 +736,20 @@
         break;
       }
       await options.activate_next(control);
-      const changed = await options.wait_for_page_change(fingerprint, snapshot.source_page_url);
-      if (!changed) {
-        warnings.push("PAGE_CHANGE_TIMEOUT");
-        stopReason = "PAGE_CHANGE_TIMEOUT";
+      const transition = await options.wait_for_page_change(fingerprint, snapshot.source_page_url, snapshot);
+      if (!transition) {
+        warnings.push("PAGE_TRANSITION_TIMEOUT");
+        stopReason = "PAGE_TRANSITION_TIMEOUT";
         break;
       }
+      if (transition.status === "READY" && transition.snapshot) {
+        pendingSnapshot = transition.snapshot;
+        continue;
+      }
+      const reason = transition.reason || "PAGE_TRANSITION_TIMEOUT";
+      warnings.push(transition.status === "SAFETY_STOP" ? `SAFETY_STOP:${reason}` : reason);
+      stopReason = reason;
+      break;
     }
     return buildExport(pages, {
       collected_at: options.collected_at || new Date().toISOString(),
@@ -666,6 +779,7 @@
     parseAffiliateCreatorRoute,
     parseDisplayedAffiliateUrl,
     parseDuration,
+    parseEstimatedReward,
     parseInteger,
     parseLabeledNumber,
     parseLabeledRate,
@@ -675,6 +789,7 @@
     runPagination,
     sourceSurfaceFromUrl,
     stableHash,
-    validateExportBundle
+    validateExportBundle,
+    waitForDistinctPage
   });
 })(globalThis);

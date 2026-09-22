@@ -10,6 +10,7 @@ const runtimeFiles = ["src/collector-core.js", "src/content-script.js", "src/pop
 const runtimeSource = (
   await Promise.all(runtimeFiles.map((file) => readFile(path.join(extensionRoot, file), "utf8")))
 ).join("\n");
+const contentScriptSource = await readFile(path.join(extensionRoot, "src/content-script.js"), "utf8");
 const manifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
 const popupHtml = await readFile(path.join(extensionRoot, "src/popup.html"), "utf8");
 
@@ -33,6 +34,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest uses only activeTab and the single Affiliate Center host", () => {
   assert.equal(manifest.manifest_version, 3);
+  assert.equal(manifest.version, "0.1.1");
   assert.deepEqual(manifest.permissions, ["activeTab"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.equal("background" in manifest, false);
@@ -53,4 +55,9 @@ test("popup has no image, video, canvas, iframe, or remote script elements", () 
 
 test("runtime never reads form values", () => {
   assert.equal(/\.value\b/.test(runtimeSource), false);
+});
+
+test("production pagination uses the bounded 10-second, 250ms readiness poll", () => {
+  assert.match(contentScriptSource, /timeout_ms:\s*10000/);
+  assert.match(contentScriptSource, /poll_interval_ms:\s*250/);
 });

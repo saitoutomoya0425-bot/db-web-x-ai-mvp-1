@@ -1,19 +1,27 @@
 export const syntheticPostDescriptor = Object.freeze({
   post_href: "https://myfans.jp/posts/123e4567-e89b-12d3-a456-426614174000",
-  anchor_text: "Synthetic Post Title",
+  anchor_text: "",
   text: [
     "動画",
     "12:34",
     "Synthetic Post Title",
     "Synthetic Creator",
     "@synthetic_creator",
-    "単品販売価格 1,980円",
-    "アフィリエイト報酬率 12.5%",
-    "推定報酬 247円",
+    "単品販売価格 5,980円",
+    "アフィ報酬率:50%（¥2,511）",
     "いいね 321",
     "3日前"
   ].join(" "),
-  title_candidates: ["Synthetic Post Title"],
+  title_candidates: [
+    "12:34",
+    "Synthetic Creator",
+    "3日前",
+    "単品販売価格 5,980円",
+    "アフィ報酬率:50%（¥2,511）",
+    "プロフィールURL",
+    "投稿のアフィURLのコピー",
+    "Synthetic Post Title"
+  ],
   creator_name_candidates: ["Synthetic Creator"],
   links: [
     { href: "https://myfans.jp/synthetic_creator", text: "Synthetic Creator", visible: true },

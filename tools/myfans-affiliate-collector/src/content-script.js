@@ -79,12 +79,33 @@
       .filter(Boolean);
   }
 
+  function directText(element) {
+    if (!(element instanceof Element) || !isVisible(element)) return "";
+    return core.normalizeSpace(
+      [...element.childNodes]
+        .filter((node) => node.nodeType === 3)
+        .map((node) => node.nodeValue || "")
+        .join(" ")
+    );
+  }
+
+  function postTitleCandidates(container, anchor) {
+    const candidates = [
+      ...headingCandidates(container),
+      anchor.getAttribute("aria-label"),
+      visibleText(anchor)
+    ];
+    for (const element of allVisible(container, "p, span, div, a[href], [role='heading'], [aria-label]")) {
+      candidates.push(element.getAttribute("aria-label"), directText(element));
+    }
+    return [...new Set(candidates.map(core.normalizeSpace).filter(Boolean))].slice(0, 120);
+  }
+
   function creatorNameCandidates(container) {
-    const profileLinkNames = linkDescriptors(container)
+    return linkDescriptors(container)
       .filter((link) => core.parseCreatorProfileUrl(link.href) || core.parseAffiliateCreatorRoute(link.href))
       .map((link) => link.text)
       .filter((text) => text && !text.startsWith("@"));
-    return [...profileLinkNames, ...headingCandidates(container)];
   }
 
   function planDescriptors(root) {
@@ -107,13 +128,13 @@
 
   function descriptorForPost(anchor, sourcePageUrl, sourceSurface, collectedAt) {
     const container = closestSemanticContainer(anchor);
-    const headings = headingCandidates(container);
+    const creatorCandidates = creatorNameCandidates(container);
     return {
       post_href: anchor.href,
       anchor_text: visibleText(anchor),
       text: visibleText(container),
-      title_candidates: [visibleText(anchor), ...headings],
-      creator_name_candidates: creatorNameCandidates(container),
+      title_candidates: postTitleCandidates(container, anchor),
+      creator_name_candidates: creatorCandidates,
       links: linkDescriptors(container),
       source_surface: sourceSurface,
       source_page_url: sourcePageUrl,
@@ -258,33 +279,16 @@
     return null;
   }
 
-  function waitForPageChange(previousFingerprint, previousUrl) {
-    return new Promise((resolve) => {
-      let settled = false;
-      let intervalId = null;
-      let timeoutId = null;
-      const observer = new MutationObserver(check);
-
-      function finish(changed) {
-        if (settled) return;
-        settled = true;
-        observer.disconnect();
-        if (intervalId) globalThis.clearInterval(intervalId);
-        if (timeoutId) globalThis.clearTimeout(timeoutId);
-        resolve(changed);
-      }
-
-      function check() {
-        const currentUrl = safeSourcePageUrl(globalThis.location.href);
-        const snapshot = collectCurrentPage();
-        if (snapshot.stop_reason || currentUrl !== previousUrl || snapshot.fingerprint !== previousFingerprint) {
-          finish(true);
-        }
-      }
-
-      observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-      intervalId = globalThis.setInterval(check, 500);
-      timeoutId = globalThis.setTimeout(() => finish(false), 15000);
+  function waitForPageChange(previousFingerprint, previousUrl, previousSnapshot) {
+    return core.waitForDistinctPage({
+      previous_fingerprint: previousFingerprint,
+      previous_url: previousUrl,
+      previous_snapshot: previousSnapshot,
+      collect_current: async () => collectCurrentPage(),
+      timeout_ms: 10000,
+      poll_interval_ms: 250,
+      now: () => Date.now(),
+      sleep: (milliseconds) => new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds))
     });
   }
 
@@ -345,7 +349,7 @@
       collect_current: async () => collectCurrentPage(),
       get_next_control: async () => findNextControl(),
       activate_next: async (control) => control.click(),
-      wait_for_page_change: async (fingerprint, url) => waitForPageChange(fingerprint, url),
+      wait_for_page_change: async (fingerprint, url, snapshot) => waitForPageChange(fingerprint, url, snapshot),
       collected_at: new Date().toISOString()
     });
   }

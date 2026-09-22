@@ -67,7 +67,7 @@ The collector also excludes account name, email, affiliate ID, bank details, das
 
 The parser prioritizes public MyFans URL shapes, button and visible Japanese labels, roles, accessible labels, headings, and relative semantic containers such as articles and list items. Generated or Tailwind class names are not used as primary identifiers.
 
-The multi-page action uses only a visible, enabled `次へ` or `次のページ` control. It waits for a URL or rendered-record fingerprint change and stops on:
+The multi-page action uses only a visible, enabled `次へ` or `次のページ` control. After a click it waits up to 10 seconds for the URL to change, the expected catalog rows to be present, and the rendered-record fingerprint to differ. A URL change alone is not page-ready. It stops on:
 
 - five scanned pages
 - missing or disabled next control
