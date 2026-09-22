@@ -114,6 +114,47 @@
       .sort((left, right) => right.length - left.length);
   }
 
+  function orderedVisibleLeafTitleData(container) {
+    const candidates = [];
+    let textNodeCount = 0;
+    const walker = document.createTreeWalker(container, globalThis.NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const parent = node.parentElement;
+      const text = core.normalizeSpace(node.nodeValue || "");
+      if (
+        text &&
+        parent &&
+        isVisible(parent) &&
+        !parent.closest(
+          "button, [role='button'], script, style, noscript, input, textarea, select, option, svg, video, audio"
+        )
+      ) {
+        textNodeCount += 1;
+        if (candidates.length < 240) {
+          candidates.push({
+            text,
+            strategy: "CARD_ORDERED_VISIBLE_LEAF",
+            dom_order: textNodeCount
+          });
+        }
+      }
+      node = walker.nextNode();
+    }
+
+    const tagSequence = [container, ...container.querySelectorAll("*")]
+      .filter(isVisible)
+      .slice(0, 80)
+      .map((element) => element.tagName.toLowerCase());
+    return {
+      candidates,
+      context: {
+        text_node_count: textNodeCount,
+        anonymized_tag_sequence: tagSequence
+      }
+    };
+  }
+
   function semanticTextCandidates(root) {
     if (!(root instanceof Element)) return [];
     const candidates = [];
@@ -222,11 +263,14 @@
   function descriptorForPost(anchor, sourcePageUrl, sourceSurface, collectedAt) {
     const container = closestSemanticContainer(anchor);
     const creatorCandidates = creatorNameCandidates(container);
+    const leafTitleData = orderedVisibleLeafTitleData(container);
     return {
       post_href: anchor.href,
       anchor_text: visibleText(anchor),
       text: visibleText(container),
       title_candidates: postTitleCandidates(container, anchor),
+      title_leaf_candidates: leafTitleData.candidates,
+      title_diagnostic_context: leafTitleData.context,
       creator_name_candidates: creatorCandidates,
       likes_candidates: likeCandidates(container),
       links: linkDescriptors(container),

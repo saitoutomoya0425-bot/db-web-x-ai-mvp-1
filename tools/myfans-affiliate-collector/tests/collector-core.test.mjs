@@ -9,6 +9,7 @@ import {
   snapshot,
   syntheticCreatorDescriptor,
   syntheticPostDescriptor,
+  syntheticPostLeafTitleCases,
   syntheticPostTitleCases
 } from "./fixtures/synthetic-page-models.mjs";
 
@@ -35,8 +36,8 @@ function fakeClock() {
   };
 }
 
-test("reports collector version 0.1.3", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.3");
+test("reports collector version 0.1.4", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.4");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -193,6 +194,83 @@ test("extracts normal, multiline, ellipsis, and nearby synthetic titles without 
     );
     assert.equal(record.title, titleCase.expected, titleCase.name);
   }
+});
+
+test("uses ordered visible leaf text only after semantic title candidates fail", () => {
+  for (const titleCase of syntheticPostLeafTitleCases) {
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        title_candidates: [],
+        title_leaf_candidates: titleCase.leaves,
+        title_diagnostic_context: {
+          text_node_count: titleCase.leaves.length,
+          anonymized_tag_sequence: ["article", "div", "span"]
+        }
+      })
+    );
+    assert.equal(record.title, titleCase.expected, titleCase.name);
+    if (titleCase.expected) assert.equal("title_diagnostic" in record, false, titleCase.name);
+  }
+});
+
+test("emits only sanitized reason codes and anonymous structure when title remains missing", () => {
+  const titleCase = syntheticPostLeafTitleCases.find((item) => item.name === "truly missing title");
+  const record = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      title_candidates: [],
+      title_leaf_candidates: titleCase.leaves,
+      title_diagnostic_context: {
+        text_node_count: titleCase.leaves.length,
+        anonymized_tag_sequence: ["ARTICLE", "DIV", "SPAN", "x-private-card", "SCRIPT"]
+      }
+    })
+  );
+  assert.equal(record.title, null);
+  assert.deepEqual(record.title_diagnostic, {
+    post_uuid: record.post_uuid,
+    text_node_count: titleCase.leaves.length,
+    anonymized_dom_tag_sequence: ["article", "div", "span", "other", "other"],
+    candidate_count: titleCase.leaves.length,
+    rejection_reason_codes: [
+      "MEDIA_BADGE",
+      "DURATION",
+      "PRICE",
+      "REWARD",
+      "NON_NATURAL_TEXT",
+      "CREATOR_OR_USERNAME",
+      "USERNAME",
+      "RELATIVE_DATE",
+      "AFFILIATE_OR_PROFILE_ACTION"
+    ],
+    chosen_strategy: "NONE",
+    title_missing_reason: "NO_SAFE_NATURAL_TEXT_AFTER_METADATA_FILTER"
+  });
+  const diagnosticText = JSON.stringify(record.title_diagnostic);
+  for (const forbiddenValue of ["Synthetic Creator", "5,980", "2,511", "3日前", "x-private-card"]) {
+    assert.equal(diagnosticText.includes(forbiddenValue), false);
+  }
+  assert.equal(core.assertSafeExport(record), true);
+});
+
+test("distinguishes no visible title candidates from candidates rejected as metadata", () => {
+  const record = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      title_candidates: [],
+      title_leaf_candidates: [],
+      title_diagnostic_context: {
+        text_node_count: 0,
+        anonymized_tag_sequence: ["article", "div"]
+      }
+    })
+  );
+  assert.equal(record.title, null);
+  assert.equal(record.title_diagnostic.candidate_count, 0);
+  assert.deepEqual(record.title_diagnostic.rejection_reason_codes, []);
+  assert.equal(record.title_diagnostic.chosen_strategy, "NONE");
+  assert.equal(record.title_diagnostic.title_missing_reason, "NO_VISIBLE_TITLE_CANDIDATES");
 });
 
 test("does not interpret a reward amount as likes without explicit like semantics", () => {

@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.3";
+  const COLLECTOR_VERSION = "0.1.4";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -229,34 +229,157 @@
     return null;
   }
 
-  function isPostMetadataText(value) {
-    if (!value) return true;
-    if (/^(?:@|動画$|画像$|video$|image$)/i.test(value)) return true;
-    if (/^(?:プロフィールURL|(?:プロフィール|投稿|作品)(?:の)?アフィ(?:リエイト)?URL(?:の|を)?コピー|投稿のアフィURL|アフィURL(?:のコピー)?|コピー)$/.test(value)) return true;
-    if (/^(?:詳細を見る|もっと見る|プロフィールを見る|作品を見る|購入(?:する)?|開く|閉じる|戻る|次へ|前へ|検索|シェア|共有|保存|登録|作成)$/.test(value)) return true;
-    if (/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value)) return true;
-    if (/(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?:\s|$)/.test(value)) return true;
-    if (/^[（(]?\s*[¥￥]\s*[0-9][0-9,，]*\s*円?\s*[）)]?$/.test(value)) return true;
-    if (/^[0-9][0-9,，]*\s*(?:件)?$/.test(value)) return true;
-    if (/^[0-9]+(?:\.[0-9]+)?\s*%$/.test(value)) return true;
-    return /(?:単品販売価格|販売価格|アフィ(?:リエイト)?報酬率|報酬率|報酬単価|推定報酬|見込報酬|報酬額|いいね)/.test(value);
+  const TITLE_STRATEGIES = new Set([
+    "ANCHOR_ATTRIBUTE",
+    "SEMANTIC",
+    "POST_LINK",
+    "NEARBY_SEMANTIC",
+    "CARD_ORDERED_VISIBLE_LEAF"
+  ]);
+  const SAFE_DIAGNOSTIC_TAGS = new Set([
+    "a",
+    "article",
+    "button",
+    "div",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "img",
+    "li",
+    "main",
+    "p",
+    "section",
+    "span",
+    "svg",
+    "video"
+  ]);
+
+  function titleCandidateDescriptor(candidate, fallbackStrategy) {
+    const descriptor =
+      candidate && typeof candidate === "object"
+        ? candidate
+        : { text: candidate, strategy: fallbackStrategy };
+    const strategy = TITLE_STRATEGIES.has(descriptor.strategy)
+      ? descriptor.strategy
+      : fallbackStrategy;
+    return {
+      text: normalizeSpace(descriptor.text),
+      strategy: TITLE_STRATEGIES.has(strategy) ? strategy : "SEMANTIC"
+    };
   }
 
-  function firstPostTitle(candidates, excludedCandidates) {
+  function titleRejectionReason(value, excluded, strictNaturalText) {
+    if (!value) return "EMPTY";
+    if (value.length < 2) return "TOO_SHORT";
+    if (value.length > 1000) return "TOO_LONG";
+    if (/^@/.test(value)) return "USERNAME";
+    if (excluded.some((excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue))) {
+      return "CREATOR_OR_USERNAME";
+    }
+    if (/^(?:動画|画像|video|image)$/i.test(value)) return "MEDIA_BADGE";
+    if (/^(?:プロフィールURL(?:(?:の|を)?コピー)?|(?:プロフィール|投稿|作品)(?:の)?アフィ(?:リエイト)?URL(?:の|を)?コピー|投稿のアフィURL|アフィURL(?:のコピー)?|(?:URL|リンク)(?:の|を)?コピー(?:しました)?|コピー(?:しました)?)$/.test(value)) {
+      return "AFFILIATE_OR_PROFILE_ACTION";
+    }
+    if (/^(?:詳細を見る|もっと見る|プロフィールを見る|作品を見る|購入(?:する)?|開く|閉じる|戻る|次へ|前へ|検索|シェア|共有|保存|登録|作成)$/.test(value)) {
+      return "ACTION_LABEL";
+    }
+    if (/^(?:再生|一時停止|停止|ミュート|ミュート解除|全画面|音量|シーク|play|pause|mute|unmute|fullscreen)$/i.test(value)) {
+      return "MEDIA_CONTROL";
+    }
+    if (/^(?:限定|無料|有料|新着|おすすめ|公開|非公開|鍵|ロック|lock|購入済み|販売中|公開中|閲覧可能|new|sale|featured)$/i.test(value)) {
+      return "BADGE_OR_LOCK_LABEL";
+    }
+    if (/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value)) {
+      return "RELATIVE_DATE";
+    }
+    if (/(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?:\s|$)/.test(value)) return "DURATION";
+    if (/^[（(]?\s*[¥￥]\s*[0-9][0-9,，]*\s*円?\s*[）)]?$/.test(value)) {
+      return "PRICE_OR_REWARD_AMOUNT";
+    }
+    if (/^[0-9][0-9,，]*\s*(?:件)?$/.test(value)) return "NUMERIC_ONLY";
+    if (/^[0-9]+(?:\.[0-9]+)?\s*%$/.test(value)) return "REWARD_RATE";
+    if (/(?:単品販売価格|販売価格|単品販売|価格)/.test(value)) return "PRICE";
+    if (/(?:アフィ(?:リエイト)?報酬率|報酬率|報酬単価|推定報酬|見込報酬|報酬額)/.test(value)) {
+      return "REWARD";
+    }
+    if (/(?:いいね|likes?|hearts?|[♡♥❤])/i.test(value)) return "LIKES";
+    if (/^(?:https?:\/\/|www\.)/i.test(value)) return "URL";
+    if (strictNaturalText && !/\p{L}/u.test(value)) return "NON_NATURAL_TEXT";
+    return null;
+  }
+
+  function selectPostTitle(primaryCandidates, leafCandidates, excludedCandidates) {
     const excluded = [...new Set(
       (excludedCandidates || [])
         .map(normalizeSpace)
         .filter(Boolean)
         .flatMap((value) => [value, value.startsWith("@") ? value.slice(1) : value])
     )];
-    for (const candidate of candidates || []) {
-      const value = normalizeSpace(candidate);
-      if (value.length < 2 || value.length > 1000) continue;
-      if (excluded.some((excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue))) continue;
-      if (isPostMetadataText(value)) continue;
-      return value;
+    const rejectionReasons = [];
+    const primary = primaryCandidates || [];
+    const fallback = leafCandidates || [];
+
+    for (const candidate of primary) {
+      const normalized = titleCandidateDescriptor(candidate, "SEMANTIC");
+      const reason = titleRejectionReason(normalized.text, excluded, false);
+      if (!reason) {
+        return {
+          title: normalized.text,
+          chosen_strategy: normalized.strategy,
+          candidate_count: primary.length + fallback.length,
+          rejection_reason_codes: [...new Set(rejectionReasons)]
+        };
+      }
+      rejectionReasons.push(reason);
     }
-    return null;
+
+    for (const candidate of fallback) {
+      const normalized = titleCandidateDescriptor(candidate, "CARD_ORDERED_VISIBLE_LEAF");
+      const reason = titleRejectionReason(normalized.text, excluded, true);
+      if (!reason) {
+        return {
+          title: normalized.text,
+          chosen_strategy: normalized.strategy,
+          candidate_count: primary.length + fallback.length,
+          rejection_reason_codes: [...new Set(rejectionReasons)]
+        };
+      }
+      rejectionReasons.push(reason);
+    }
+
+    const candidateCount = primary.length + fallback.length;
+    return {
+      title: null,
+      chosen_strategy: "NONE",
+      candidate_count: candidateCount,
+      rejection_reason_codes: [...new Set(rejectionReasons)],
+      title_missing_reason:
+        candidateCount === 0
+          ? "NO_VISIBLE_TITLE_CANDIDATES"
+          : "NO_SAFE_NATURAL_TEXT_AFTER_METADATA_FILTER"
+    };
+  }
+
+  function sanitizedTitleDiagnostic(postUuid, selection, context) {
+    const textNodeCount = Number.isSafeInteger(context?.text_node_count)
+      ? Math.max(0, Math.min(context.text_node_count, 1000))
+      : 0;
+    const anonymizedTagSequence = (context?.anonymized_tag_sequence || [])
+      .slice(0, 80)
+      .map((tag) => normalizeSpace(tag).toLowerCase())
+      .map((tag) => (SAFE_DIAGNOSTIC_TAGS.has(tag) ? tag : "other"));
+    return {
+      post_uuid: postUuid,
+      text_node_count: textNodeCount,
+      anonymized_dom_tag_sequence: anonymizedTagSequence,
+      candidate_count: selection.candidate_count,
+      rejection_reason_codes: selection.rejection_reason_codes,
+      chosen_strategy: selection.chosen_strategy,
+      title_missing_reason: selection.title_missing_reason
+    };
   }
 
   function parseLikes(candidates) {
@@ -324,8 +447,9 @@
     const rawCreatorName = firstMeaningfulTitle(descriptor.creator_name_candidates || []);
     const creatorName = cleanCreatorName(rawCreatorName);
     const username = profile?.username || affiliateCreatorRoute?.username || parseUsernameFromText(text);
-    const title = firstPostTitle(
+    const titleSelection = selectPostTitle(
       descriptor.title_candidates || [descriptor.anchor_text],
+      descriptor.title_leaf_candidates || [],
       [
         ...(descriptor.creator_name_candidates || []),
         creatorName,
@@ -333,6 +457,7 @@
         username ? `@${username}` : null
       ].filter(Boolean)
     );
+    const title = titleSelection.title;
     const displayedAffiliateUrl = links.map((link) => parseDisplayedAffiliateUrl(link.href)).find(Boolean) || null;
     const price = parseLabeledYen(text, ["単品販売価格", "販売価格", "単品販売", "価格"]);
     const estimatedReward = parseEstimatedReward(text);
@@ -368,6 +493,13 @@
         : "MEDIUM"
     };
     if (displayedAffiliateUrl) record.displayed_affiliate_url = displayedAffiliateUrl;
+    if (!title) {
+      record.title_diagnostic = sanitizedTitleDiagnostic(
+        identity.post_uuid,
+        titleSelection,
+        descriptor.title_diagnostic_context
+      );
+    }
     return record;
   }
 

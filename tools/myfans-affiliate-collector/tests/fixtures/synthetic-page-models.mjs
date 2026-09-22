@@ -78,6 +78,91 @@ export const syntheticPostTitleCases = Object.freeze([
   }
 ]);
 
+const orderedLeaf = (text) => ({
+  text,
+  strategy: "CARD_ORDERED_VISIBLE_LEAF"
+});
+
+export const syntheticPostLeafTitleCases = Object.freeze([
+  {
+    name: "plain div title",
+    leaves: [orderedLeaf("Plain div title")],
+    expected: "Plain div title"
+  },
+  {
+    name: "nested span title",
+    leaves: [orderedLeaf("Nested span title")],
+    expected: "Nested span title"
+  },
+  {
+    name: "title immediately after reward block",
+    leaves: [
+      orderedLeaf("アフィ報酬率:50%（¥2,511）"),
+      orderedLeaf("Title after the reward block")
+    ],
+    expected: "Title after the reward block"
+  },
+  {
+    name: "title immediately before creator block",
+    leaves: [
+      orderedLeaf("Title before the creator block"),
+      orderedLeaf("Synthetic Creator"),
+      orderedLeaf("3日前")
+    ],
+    expected: "Title before the creator block"
+  },
+  {
+    name: "title containing numbers",
+    leaves: [orderedLeaf("第12話 2026年版")],
+    expected: "第12話 2026年版"
+  },
+  {
+    name: "title containing emoji",
+    leaves: [orderedLeaf("新作公開🎉 特別編")],
+    expected: "新作公開🎉 特別編"
+  },
+  {
+    name: "title containing brackets",
+    leaves: [orderedLeaf("【限定企画】特別な投稿")],
+    expected: "【限定企画】特別な投稿"
+  },
+  {
+    name: "truncated ellipsis title",
+    leaves: [orderedLeaf("この先は本編で…")],
+    expected: "この先は本編で…"
+  },
+  {
+    name: "metadata-heavy card",
+    leaves: [
+      orderedLeaf("video"),
+      orderedLeaf("12:34"),
+      orderedLeaf("単品販売価格 5,980円"),
+      orderedLeaf("アフィ報酬率:50%（¥2,511）"),
+      orderedLeaf("🔒"),
+      orderedLeaf("Metadata-heavy real title"),
+      orderedLeaf("Synthetic Creator"),
+      orderedLeaf("3日前"),
+      orderedLeaf("投稿のアフィURLのコピー")
+    ],
+    expected: "Metadata-heavy real title"
+  },
+  {
+    name: "truly missing title",
+    leaves: [
+      orderedLeaf("video"),
+      orderedLeaf("12:34"),
+      orderedLeaf("単品販売価格 5,980円"),
+      orderedLeaf("アフィ報酬率:50%（¥2,511）"),
+      orderedLeaf("🔒"),
+      orderedLeaf("Synthetic Creator"),
+      orderedLeaf("@synthetic_creator"),
+      orderedLeaf("3日前"),
+      orderedLeaf("投稿のアフィURLのコピー")
+    ],
+    expected: null
+  }
+]);
+
 export const syntheticCreatorDescriptor = Object.freeze({
   profile_href: "https://myfans.jp/synthetic_creator",
   text: [
