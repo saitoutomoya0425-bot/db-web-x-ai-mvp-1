@@ -66,8 +66,8 @@ function missingTitleDescriptorWithDiagnostics(overrides = {}) {
   };
 }
 
-test("reports collector version 0.1.7", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.7");
+test("reports collector version 0.1.8", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.8");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -319,6 +319,93 @@ test("accepts natural post titles that contain inline metadata tokens", () => {
     );
     assert.equal(record.title, title, title);
     assert.equal("title_diagnostic" in record, false, title);
+  }
+});
+
+test("accepts safe long natural titles only inside the strong ordered title window", () => {
+  const naturalSentence = "これは画面に表示された長い作品説明です。内容を正確に保存するための自然な文章が続きます。";
+  const metadataSentence = "価格は¥4,980です。右上のいいねを押して、3日前の出来事について感想を教えてください。";
+  const acceptedTitles = [
+    naturalSentence.repeat(Math.ceil(1001 / naturalSentence.length)).slice(0, 1001),
+    naturalSentence.repeat(Math.ceil(2000 / naturalSentence.length)).slice(0, 2000),
+    metadataSentence.repeat(Math.ceil(1600 / metadataSentence.length)).slice(0, 1600)
+  ];
+
+  for (const title of acceptedTitles) {
+    const segments = [
+      "アフィ報酬率50%",
+      title,
+      "Synthetic Creator",
+      "3日前",
+      "投稿のアフィURLのコピー"
+    ].map((text, index) => ({
+      text,
+      strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+      segment_order: index + 1
+    }));
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        title_candidates: [],
+        title_segment_candidates: segments,
+        title_leaf_candidates: []
+      })
+    );
+    assert.equal(record.title, title, `accepted ${title.length} character title`);
+    assert.equal("title_diagnostic" in record, false, `accepted ${title.length} character title`);
+  }
+});
+
+test("rejects unsafe or misplaced long text and preserves the hard title cap", () => {
+  const naturalSentence = "これは自然な長文ですが安全なタイトル位置にないため採用しません。";
+  const outsideWindow = naturalSentence.repeat(Math.ceil(1200 / naturalSentence.length)).slice(0, 1200);
+  const metadataOnly = "単品販売価格 ¥4,980 アフィ報酬率50% 3日前 いいね 123 ".repeat(40);
+  const actionOnly = "投稿のアフィURLのコピー ".repeat(100);
+  const overHardCap = naturalSentence
+    .repeat(Math.ceil(10001 / naturalSentence.length))
+    .slice(0, 10001);
+  const rejectedCases = [
+    {
+      name: "long natural text outside the strong title window",
+      segments: [outsideWindow, "Synthetic Creator", "3日前", "投稿のアフィURLのコピー"]
+    },
+    {
+      name: "long natural text after price but without a reward block",
+      segments: ["単品販売価格 ¥4,980", outsideWindow, "Synthetic Creator", "3日前", "投稿のアフィURLのコピー"]
+    },
+    {
+      name: "long metadata-only text inside the title window",
+      segments: ["アフィ報酬率50%", metadataOnly, "Synthetic Creator", "3日前", "投稿のアフィURLのコピー"]
+    },
+    {
+      name: "long action-only text inside the title window",
+      segments: ["アフィ報酬率50%", actionOnly, "Synthetic Creator", "3日前", "投稿のアフィURLのコピー"]
+    },
+    {
+      name: "natural text above the hard title cap",
+      segments: ["アフィ報酬率50%", overHardCap, "Synthetic Creator", "3日前", "投稿のアフィURLのコピー"]
+    }
+  ];
+
+  for (const titleCase of rejectedCases) {
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        title_candidates: [],
+        title_segment_candidates: titleCase.segments.map((text, index) => ({
+          text,
+          strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+          segment_order: index + 1
+        })),
+        title_leaf_candidates: []
+      })
+    );
+    assert.equal(record.title, null, titleCase.name);
+    assert.equal(
+      record.title_diagnostic.rejection_reason_codes.includes("TOO_LONG"),
+      true,
+      titleCase.name
+    );
   }
 });
 

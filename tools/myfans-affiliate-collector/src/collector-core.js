@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.7";
+  const COLLECTOR_VERSION = "0.1.8";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -237,6 +237,8 @@
     "CARD_ORDERED_SEGMENT_WINDOW",
     "CARD_ORDERED_VISIBLE_LEAF"
   ]);
+  const STANDARD_TITLE_MAX_LENGTH = 1000;
+  const HARD_TITLE_MAX_LENGTH = 10000;
   const SAFE_DIAGNOSTIC_TAGS = new Set([
     "a",
     "article",
@@ -343,10 +345,34 @@
     return (remainder.match(/\p{L}/gu) || []).length >= 6;
   }
 
-  function titleRejectionReason(value, excluded, strictNaturalText) {
+  function hasSafeStrongWindowLongTitleText(value, excluded) {
+    return hasSubstantialNaturalTitleText(value, excluded, [
+      /(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/g,
+      /(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?=\s|$)/g,
+      /(?:単品販売価格|販売価格|単品販売|価格)/g,
+      /(?:アフィ(?:リエイト)?報酬率|報酬率|報酬単価|推定報酬|見込報酬|報酬額)/g,
+      /(?:いいね(?:数|する)?|likes?|hearts?|[♡♥❤]\uFE0F?)/gi,
+      /(?:プロフィールURL(?:(?:の|を)?コピー)?|(?:プロフィール|投稿|作品)(?:の)?アフィ(?:リエイト)?URL(?:の|を)?コピー|投稿のアフィURL|アフィURL(?:のコピー)?|(?:URL|リンク)(?:の|を)?コピー(?:しました)?|コピー(?:しました)?)/g,
+      /(?:詳細を見る|もっと見る|プロフィールを見る|作品を見る|購入(?:する)?|開く|閉じる|戻る|次へ|前へ|検索|シェア|共有|保存|登録|作成)/g,
+      /(?:再生|一時停止|停止|ミュート|ミュート解除|全画面|音量|シーク|play|pause|mute|unmute|fullscreen)/gi,
+      /(?:限定|無料|有料|新着|おすすめ|公開|非公開|鍵|ロック|lock|購入済み|販売中|公開中|閲覧可能|new|sale|featured)/gi,
+      /(?:https?:\/\/|www\.)[^\s]+/gi
+    ]);
+  }
+
+  function titleRejectionReason(value, excluded, strictNaturalText, context = {}) {
     if (!value) return "EMPTY";
     if (value.length < 2) return "TOO_SHORT";
-    if (value.length > 1000) return "TOO_LONG";
+    if (value.length > HARD_TITLE_MAX_LENGTH) return "TOO_LONG";
+    if (
+      value.length > STANDARD_TITLE_MAX_LENGTH &&
+      (
+        !context.strong_title_window ||
+        !hasSafeStrongWindowLongTitleText(value, excluded)
+      )
+    ) {
+      return "TOO_LONG";
+    }
     if (/^@/.test(value)) return "USERNAME";
     const matchingExcludedValues = excluded.filter(
       (excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue)
@@ -425,7 +451,7 @@
 
   function evaluateOrderedSegmentWindow(candidates, excludedCandidates) {
     const excluded = normalizedTitleExclusions(excludedCandidates);
-    const entries = (candidates || []).map((candidate) => {
+    const baselineEntries = (candidates || []).map((candidate) => {
       const normalized = titleCandidateDescriptor(candidate, "CARD_ORDERED_SEGMENT_WINDOW");
       return {
         ...normalized,
@@ -445,19 +471,39 @@
       "AFFILIATE_OR_PROFILE_ACTION",
       "ACTION_LABEL"
     ]);
+    const rewardReasons = new Set([
+      "REWARD",
+      "REWARD_RATE"
+    ]);
+    const entries = baselineEntries.map((entry, index) => {
+      const hasCommercialBefore = baselineEntries
+        .slice(0, index)
+        .some((candidate) => commercialReasons.has(candidate.reason));
+      const hasRewardBefore = baselineEntries
+        .slice(0, index)
+        .some((candidate) => rewardReasons.has(candidate.reason));
+      const hasClosingAfter = baselineEntries
+        .slice(index + 1)
+        .some((candidate) => closingReasons.has(candidate.reason));
+      const segmentWindow = hasCommercialBefore && hasClosingAfter;
+      const strongLongTitleWindow = hasRewardBefore && hasClosingAfter;
+      return {
+        ...entry,
+        segment_window: segmentWindow,
+        reason: segmentWindow
+          ? titleRejectionReason(entry.text, excluded, true, {
+              strong_title_window: strongLongTitleWindow
+            })
+          : entry.reason
+      };
+    });
     const rejectionReasons = entries.map((entry) => entry.reason).filter(Boolean);
     let selected = null;
     let segmentWindowFound = false;
     let safeCandidateCount = 0;
 
     for (let index = 0; index < entries.length; index += 1) {
-      const hasCommercialBefore = entries
-        .slice(0, index)
-        .some((entry) => commercialReasons.has(entry.reason));
-      const hasClosingAfter = entries
-        .slice(index + 1)
-        .some((entry) => closingReasons.has(entry.reason));
-      if (!hasCommercialBefore || !hasClosingAfter) continue;
+      if (!entries[index].segment_window) continue;
       segmentWindowFound = true;
       if (!entries[index].reason) {
         safeCandidateCount += 1;
