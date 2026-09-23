@@ -38,8 +38,36 @@ function fakeClock() {
   };
 }
 
-test("reports collector version 0.1.5", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.5");
+function missingTitleDescriptorWithDiagnostics(overrides = {}) {
+  return {
+    ...syntheticPostDescriptor,
+    title_candidates: [
+      "単品販売価格 5,980円",
+      "アフィ報酬率:50%（¥2,511）",
+      "Synthetic Creator",
+      "3日前",
+      "投稿のアフィURLのコピー"
+    ],
+    title_segment_candidates: [],
+    title_leaf_candidates: [],
+    title_diagnostic_context: {
+      text_node_count: 7,
+      anonymized_tag_sequence: ["article", "div", "span"],
+      selected_container_depth: 1,
+      selected_container_score: 92,
+      post_link_count: 1,
+      has_price_signal: true,
+      has_reward_signal: true,
+      has_affiliate_copy_action: true,
+      has_creator_signal: true,
+      ordered_segment_count: 7,
+      ...overrides
+    }
+  };
+}
+
+test("reports collector version 0.1.6", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.6");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -334,6 +362,163 @@ test("distinguishes no visible title candidates from candidates rejected as meta
   assert.deepEqual(record.title_diagnostic.rejection_reason_codes, []);
   assert.equal(record.title_diagnostic.chosen_strategy, "NONE");
   assert.equal(record.title_diagnostic.title_missing_reason, "NO_VISIBLE_TITLE_CANDIDATES");
+});
+
+test("emits bounded ancestor and visible-segment diagnostics only for a missing title", () => {
+  const longVisibleTitleCandidate = "Visible diagnostic title ".repeat(20).trim();
+  const visibleSegments = [
+    "Card preface",
+    "単品販売価格 5,980円",
+    "アフィ報酬率:50%（¥2,511）",
+    longVisibleTitleCandidate,
+    "Synthetic Creator",
+    "3日前",
+    "投稿のアフィURLのコピー",
+    "After action note"
+  ].map((text, index) => ({
+    text,
+    strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+    segment_order: index + 1
+  }));
+  const record = plain(
+    core.extractPostFromDescriptor(
+      missingTitleDescriptorWithDiagnostics({
+        eligible_ancestors: [
+          {
+            depth: 1,
+            score: 92,
+            post_link_count: 1,
+            safe_title_candidate_count: 0,
+            ordered_segment_count: 8,
+            has_price_signal: true,
+            has_reward_signal: true,
+            has_creator_signal: true,
+            has_affiliate_copy_action: true
+          },
+          {
+            depth: 2,
+            score: 92,
+            post_link_count: 1,
+            safe_title_candidate_count: 0,
+            ordered_segment_count: 10,
+            has_price_signal: true,
+            has_reward_signal: true,
+            has_creator_signal: true,
+            has_affiliate_copy_action: true
+          }
+        ],
+        visible_segment_ancestors: [
+          {
+            depth: 1,
+            selected: true,
+            segments: visibleSegments,
+            excluded_candidates: ["Synthetic Creator", "synthetic_creator", "@synthetic_creator"]
+          },
+          {
+            depth: 2,
+            selected: false,
+            segments: visibleSegments,
+            excluded_candidates: ["Synthetic Creator", "synthetic_creator", "@synthetic_creator"]
+          }
+        ]
+      })
+    )
+  );
+
+  assert.equal(record.title, null);
+  assert.equal(record.title_diagnostic.eligible_ancestors.length, 2);
+  assert.deepEqual(record.title_diagnostic.eligible_ancestors[0], {
+    depth: 1,
+    score: 92,
+    post_link_count: 1,
+    safe_title_candidate_count: 0,
+    ordered_segment_count: 8,
+    has_price_signal: true,
+    has_reward_signal: true,
+    has_creator_signal: true,
+    has_affiliate_copy_action: true
+  });
+  assert.equal(record.title_diagnostic.visible_segment_ancestors.length, 2);
+  const segments = record.title_diagnostic.visible_segment_ancestors[0].segments;
+  assert.equal(segments[0].region, "BEFORE_PRICE");
+  assert.equal(segments[1].region, "PRICE_REWARD");
+  assert.equal(segments[2].region, "PRICE_REWARD");
+  assert.equal(segments[3].region, "BETWEEN_REWARD_AND_CREATOR");
+  assert.equal(segments[3].rejection_reason, null);
+  assert.equal(segments[3].text.length, 300);
+  assert.equal(segments[4].region, "CREATOR_DATE_ACTION");
+  assert.equal(segments[6].region, "CREATOR_DATE_ACTION");
+  assert.equal(segments[7].region, "AFTER_ACTION");
+});
+
+test("does not emit detailed missing-title diagnostics for a successful title", () => {
+  const record = plain(
+    core.extractPostFromDescriptor({
+      ...syntheticPostDescriptor,
+      title_candidates: ["A safe visible post title"],
+      title_diagnostic_context: {
+        eligible_ancestors: [{ depth: 1, score: 92, post_link_count: 1 }],
+        visible_segment_ancestors: [{
+          depth: 1,
+          selected: true,
+          segments: [{ text: "A safe visible post title", segment_order: 1 }],
+          excluded_candidates: []
+        }]
+      }
+    })
+  );
+  assert.equal(record.title, "A safe visible post title");
+  assert.equal("title_diagnostic" in record, false);
+});
+
+test("caps missing-title segments and redacts markup, URLs, credentials, and account data", () => {
+  const sensitiveSegments = [
+    "<script>visible markup</script>",
+    "https://cdn.example.test/private-image.jpg",
+    "person@example.test",
+    "token=synthetic-secret",
+    "口座番号 1234567890",
+    "X".repeat(500),
+    ...Array.from({ length: 29 }, (_, index) => `Safe diagnostic line ${index + 1}`)
+  ].map((text, index) => ({ text, segment_order: index + 1 }));
+  const visibleSegmentAncestors = Array.from({ length: 4 }, (_, index) => ({
+    depth: index + 1,
+    selected: index === 0,
+    segments: sensitiveSegments,
+    excluded_candidates: []
+  }));
+  const record = plain(
+    core.extractPostFromDescriptor(
+      missingTitleDescriptorWithDiagnostics({ visible_segment_ancestors: visibleSegmentAncestors })
+    )
+  );
+  const diagnostic = record.title_diagnostic;
+  const serialized = JSON.stringify(diagnostic);
+
+  assert.equal(diagnostic.visible_segment_ancestors.length, 3);
+  assert.equal(diagnostic.visible_segment_ancestors[0].segments.length, 30);
+  assert.equal(
+    diagnostic.visible_segment_ancestors.every((ancestor) =>
+      ancestor.segments.every((segment) => segment.text.length <= 300)
+    ),
+    true
+  );
+  for (const forbidden of [
+    "<script>",
+    "cdn.example.test",
+    "private-image.jpg",
+    "person@example.test",
+    "synthetic-secret",
+    "1234567890"
+  ]) {
+    assert.equal(serialized.includes(forbidden), false, forbidden);
+  }
+  assert.equal(serialized.includes("[MARKUP_REDACTED]"), true);
+  assert.equal(serialized.includes("[URL_REDACTED]"), true);
+  assert.equal(serialized.includes("[EMAIL_REDACTED]"), true);
+  assert.equal(serialized.includes("[CREDENTIAL_REDACTED]"), true);
+  assert.equal(serialized.includes("[ACCOUNT_DATA_REDACTED]"), true);
+  assert.equal(core.assertSafeExport(record), true);
 });
 
 test("does not interpret a reward amount as likes without explicit like semantics", () => {

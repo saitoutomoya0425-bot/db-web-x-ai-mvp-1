@@ -79,6 +79,20 @@
       }));
   }
 
+  function diagnosticVisibleSegmentCandidates(element) {
+    if (!(element instanceof Element) || !isVisible(element)) return [];
+    return String(element.innerText || "")
+      .split(/[\r\n]+/)
+      .map(core.normalizeSpace)
+      .filter(Boolean)
+      .slice(0, 30)
+      .map((text, index) => ({
+        text,
+        strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+        segment_order: index + 1
+      }));
+  }
+
   function postCardCandidateEvidence(element, targetPostUuid, depth) {
     const anchors = [
       ...(element.matches("a[href]") && isVisible(element) ? [element] : []),
@@ -115,6 +129,10 @@
       : [];
     const segmentWindow = core.summarizePostTitleSegmentWindow(segments, creatorExclusions);
     const leafWindow = core.summarizePostTitleSegmentWindow(leafCandidates, creatorExclusions);
+    const safeTitleCandidateCount = Math.max(
+      segmentWindow.safe_candidate_count,
+      leafWindow.safe_candidate_count
+    );
     const categorySignalCount = [
       "見た目",
       "プレイ",
@@ -139,10 +157,9 @@
       has_post_action:
         hasAffiliateCopyAction ||
         /(?:投稿|作品)(?:を見る|を開く|詳細)/.test(text),
-      title_window_candidate_count: Math.max(
-        segmentWindow.safe_candidate_count,
-        leafWindow.safe_candidate_count
-      ),
+      title_window_candidate_count: safeTitleCandidateCount,
+      safe_title_candidate_count: safeTitleCandidateCount,
+      ordered_segment_count: segments.length,
       has_page_navigation:
         element.matches("nav, [role='navigation']") ||
         Boolean(element.querySelector("nav, [role='navigation']")) ||
@@ -167,6 +184,10 @@
     const selection = core.selectPostCardContainerCandidate(
       candidates.map((candidate) => candidate.evidence)
     );
+    const ancestorCandidates = candidates.map((candidate) => ({
+      ...candidate,
+      scoring: core.scorePostCardContainerCandidate(candidate.evidence)
+    }));
     if (!selection) {
       return {
         container: anchor.parentElement || anchor,
@@ -178,12 +199,68 @@
           has_reward_signal: false,
           has_affiliate_copy_action: false,
           has_creator_signal: false
-        }
+        },
+        ancestor_candidates: ancestorCandidates
       };
     }
     return {
       container: candidates[selection.candidate_index].element,
-      evidence: selection
+      evidence: selection,
+      ancestor_candidates: ancestorCandidates
+    };
+  }
+
+  function titleExclusionsForContainer(container) {
+    const entries = linkDescriptors(container)
+      .map((link) => ({
+        identity:
+          core.parseCreatorProfileUrl(link.href) ||
+          core.parseAffiliateCreatorRoute(link.href),
+        text: link.text
+      }))
+      .filter((entry) => entry.identity);
+    return [
+      ...entries.flatMap((entry) => [entry.text, core.cleanCreatorName(entry.text)]),
+      ...entries.flatMap((entry) => [
+        entry.identity.username,
+        entry.identity.username ? `@${entry.identity.username}` : null
+      ])
+    ].filter(Boolean);
+  }
+
+  function missingTitleAncestorContext(cardSelection) {
+    const selectedDepth = cardSelection.evidence.depth;
+    const eligibleCandidates = (cardSelection.ancestor_candidates || [])
+      .filter((candidate) => candidate.scoring.eligible);
+    const eligibleAncestors = eligibleCandidates.map((candidate) => ({
+      depth: candidate.evidence.depth,
+      score: candidate.scoring.score,
+      post_link_count: candidate.evidence.post_link_count,
+      safe_title_candidate_count: candidate.evidence.safe_title_candidate_count,
+      ordered_segment_count: candidate.evidence.ordered_segment_count,
+      has_price_signal: candidate.evidence.has_price_signal,
+      has_reward_signal: candidate.evidence.has_reward_signal,
+      has_creator_signal: candidate.evidence.has_creator_signal,
+      has_affiliate_copy_action: candidate.evidence.has_affiliate_copy_action
+    }));
+    const visibleSegmentAncestors = eligibleCandidates
+      .filter((candidate) =>
+        candidate.evidence.depth === selectedDepth ||
+        (
+          candidate.evidence.depth > selectedDepth &&
+          candidate.evidence.depth <= selectedDepth + 2
+        )
+      )
+      .slice(0, 3)
+      .map((candidate) => ({
+        depth: candidate.evidence.depth,
+        selected: candidate.evidence.depth === selectedDepth,
+        segments: diagnosticVisibleSegmentCandidates(candidate.element),
+        excluded_candidates: titleExclusionsForContainer(candidate.element)
+      }));
+    return {
+      eligible_ancestors: eligibleAncestors,
+      visible_segment_ancestors: visibleSegmentAncestors
     };
   }
 
@@ -382,8 +459,7 @@
     return candidates;
   }
 
-  function descriptorForPost(anchor, sourcePageUrl, sourceSurface, collectedAt) {
-    const cardSelection = selectPostCardContainer(anchor);
+  function descriptorForPost(anchor, sourcePageUrl, sourceSurface, collectedAt, cardSelection) {
     const container = cardSelection.container;
     const creatorCandidates = creatorNameCandidates(container);
     const leafTitleData = orderedVisibleLeafTitleData(container);
@@ -487,9 +563,22 @@
     for (const anchor of allVisible(document, "a[href]")) {
       const identity = core.parsePostUrl(anchor.href);
       if (!identity || seenPostIds.has(identity.post_uuid)) continue;
-      const record = core.extractPostFromDescriptor(
-        descriptorForPost(anchor, sourcePageUrl, sourceSurface, collectedAt)
+      const cardSelection = selectPostCardContainer(anchor);
+      const descriptor = descriptorForPost(
+        anchor,
+        sourcePageUrl,
+        sourceSurface,
+        collectedAt,
+        cardSelection
       );
+      let record = core.extractPostFromDescriptor(descriptor);
+      if (record && !record.title) {
+        Object.assign(
+          descriptor.title_diagnostic_context,
+          missingTitleAncestorContext(cardSelection)
+        );
+        record = core.extractPostFromDescriptor(descriptor);
+      }
       if (record) {
         seenPostIds.add(record.post_uuid);
         posts.push(record);

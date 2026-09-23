@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.5";
+  const COLLECTOR_VERSION = "0.1.6";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -432,6 +432,121 @@
     };
   }
 
+  function sanitizeDiagnosticVisibleText(value) {
+    let text = normalizeSpace(value);
+    if (!text) return "";
+    text = text
+      .replace(/<\/?[a-z][^>]*>/gi, "[MARKUP_REDACTED]")
+      .replace(/(?:https?:\/\/|www\.)[^\s]+/gi, "[URL_REDACTED]")
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[EMAIL_REDACTED]")
+      .replace(
+        /\b(?:authorization|cookie|password|session|token)\s*[:=]\s*[^\s]+/gi,
+        "[CREDENTIAL_REDACTED]"
+      );
+    if (/(?:口座番号|銀行情報|本人確認|アフィリエイトID|affiliate\s*id|account\s*id)/i.test(text)) {
+      return "[ACCOUNT_DATA_REDACTED]";
+    }
+    return text.slice(0, 300);
+  }
+
+  function diagnosticRegionForEntry(entries, index) {
+    const commercialReasons = new Set([
+      "PRICE",
+      "REWARD",
+      "PRICE_OR_REWARD_AMOUNT",
+      "REWARD_RATE"
+    ]);
+    const closingReasons = new Set([
+      "CREATOR_OR_USERNAME",
+      "USERNAME",
+      "RELATIVE_DATE",
+      "AFFILIATE_OR_PROFILE_ACTION",
+      "ACTION_LABEL"
+    ]);
+    const commercialIndexes = entries
+      .map((entry, entryIndex) => commercialReasons.has(entry.reason) ? entryIndex : -1)
+      .filter((entryIndex) => entryIndex >= 0);
+    const closingIndexes = entries
+      .map((entry, entryIndex) => closingReasons.has(entry.reason) ? entryIndex : -1)
+      .filter((entryIndex) => entryIndex >= 0);
+    const firstCommercial = commercialIndexes[0] ?? -1;
+    const lastCommercial = commercialIndexes.at(-1) ?? -1;
+    const firstClosingAfterCommercial = closingIndexes.find((entryIndex) => entryIndex > lastCommercial) ?? -1;
+    const lastClosing = closingIndexes.at(-1) ?? -1;
+    const reason = entries[index]?.reason;
+
+    if (commercialReasons.has(reason)) return "PRICE_REWARD";
+    if (closingReasons.has(reason)) return "CREATOR_DATE_ACTION";
+    if (firstCommercial >= 0 && index < firstCommercial) return "BEFORE_PRICE";
+    if (
+      lastCommercial >= 0 &&
+      firstClosingAfterCommercial >= 0 &&
+      index > lastCommercial &&
+      index < firstClosingAfterCommercial
+    ) {
+      return "BETWEEN_REWARD_AND_CREATOR";
+    }
+    if (
+      firstClosingAfterCommercial >= 0 &&
+      lastClosing >= firstClosingAfterCommercial &&
+      index >= firstClosingAfterCommercial &&
+      index <= lastClosing
+    ) {
+      return "CREATOR_DATE_ACTION";
+    }
+    if (lastClosing >= 0 && index > lastClosing) return "AFTER_ACTION";
+    return "UNKNOWN";
+  }
+
+  function sanitizedVisibleSegmentDiagnostics(candidates, excludedCandidates) {
+    const excluded = normalizedTitleExclusions(excludedCandidates);
+    const entries = (candidates || []).slice(0, 30).map((candidate, index) => {
+      const normalized = titleCandidateDescriptor(candidate, "CARD_ORDERED_SEGMENT_WINDOW");
+      return {
+        order: Number.isSafeInteger(candidate?.segment_order)
+          ? Math.max(1, Math.min(candidate.segment_order, 1000))
+          : index + 1,
+        text: sanitizeDiagnosticVisibleText(normalized.text),
+        reason: titleRejectionReason(normalized.text, excluded, true)
+      };
+    });
+    return entries.map((entry, index) => ({
+      order: entry.order,
+      text: entry.text,
+      rejection_reason: entry.reason,
+      region: diagnosticRegionForEntry(entries, index)
+    }));
+  }
+
+  function sanitizedMissingTitleAncestorContext(context) {
+    const safeCount = (value, maximum) =>
+      Number.isSafeInteger(value) ? Math.max(0, Math.min(value, maximum)) : 0;
+    const eligibleAncestors = (context?.eligible_ancestors || []).slice(0, 10).map((candidate) => ({
+      depth: safeCount(candidate?.depth, 10),
+      score: Number.isFinite(candidate?.score)
+        ? Math.max(-10000, Math.min(candidate.score, 10000))
+        : 0,
+      post_link_count: safeCount(candidate?.post_link_count, 100),
+      safe_title_candidate_count: safeCount(candidate?.safe_title_candidate_count, 1000),
+      ordered_segment_count: safeCount(candidate?.ordered_segment_count, 1000),
+      has_price_signal: Boolean(candidate?.has_price_signal),
+      has_reward_signal: Boolean(candidate?.has_reward_signal),
+      has_creator_signal: Boolean(candidate?.has_creator_signal),
+      has_affiliate_copy_action: Boolean(candidate?.has_affiliate_copy_action)
+    }));
+    const visibleSegmentAncestors = (context?.visible_segment_ancestors || [])
+      .slice(0, 3)
+      .map((candidate) => ({
+        depth: safeCount(candidate?.depth, 10),
+        selected: Boolean(candidate?.selected),
+        segments: sanitizedVisibleSegmentDiagnostics(
+          candidate?.segments,
+          candidate?.excluded_candidates
+        )
+      }));
+    return { eligibleAncestors, visibleSegmentAncestors };
+  }
+
   function selectPostTitle(primaryCandidates, segmentCandidates, leafCandidates, excludedCandidates) {
     const excluded = normalizedTitleExclusions(excludedCandidates);
     const rejectionReasons = [];
@@ -505,7 +620,7 @@
       .map((tag) => (SAFE_DIAGNOSTIC_TAGS.has(tag) ? tag : "other"));
     const safeCount = (value, maximum) =>
       Number.isSafeInteger(value) ? Math.max(0, Math.min(value, maximum)) : 0;
-    return {
+    const diagnostic = {
       post_uuid: postUuid,
       text_node_count: textNodeCount,
       anonymized_dom_tag_sequence: anonymizedTagSequence,
@@ -526,6 +641,14 @@
       segment_window_found: Boolean(selection.segment_window_found),
       missing_reason: selection.title_missing_reason
     };
+    const ancestorContext = sanitizedMissingTitleAncestorContext(context);
+    if (ancestorContext.eligibleAncestors.length > 0) {
+      diagnostic.eligible_ancestors = ancestorContext.eligibleAncestors;
+    }
+    if (ancestorContext.visibleSegmentAncestors.length > 0) {
+      diagnostic.visible_segment_ancestors = ancestorContext.visibleSegmentAncestors;
+    }
+    return diagnostic;
   }
 
   function parseLikes(candidates) {
