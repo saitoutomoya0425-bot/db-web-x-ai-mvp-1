@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.4";
+  const COLLECTOR_VERSION = "0.1.5";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -234,6 +234,7 @@
     "SEMANTIC",
     "POST_LINK",
     "NEARBY_SEMANTIC",
+    "CARD_ORDERED_SEGMENT_WINDOW",
     "CARD_ORDERED_VISIBLE_LEAF"
   ]);
   const SAFE_DIAGNOSTIC_TAGS = new Set([
@@ -256,6 +257,58 @@
     "svg",
     "video"
   ]);
+
+  function scorePostCardContainerCandidate(candidate) {
+    const postLinkCount = Number.isSafeInteger(candidate?.post_link_count)
+      ? candidate.post_link_count
+      : 0;
+    const textLength = Number.isSafeInteger(candidate?.text_length)
+      ? candidate.text_length
+      : 0;
+    if (!candidate?.contains_target_post || postLinkCount !== 1 || candidate?.is_page_level) {
+      return { eligible: false, score: -10000 };
+    }
+    if (textLength > 8000) return { eligible: false, score: -10000 };
+
+    let score = 20;
+    if (candidate.has_price_signal) score += 5;
+    if (candidate.has_reward_signal) score += 6;
+    if (candidate.has_affiliate_copy_action) score += 24;
+    if (candidate.has_profile_action) score += 3;
+    if (candidate.has_creator_signal) score += 8;
+    if (candidate.has_relative_date_signal) score += 4;
+    if (candidate.has_duration_signal) score += 2;
+    if (candidate.has_post_action) score += 6;
+    if (candidate.has_price_signal && candidate.has_reward_signal) score += 4;
+    if (candidate.has_affiliate_copy_action && candidate.has_creator_signal) score += 8;
+    if ((candidate.title_window_candidate_count || 0) > 0) score += 30;
+    if (textLength >= 12 && textLength <= 3000) score += 2;
+    if (textLength > 3500) score -= 30;
+    if (candidate.has_page_navigation) score -= 40;
+    if (candidate.has_category_ui) score -= 20;
+    return { eligible: true, score };
+  }
+
+  function selectPostCardContainerCandidate(candidates) {
+    const scored = (candidates || [])
+      .map((candidate, candidateIndex) => {
+        const result = scorePostCardContainerCandidate(candidate);
+        return {
+          ...candidate,
+          candidate_index: candidateIndex,
+          selected_container_score: result.score,
+          eligible: result.eligible
+        };
+      })
+      .filter((candidate) => candidate.eligible)
+      .sort((left, right) => {
+        if (right.selected_container_score !== left.selected_container_score) {
+          return right.selected_container_score - left.selected_container_score;
+        }
+        return (left.depth || 0) - (right.depth || 0);
+      });
+    return scored[0] || null;
+  }
 
   function titleCandidateDescriptor(candidate, fallbackStrategy) {
     const descriptor =
@@ -311,16 +364,81 @@
     return null;
   }
 
-  function selectPostTitle(primaryCandidates, leafCandidates, excludedCandidates) {
-    const excluded = [...new Set(
+  function normalizedTitleExclusions(excludedCandidates) {
+    return [...new Set(
       (excludedCandidates || [])
         .map(normalizeSpace)
         .filter(Boolean)
         .flatMap((value) => [value, value.startsWith("@") ? value.slice(1) : value])
     )];
+  }
+
+  function evaluateOrderedSegmentWindow(candidates, excludedCandidates) {
+    const excluded = normalizedTitleExclusions(excludedCandidates);
+    const entries = (candidates || []).map((candidate) => {
+      const normalized = titleCandidateDescriptor(candidate, "CARD_ORDERED_SEGMENT_WINDOW");
+      return {
+        ...normalized,
+        reason: titleRejectionReason(normalized.text, excluded, true)
+      };
+    });
+    const commercialReasons = new Set([
+      "PRICE",
+      "REWARD",
+      "PRICE_OR_REWARD_AMOUNT",
+      "REWARD_RATE"
+    ]);
+    const closingReasons = new Set([
+      "CREATOR_OR_USERNAME",
+      "USERNAME",
+      "RELATIVE_DATE",
+      "AFFILIATE_OR_PROFILE_ACTION",
+      "ACTION_LABEL"
+    ]);
+    const rejectionReasons = entries.map((entry) => entry.reason).filter(Boolean);
+    let selected = null;
+    let segmentWindowFound = false;
+    let safeCandidateCount = 0;
+
+    for (let index = 0; index < entries.length; index += 1) {
+      const hasCommercialBefore = entries
+        .slice(0, index)
+        .some((entry) => commercialReasons.has(entry.reason));
+      const hasClosingAfter = entries
+        .slice(index + 1)
+        .some((entry) => closingReasons.has(entry.reason));
+      if (!hasCommercialBefore || !hasClosingAfter) continue;
+      segmentWindowFound = true;
+      if (!entries[index].reason) {
+        safeCandidateCount += 1;
+        if (!selected) selected = entries[index];
+      }
+    }
+
+    return {
+      title: selected?.text || null,
+      chosen_strategy: selected?.strategy || "NONE",
+      rejection_reason_codes: [...new Set(rejectionReasons)],
+      segment_window_found: segmentWindowFound,
+      safe_candidate_count: safeCandidateCount
+    };
+  }
+
+  function summarizePostTitleSegmentWindow(candidates, excludedCandidates) {
+    const result = evaluateOrderedSegmentWindow(candidates, excludedCandidates);
+    return {
+      segment_window_found: result.segment_window_found,
+      safe_candidate_count: result.safe_candidate_count
+    };
+  }
+
+  function selectPostTitle(primaryCandidates, segmentCandidates, leafCandidates, excludedCandidates) {
+    const excluded = normalizedTitleExclusions(excludedCandidates);
     const rejectionReasons = [];
     const primary = primaryCandidates || [];
+    const segments = segmentCandidates || [];
     const fallback = leafCandidates || [];
+    const candidateCount = primary.length + segments.length + fallback.length;
 
     for (const candidate of primary) {
       const normalized = titleCandidateDescriptor(candidate, "SEMANTIC");
@@ -329,11 +447,24 @@
         return {
           title: normalized.text,
           chosen_strategy: normalized.strategy,
-          candidate_count: primary.length + fallback.length,
-          rejection_reason_codes: [...new Set(rejectionReasons)]
+          candidate_count: candidateCount,
+          rejection_reason_codes: [...new Set(rejectionReasons)],
+          segment_window_found: false
         };
       }
       rejectionReasons.push(reason);
+    }
+
+    const segmentResult = evaluateOrderedSegmentWindow(segments, excludedCandidates);
+    rejectionReasons.push(...segmentResult.rejection_reason_codes);
+    if (segmentResult.title) {
+      return {
+        title: segmentResult.title,
+        chosen_strategy: segmentResult.chosen_strategy,
+        candidate_count: candidateCount,
+        rejection_reason_codes: [...new Set(rejectionReasons)],
+        segment_window_found: true
+      };
     }
 
     for (const candidate of fallback) {
@@ -343,19 +474,20 @@
         return {
           title: normalized.text,
           chosen_strategy: normalized.strategy,
-          candidate_count: primary.length + fallback.length,
-          rejection_reason_codes: [...new Set(rejectionReasons)]
+          candidate_count: candidateCount,
+          rejection_reason_codes: [...new Set(rejectionReasons)],
+          segment_window_found: segmentResult.segment_window_found
         };
       }
       rejectionReasons.push(reason);
     }
 
-    const candidateCount = primary.length + fallback.length;
     return {
       title: null,
       chosen_strategy: "NONE",
       candidate_count: candidateCount,
       rejection_reason_codes: [...new Set(rejectionReasons)],
+      segment_window_found: segmentResult.segment_window_found,
       title_missing_reason:
         candidateCount === 0
           ? "NO_VISIBLE_TITLE_CANDIDATES"
@@ -371,6 +503,8 @@
       .slice(0, 80)
       .map((tag) => normalizeSpace(tag).toLowerCase())
       .map((tag) => (SAFE_DIAGNOSTIC_TAGS.has(tag) ? tag : "other"));
+    const safeCount = (value, maximum) =>
+      Number.isSafeInteger(value) ? Math.max(0, Math.min(value, maximum)) : 0;
     return {
       post_uuid: postUuid,
       text_node_count: textNodeCount,
@@ -378,7 +512,19 @@
       candidate_count: selection.candidate_count,
       rejection_reason_codes: selection.rejection_reason_codes,
       chosen_strategy: selection.chosen_strategy,
-      title_missing_reason: selection.title_missing_reason
+      title_missing_reason: selection.title_missing_reason,
+      selected_container_depth: safeCount(context?.selected_container_depth, 10),
+      selected_container_score: Number.isFinite(context?.selected_container_score)
+        ? Math.max(-10000, Math.min(context.selected_container_score, 10000))
+        : 0,
+      post_link_count: safeCount(context?.post_link_count, 100),
+      has_price_signal: Boolean(context?.has_price_signal),
+      has_reward_signal: Boolean(context?.has_reward_signal),
+      has_affiliate_copy_action: Boolean(context?.has_affiliate_copy_action),
+      has_creator_signal: Boolean(context?.has_creator_signal),
+      ordered_segment_count: safeCount(context?.ordered_segment_count, 1000),
+      segment_window_found: Boolean(selection.segment_window_found),
+      missing_reason: selection.title_missing_reason
     };
   }
 
@@ -449,6 +595,7 @@
     const username = profile?.username || affiliateCreatorRoute?.username || parseUsernameFromText(text);
     const titleSelection = selectPostTitle(
       descriptor.title_candidates || [descriptor.anchor_text],
+      descriptor.title_segment_candidates || [],
       descriptor.title_leaf_candidates || [],
       [
         ...(descriptor.creator_name_candidates || []),
@@ -960,8 +1107,11 @@
     parsePostUrl,
     parseRelativePublishedText,
     runPagination,
+    scorePostCardContainerCandidate,
+    selectPostCardContainerCandidate,
     sourceSurfaceFromUrl,
     stableHash,
+    summarizePostTitleSegmentWindow,
     validateExportBundle,
     waitForDistinctPage
   });

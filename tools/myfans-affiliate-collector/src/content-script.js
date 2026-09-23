@@ -65,6 +65,128 @@
     return fallback || anchor;
   }
 
+  function orderedVisibleSegmentCandidates(element) {
+    if (!(element instanceof Element) || !isVisible(element)) return [];
+    return String(element.innerText || element.textContent || "")
+      .split(/[\r\n]+/)
+      .map(core.normalizeSpace)
+      .filter(Boolean)
+      .slice(0, 240)
+      .map((text, index) => ({
+        text,
+        strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+        segment_order: index + 1
+      }));
+  }
+
+  function postCardCandidateEvidence(element, targetPostUuid, depth) {
+    const anchors = [
+      ...(element.matches("a[href]") && isVisible(element) ? [element] : []),
+      ...allVisible(element, "a[href]")
+    ];
+    const postUuids = new Set(
+      anchors
+        .map((candidate) => core.parsePostUrl(candidate.href)?.post_uuid)
+        .filter(Boolean)
+    );
+    const creatorLinkEntries = anchors
+      .map((candidate) => ({
+        identity:
+          core.parseCreatorProfileUrl(candidate.href) ||
+          core.parseAffiliateCreatorRoute(candidate.href),
+        text: visibleText(candidate)
+      }))
+      .filter((entry) => entry.identity);
+    const creatorCandidates = creatorLinkEntries
+      .flatMap((entry) => [entry.text, core.cleanCreatorName(entry.text)])
+      .filter((text) => text && !text.startsWith("@"));
+    const creatorExclusions = [
+      ...creatorCandidates,
+      ...creatorLinkEntries.flatMap((entry) => [
+        entry.identity.username,
+        entry.identity.username ? "@" + entry.identity.username : null
+      ])
+    ].filter(Boolean);
+    const text = visibleText(element);
+    const canBeSingleCard = postUuids.size === 1 && text.length <= 8000;
+    const segments = canBeSingleCard ? orderedVisibleSegmentCandidates(element) : [];
+    const leafCandidates = canBeSingleCard
+      ? orderedVisibleLeafTitleData(element).candidates
+      : [];
+    const segmentWindow = core.summarizePostTitleSegmentWindow(segments, creatorExclusions);
+    const leafWindow = core.summarizePostTitleSegmentWindow(leafCandidates, creatorExclusions);
+    const categorySignalCount = [
+      "見た目",
+      "プレイ",
+      "タイプ",
+      "シチュエーション",
+      "コスチューム"
+    ].filter((label) => text.includes(label)).length;
+    const hasAffiliateCopyAction =
+      /(?:投稿|作品)(?:の)?アフィ(?:リエイト)?URL(?:の|を)?コピー/.test(text);
+    return {
+      depth,
+      contains_target_post: postUuids.has(targetPostUuid),
+      post_link_count: postUuids.size,
+      text_length: text.length,
+      has_price_signal: /(?:単品販売価格|販売価格)/.test(text),
+      has_reward_signal: /(?:アフィ(?:リエイト)?報酬率|報酬率|報酬額)/.test(text),
+      has_affiliate_copy_action: hasAffiliateCopyAction,
+      has_profile_action: /プロフィールURL/.test(text),
+      has_creator_signal: creatorLinkEntries.length > 0 || creatorCandidates.length > 0,
+      has_relative_date_signal: Boolean(core.parseRelativePublishedText(text)),
+      has_duration_signal: Boolean(core.parseDuration(text)),
+      has_post_action:
+        hasAffiliateCopyAction ||
+        /(?:投稿|作品)(?:を見る|を開く|詳細)/.test(text),
+      title_window_candidate_count: Math.max(
+        segmentWindow.safe_candidate_count,
+        leafWindow.safe_candidate_count
+      ),
+      has_page_navigation:
+        element.matches("nav, [role='navigation']") ||
+        Boolean(element.querySelector("nav, [role='navigation']")) ||
+        (/ホーム/.test(text) && /アフィ検索/.test(text) && /レポート/.test(text)),
+      has_category_ui: categorySignalCount >= 3,
+      is_page_level: element.matches("main, body")
+    };
+  }
+
+  function selectPostCardContainer(anchor) {
+    const identity = core.parsePostUrl(anchor.href);
+    const candidates = [];
+    let current = anchor;
+    for (let depth = 0; current && depth < 10; depth += 1, current = current.parentElement) {
+      if (!(current instanceof Element)) continue;
+      if (current.matches("main, body")) break;
+      candidates.push({
+        element: current,
+        evidence: postCardCandidateEvidence(current, identity.post_uuid, depth)
+      });
+    }
+    const selection = core.selectPostCardContainerCandidate(
+      candidates.map((candidate) => candidate.evidence)
+    );
+    if (!selection) {
+      return {
+        container: anchor.parentElement || anchor,
+        evidence: {
+          depth: 0,
+          selected_container_score: 0,
+          post_link_count: 1,
+          has_price_signal: false,
+          has_reward_signal: false,
+          has_affiliate_copy_action: false,
+          has_creator_signal: false
+        }
+      };
+    }
+    return {
+      container: candidates[selection.candidate_index].element,
+      evidence: selection
+    };
+  }
+
   function linkDescriptors(container) {
     return allVisible(container, "a[href]").map((anchor) => ({
       href: anchor.href,
@@ -261,16 +383,29 @@
   }
 
   function descriptorForPost(anchor, sourcePageUrl, sourceSurface, collectedAt) {
-    const container = closestSemanticContainer(anchor);
+    const cardSelection = selectPostCardContainer(anchor);
+    const container = cardSelection.container;
     const creatorCandidates = creatorNameCandidates(container);
     const leafTitleData = orderedVisibleLeafTitleData(container);
+    const segmentCandidates = orderedVisibleSegmentCandidates(container);
     return {
       post_href: anchor.href,
       anchor_text: visibleText(anchor),
       text: visibleText(container),
       title_candidates: postTitleCandidates(container, anchor),
+      title_segment_candidates: segmentCandidates,
       title_leaf_candidates: leafTitleData.candidates,
-      title_diagnostic_context: leafTitleData.context,
+      title_diagnostic_context: {
+        ...leafTitleData.context,
+        selected_container_depth: cardSelection.evidence.depth,
+        selected_container_score: cardSelection.evidence.selected_container_score,
+        post_link_count: cardSelection.evidence.post_link_count,
+        has_price_signal: cardSelection.evidence.has_price_signal,
+        has_reward_signal: cardSelection.evidence.has_reward_signal,
+        has_affiliate_copy_action: cardSelection.evidence.has_affiliate_copy_action,
+        has_creator_signal: cardSelection.evidence.has_creator_signal,
+        ordered_segment_count: segmentCandidates.length
+      },
       creator_name_candidates: creatorCandidates,
       likes_candidates: likeCandidates(container),
       links: linkDescriptors(container),

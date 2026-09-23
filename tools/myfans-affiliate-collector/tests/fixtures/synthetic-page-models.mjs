@@ -83,6 +83,11 @@ const orderedLeaf = (text) => ({
   strategy: "CARD_ORDERED_VISIBLE_LEAF"
 });
 
+const orderedSegment = (text) => ({
+  text,
+  strategy: "CARD_ORDERED_SEGMENT_WINDOW"
+});
+
 export const syntheticPostLeafTitleCases = Object.freeze([
   {
     name: "plain div title",
@@ -158,6 +163,220 @@ export const syntheticPostLeafTitleCases = Object.freeze([
       orderedLeaf("@synthetic_creator"),
       orderedLeaf("3日前"),
       orderedLeaf("投稿のアフィURLのコピー")
+    ],
+    expected: null
+  }
+]);
+
+export const syntheticPostCardBoundaryCases = Object.freeze([
+  {
+    name: "outer card completes an inner media and commerce block",
+    candidates: [
+      {
+        id: "inner",
+        depth: 2,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 140,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: false,
+        has_profile_action: false,
+        has_creator_signal: false,
+        has_relative_date_signal: false,
+        has_duration_signal: true,
+        has_post_action: false,
+        title_window_candidate_count: 0,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      },
+      {
+        id: "outer",
+        depth: 3,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 310,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 1,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      }
+    ],
+    expected: "outer"
+  },
+  {
+    name: "row containing two cards is ineligible",
+    candidates: [
+      {
+        id: "single-card",
+        depth: 4,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 300,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 1,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      },
+      {
+        id: "two-card-row",
+        depth: 5,
+        contains_target_post: true,
+        post_link_count: 2,
+        text_length: 700,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 2,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      }
+    ],
+    expected: "single-card"
+  },
+  {
+    name: "outer title window beats a metadata-complete inner block",
+    candidates: [
+      {
+        id: "metadata-inner",
+        depth: 2,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 250,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 0,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      },
+      {
+        id: "title-outer",
+        depth: 3,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 320,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 1,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      }
+    ],
+    expected: "title-outer"
+  },
+  {
+    name: "narrow complete card wins a score tie",
+    candidates: [
+      {
+        id: "inner-complete",
+        depth: 2,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 240,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 1,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      },
+      {
+        id: "outer-equivalent",
+        depth: 3,
+        contains_target_post: true,
+        post_link_count: 1,
+        text_length: 340,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_profile_action: true,
+        has_creator_signal: true,
+        has_relative_date_signal: true,
+        has_duration_signal: true,
+        has_post_action: true,
+        title_window_candidate_count: 1,
+        has_page_navigation: false,
+        has_category_ui: false,
+        is_page_level: false
+      }
+    ],
+    expected: "inner-complete"
+  }
+]);
+
+export const syntheticPostSegmentTitleCases = Object.freeze([
+  {
+    name: "title after reward and before creator",
+    segments: [
+      orderedSegment("単品販売価格 5,980円"),
+      orderedSegment("アフィ報酬率:50%（¥2,511）"),
+      orderedSegment("Reward後、creator前のtitle"),
+      orderedSegment("Synthetic Creator"),
+      orderedSegment("3日前")
+    ],
+    expected: "Reward後、creator前のtitle"
+  },
+  {
+    name: "nested sibling title segment",
+    segments: [
+      orderedSegment("アフィ報酬率 30%"),
+      orderedSegment("Nested sibling title…"),
+      orderedSegment("@synthetic_creator"),
+      orderedSegment("投稿のアフィURLのコピー")
+    ],
+    expected: "Nested sibling title…"
+  },
+  {
+    name: "metadata only segment window",
+    segments: [
+      orderedSegment("単品販売価格 5,980円"),
+      orderedSegment("アフィ報酬率:50%（¥2,511）"),
+      orderedSegment("Synthetic Creator"),
+      orderedSegment("3日前"),
+      orderedSegment("投稿のアフィURLのコピー")
     ],
     expected: null
   }

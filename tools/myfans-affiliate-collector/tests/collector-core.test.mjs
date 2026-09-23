@@ -8,8 +8,10 @@ import { fileURLToPath } from "node:url";
 import {
   snapshot,
   syntheticCreatorDescriptor,
+  syntheticPostCardBoundaryCases,
   syntheticPostDescriptor,
   syntheticPostLeafTitleCases,
+  syntheticPostSegmentTitleCases,
   syntheticPostTitleCases
 } from "./fixtures/synthetic-page-models.mjs";
 
@@ -36,8 +38,8 @@ function fakeClock() {
   };
 }
 
-test("reports collector version 0.1.4", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.4");
+test("reports collector version 0.1.5", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.5");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -79,6 +81,21 @@ test("uses a visible Affiliate Center creator route for identity without inventi
     core.parseAffiliateCreatorRoute("https://www.affiliate.myfans.jp/affiliates/search/creators/tab/registered"),
     null
   );
+});
+
+test("scores every ancestor and selects the complete single-post card boundary", () => {
+  for (const boundaryCase of syntheticPostCardBoundaryCases) {
+    const selected = plain(core.selectPostCardContainerCandidate(boundaryCase.candidates));
+    assert.equal(selected.id, boundaryCase.expected, boundaryCase.name);
+  }
+  const rowCase = syntheticPostCardBoundaryCases.find(
+    (item) => item.name === "row containing two cards is ineligible"
+  );
+  const row = rowCase.candidates.find((candidate) => candidate.id === "two-card-row");
+  assert.deepEqual(plain(core.scorePostCardContainerCandidate(row)), {
+    eligible: false,
+    score: -10000
+  });
 });
 
 test("extracts the synthetic post title, creator, prices, rate, duration, likes, and relative time", () => {
@@ -214,6 +231,34 @@ test("uses ordered visible leaf text only after semantic title candidates fail",
   }
 });
 
+test("recovers only safe ordered segments between commerce and creator or action blocks", () => {
+  for (const titleCase of syntheticPostSegmentTitleCases) {
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        title_candidates: [],
+        title_segment_candidates: titleCase.segments,
+        title_leaf_candidates: [],
+        title_diagnostic_context: {
+          text_node_count: titleCase.segments.length,
+          anonymized_tag_sequence: ["article", "div", "span"],
+          selected_container_depth: 3,
+          selected_container_score: 110,
+          post_link_count: 1,
+          has_price_signal: true,
+          has_reward_signal: true,
+          has_affiliate_copy_action: true,
+          has_creator_signal: true,
+          ordered_segment_count: titleCase.segments.length
+        }
+      })
+    );
+    assert.equal(record.title, titleCase.expected, titleCase.name);
+    if (titleCase.expected) assert.equal("title_diagnostic" in record, false, titleCase.name);
+    else assert.equal(record.title_diagnostic.segment_window_found, true, titleCase.name);
+  }
+});
+
 test("emits only sanitized reason codes and anonymous structure when title remains missing", () => {
   const titleCase = syntheticPostLeafTitleCases.find((item) => item.name === "truly missing title");
   const record = plain(
@@ -223,7 +268,15 @@ test("emits only sanitized reason codes and anonymous structure when title remai
       title_leaf_candidates: titleCase.leaves,
       title_diagnostic_context: {
         text_node_count: titleCase.leaves.length,
-        anonymized_tag_sequence: ["ARTICLE", "DIV", "SPAN", "x-private-card", "SCRIPT"]
+        anonymized_tag_sequence: ["ARTICLE", "DIV", "SPAN", "x-private-card", "SCRIPT"],
+        selected_container_depth: 4,
+        selected_container_score: 108,
+        post_link_count: 1,
+        has_price_signal: true,
+        has_reward_signal: true,
+        has_affiliate_copy_action: true,
+        has_creator_signal: true,
+        ordered_segment_count: 9
       }
     })
   );
@@ -245,7 +298,17 @@ test("emits only sanitized reason codes and anonymous structure when title remai
       "AFFILIATE_OR_PROFILE_ACTION"
     ],
     chosen_strategy: "NONE",
-    title_missing_reason: "NO_SAFE_NATURAL_TEXT_AFTER_METADATA_FILTER"
+    title_missing_reason: "NO_SAFE_NATURAL_TEXT_AFTER_METADATA_FILTER",
+    selected_container_depth: 4,
+    selected_container_score: 108,
+    post_link_count: 1,
+    has_price_signal: true,
+    has_reward_signal: true,
+    has_affiliate_copy_action: true,
+    has_creator_signal: true,
+    ordered_segment_count: 9,
+    segment_window_found: false,
+    missing_reason: "NO_SAFE_NATURAL_TEXT_AFTER_METADATA_FILTER"
   });
   const diagnosticText = JSON.stringify(record.title_diagnostic);
   for (const forbiddenValue of ["Synthetic Creator", "5,980", "2,511", "3日前", "x-private-card"]) {
