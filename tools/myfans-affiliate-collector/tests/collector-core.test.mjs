@@ -66,8 +66,8 @@ function missingTitleDescriptorWithDiagnostics(overrides = {}) {
   };
 }
 
-test("reports collector version 0.1.6", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.6");
+test("reports collector version 0.1.7", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.1.7");
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -284,6 +284,84 @@ test("recovers only safe ordered segments between commerce and creator or action
     assert.equal(record.title, titleCase.expected, titleCase.name);
     if (titleCase.expected) assert.equal("title_diagnostic" in record, false, titleCase.name);
     else assert.equal(record.title_diagnostic.segment_window_found, true, titleCase.name);
+  }
+});
+
+test("accepts natural post titles that contain inline metadata tokens", () => {
+  const acceptedTitles = [
+    "期間限定で¥4,980にしました…",
+    "右上のいいねとブックマークして感想を教えてください…",
+    "彼氏が3日前にできたらしく、その話を詳しく聞きました…",
+    "Synthetic Creatorにお願いして特別な動画を撮影しました…",
+    "今日は最高だった♡",
+    "❤たくさんありがとう、また感想を聞かせてください"
+  ];
+
+  for (const title of acceptedTitles) {
+    const segments = [
+      "アフィ報酬率50%",
+      title,
+      "Synthetic Creator",
+      "3日前",
+      "投稿のアフィURLのコピー"
+    ].map((text, index) => ({
+      text,
+      strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+      segment_order: index + 1
+    }));
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        title_candidates: [],
+        title_segment_candidates: segments,
+        title_leaf_candidates: []
+      })
+    );
+    assert.equal(record.title, title, title);
+    assert.equal("title_diagnostic" in record, false, title);
+  }
+});
+
+test("continues to reject metadata-only ordered segments", () => {
+  const rejectedTitles = [
+    { text: "¥4,980", reason: "PRICE_OR_REWARD_AMOUNT" },
+    { text: "単品販売価格 ¥4,980", reason: "PRICE" },
+    { text: "アフィ報酬率50%", reason: "REWARD" },
+    { text: "3日前", reason: "RELATIVE_DATE" },
+    { text: "いいね 123", reason: "LIKES" },
+    { text: "♡ 123", reason: "LIKES" },
+    { text: "Synthetic Creator", reason: "CREATOR_OR_USERNAME" },
+    { text: "@synthetic_creator", reason: "USERNAME" },
+    { text: "プロフィールURL", reason: "AFFILIATE_OR_PROFILE_ACTION" },
+    { text: "投稿のアフィURLのコピー", reason: "AFFILIATE_OR_PROFILE_ACTION" }
+  ];
+
+  for (const titleCase of rejectedTitles) {
+    const segments = [
+      "アフィ報酬率50%",
+      titleCase.text,
+      "Synthetic Creator",
+      "3日前",
+      "投稿のアフィURLのコピー"
+    ].map((text, index) => ({
+      text,
+      strategy: "CARD_ORDERED_SEGMENT_WINDOW",
+      segment_order: index + 1
+    }));
+    const record = plain(
+      core.extractPostFromDescriptor({
+        ...syntheticPostDescriptor,
+        title_candidates: [],
+        title_segment_candidates: segments,
+        title_leaf_candidates: []
+      })
+    );
+    assert.equal(record.title, null, titleCase.text);
+    assert.equal(
+      record.title_diagnostic.rejection_reason_codes.includes(titleCase.reason),
+      true,
+      titleCase.text
+    );
   }
 });
 

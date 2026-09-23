@@ -34,7 +34,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest uses only activeTab and the single Affiliate Center host", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.1.6");
+  assert.equal(manifest.version, "0.1.7");
   assert.deepEqual(manifest.permissions, ["activeTab"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.equal("background" in manifest, false);

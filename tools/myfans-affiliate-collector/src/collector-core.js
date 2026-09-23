@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.6";
+  const COLLECTOR_VERSION = "0.1.7";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
@@ -324,12 +324,37 @@
     };
   }
 
+  function hasSubstantialNaturalTitleText(value, removableValues, removablePatterns) {
+    let remainder = normalizeSpace(value);
+    for (const removableValue of [...new Set(removableValues || [])]
+      .map(normalizeSpace)
+      .filter(Boolean)
+      .sort((left, right) => right.length - left.length)) {
+      remainder = remainder.split(removableValue).join(" ");
+    }
+    for (const removablePattern of removablePatterns || []) {
+      remainder = remainder.replace(removablePattern, " ");
+    }
+    remainder = remainder
+      .replace(/[¥￥]\s*[0-9][0-9,，]*/g, " ")
+      .replace(/[0-9]+(?:\.[0-9]+)?\s*%/g, " ")
+      .replace(/[0-9][0-9,，]*(?:\s*(?:円|件))?/g, " ")
+      .replace(/[\p{P}\p{S}\s_]+/gu, "");
+    return (remainder.match(/\p{L}/gu) || []).length >= 6;
+  }
+
   function titleRejectionReason(value, excluded, strictNaturalText) {
     if (!value) return "EMPTY";
     if (value.length < 2) return "TOO_SHORT";
     if (value.length > 1000) return "TOO_LONG";
     if (/^@/.test(value)) return "USERNAME";
-    if (excluded.some((excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue))) {
+    const matchingExcludedValues = excluded.filter(
+      (excludedValue) => excludedValue.length >= 2 && value.includes(excludedValue)
+    );
+    if (
+      matchingExcludedValues.length > 0 &&
+      !hasSubstantialNaturalTitleText(value, matchingExcludedValues, [])
+    ) {
       return "CREATOR_OR_USERNAME";
     }
     if (/^(?:動画|画像|video|image)$/i.test(value)) return "MEDIA_BADGE";
@@ -345,7 +370,14 @@
     if (/^(?:限定|無料|有料|新着|おすすめ|公開|非公開|鍵|ロック|lock|購入済み|販売中|公開中|閲覧可能|new|sale|featured)$/i.test(value)) {
       return "BADGE_OR_LOCK_LABEL";
     }
-    if (/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value)) {
+    if (
+      /(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/.test(value) &&
+      !hasSubstantialNaturalTitleText(
+        value,
+        [],
+        [/(?:たった今|昨日|\d+\s*(?:秒|分|時間|日|週間|週|か月|ヶ月|月|年)前)/g]
+      )
+    ) {
       return "RELATIVE_DATE";
     }
     if (/(?:^|\s)\d{1,2}:\d{2}(?::\d{2})?(?:\s|$)/.test(value)) return "DURATION";
@@ -354,11 +386,29 @@
     }
     if (/^[0-9][0-9,，]*\s*(?:件)?$/.test(value)) return "NUMERIC_ONLY";
     if (/^[0-9]+(?:\.[0-9]+)?\s*%$/.test(value)) return "REWARD_RATE";
-    if (/(?:単品販売価格|販売価格|単品販売|価格)/.test(value)) return "PRICE";
+    if (
+      /(?:単品販売価格|販売価格|単品販売|価格)/.test(value) &&
+      !hasSubstantialNaturalTitleText(
+        value,
+        [],
+        [/(?:単品販売価格|販売価格|単品販売|価格)/g]
+      )
+    ) {
+      return "PRICE";
+    }
     if (/(?:アフィ(?:リエイト)?報酬率|報酬率|報酬単価|推定報酬|見込報酬|報酬額)/.test(value)) {
       return "REWARD";
     }
-    if (/(?:いいね|likes?|hearts?|[♡♥❤])/i.test(value)) return "LIKES";
+    if (
+      /(?:いいね|likes?|hearts?|[♡♥❤])/i.test(value) &&
+      !hasSubstantialNaturalTitleText(
+        value,
+        [],
+        [/(?:いいね(?:数|する)?|likes?|hearts?|[♡♥❤]\uFE0F?)/gi]
+      )
+    ) {
+      return "LIKES";
+    }
     if (/^(?:https?:\/\/|www\.)/i.test(value)) return "URL";
     if (strictNaturalText && !/\p{L}/u.test(value)) return "NON_NATURAL_TEXT";
     return null;
