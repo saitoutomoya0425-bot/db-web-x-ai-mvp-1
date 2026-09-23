@@ -54,3 +54,16 @@ node --check tools/myfans-affiliate-collector/src/popup.js
 ```
 
 All fixtures are synthetic and sanitized. No real creator, post, account, or Affiliate Center HTML is stored in the repository.
+
+## DB dry-run preview
+
+Collector `0.1.8` exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
+
+```bash
+node tools/myfans-affiliate-collector/bin/dry-run-import.mjs \
+  /path/to/myfans-affiliate-catalog-*.json --summary-only
+```
+
+Remove `--summary-only` to print the complete normalized preview to standard output. The command never writes an output file, imports a database client, reads environment credentials, or performs a network request. Its report always includes `apply: false`, `db_query_count: 0`, and `db_write_count: 0`.
+
+See [MYFANS_DRY_RUN_IMPORTER.md](../../docs/MYFANS_DRY_RUN_IMPORTER.md) for the identity contract, field mapping, and known schema gaps.
