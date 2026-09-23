@@ -67,3 +67,15 @@ node tools/myfans-affiliate-collector/bin/dry-run-import.mjs \
 Remove `--summary-only` to print the complete normalized preview to standard output. The command never writes an output file, imports a database client, reads environment credentials, or performs a network request. Its report always includes `apply: false`, `db_query_count: 0`, and `db_write_count: 0`.
 
 See [MYFANS_DRY_RUN_IMPORTER.md](../../docs/MYFANS_DRY_RUN_IMPORTER.md) for the identity contract, field mapping, and known schema gaps.
+
+## Read-only database resolution
+
+After the local dry-run passes, resolve migration-029 identities and classify existing rows without writing:
+
+```bash
+node --env-file=.env.local \
+  tools/myfans-affiliate-collector/bin/resolve-staging-plan.mjs \
+  /path/to/myfans-affiliate-catalog-*.json --summary-only
+```
+
+The resolver stops if the MyFans `data_sources` row is absent or ambiguous. Otherwise it issues only three target-bounded `SELECT` queries, reports insert/update/no-op counts, and proves second-run idempotency in memory. It never prints raw database IDs. See [MYFANS_READ_ONLY_STAGING_PLAN.md](../../docs/MYFANS_READ_ONLY_STAGING_PLAN.md).
