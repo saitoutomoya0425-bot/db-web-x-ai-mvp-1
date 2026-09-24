@@ -58,3 +58,7 @@ The view excludes raw metadata, images, account data, and internal database IDs.
 `src/lib/myfans/private-preview.ts` maps an authorized server-side record to a source-neutral preview model. `src/components/private/source-neutral-preview-card.tsx` renders that model with a neutral placeholder, source badge, optional price, canonical link, gate status, and affiliate CTA decision.
 
 There is deliberately no page, route, navigation link, sitemap entry, public query, or production loader for this component. A later authorized phase can mount it behind an explicit private server-side access boundary without changing its data contract.
+
+## Read-only pre-review
+
+Phase 6K.7 adds a deterministic pre-review in `src/lib/myfans/publication-review.ts` and an aggregate-only database runner in `scripts/myfans-publication-review.ts`. It treats current fail-closed publication state as an output rather than a reason for circular human review. The production aggregate result and simulation are recorded in [MyFans publication review classification](./MYFANS_PUBLICATION_REVIEW_CLASSIFICATION.md).
