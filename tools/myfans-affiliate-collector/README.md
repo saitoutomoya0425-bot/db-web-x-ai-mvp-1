@@ -15,10 +15,17 @@ Chrome Manifest V3 extension for exporting catalog text already rendered in the 
 Open the extension popup on a supported page, then select one action:
 
 - **現在ページを取得** exports the visible page once.
-- **一覧を収集（最大5ページ）** follows only a visible, enabled `次へ` control and stops after at most five pages.
+- **新規収集（最大5ページ）** starts at page 1 of the current canonical search/category scope.
+- **続きから収集（最大5ページ）** resumes that same scope from its saved checkpoint.
 - **Diagnostic / Probe** exports an anonymized structure summary when parsing does not match the current UI.
 
-The first two actions download a `myfans-affiliate-catalog-*.json` file. The popup shows post, creator, page, and warning counts plus at most three text-only samples.
+Each bounded list run downloads a run export and a cumulative export. The cumulative state is also held in extension-local storage, keyed by a canonical scope that excludes `page` but includes the route, category/search filters, media filter, and sort. A checkpoint is never reused across different scopes.
+
+Unknown or duplicate pagination/filter query keys are not discarded into a broader scope; resumable collection stops until the scope contract is updated.
+
+Every run remains capped at five successfully collected pages. Resume uses either the exact URL from the visible `次へ` link or returns to the last observed page and activates its normal visible `次へ` control. It never computes or guesses a future page URL.
+
+The popup shows run post, creator, page, warning counts, cumulative unique post count, and at most three text-only samples.
 
 ## Supported pages
 
@@ -34,11 +41,20 @@ The content script is not installed on report, account, media-management, or pay
 
 - Text and visible public URLs only
 - No image, avatar, thumbnail, OGP, poster, media blob, or video URL fields
-- No cookies, tokens, browser storage, credential values, raw HTML, screenshots, network capture, or request interception
+- No cookies, tokens, page local/session storage, credential values, raw HTML, screenshots, network capture, or request interception
+- Checkpoint and cumulative catalogs use only `chrome.storage.local`; the page's storage is never read
 - No extension-originated `fetch` or XHR
 - No copy/generate button activation; only the normal visible `次へ` control may be clicked
 - Login redirects, rate-limit/anti-bot text, unexpected visible modals, timeouts, and duplicate page fingerprints stop collection
-- Phase 1 output is local JSON only; the included staging-plan function has `apply: false` and performs no database operation
+- Output is local JSON only; the included staging-plan function has `apply: false` and performs no database operation
+
+## Checkpoint and merge contract
+
+The checkpoint records collector version, canonical scope, start/last page, an observed next-page candidate, pages collected in the run, cumulative UUID count, seen UUIDs, timestamps, completion state, and stop reason. Missing or disabled `次へ` is the only `COMPLETE` condition. Five-page bounds remain `IN_PROGRESS`; login, rate-limit/anti-bot, modal, timeout, or duplicate-page stops remain `INTERRUPTED`.
+
+Cumulative merge uses the strict post UUID as identity. A new UUID is added, an identical allowed-field observation is a no-op, an allowed-field change replaces the latest observation as an update candidate, and a UUID/creator identity conflict fails closed before storage is changed. Records absent from later snapshots are never deleted or unpublished. Per-post and per-creator sidecars retain first/last seen time, run, source page, and collector version without raw HTML or media URLs.
+
+The run export remains the existing `myfans-affiliate-catalog-local-v1` record shape with run metadata. The cumulative export uses the same catalog record schema plus `cumulative_schema_version`, checkpoint/run summaries, and observation sidecars. The dry-run importer accepts both collector `0.1.8` and `0.2.0`; it still performs no database or network operation.
 
 See [MYFANS_LOCAL_COLLECTOR.md](../../docs/MYFANS_LOCAL_COLLECTOR.md) for the field policy and operational notes.
 
@@ -57,7 +73,7 @@ All fixtures are synthetic and sanitized. No real creator, post, account, or Aff
 
 ## DB dry-run preview
 
-Collector `0.1.8` exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
+Collector `0.1.8` snapshot exports and `0.2.0` run/cumulative exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
 
 ```bash
 node tools/myfans-affiliate-collector/bin/dry-run-import.mjs \

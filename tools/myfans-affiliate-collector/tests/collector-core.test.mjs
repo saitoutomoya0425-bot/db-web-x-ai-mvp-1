@@ -66,8 +66,51 @@ function missingTitleDescriptorWithDiagnostics(overrides = {}) {
   };
 }
 
-test("reports collector version 0.1.8", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.1.8");
+function cumulativePost(index, page, overrides = {}) {
+  const uuid = `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+  return {
+    ...plain(core.extractPostFromDescriptor(syntheticPostDescriptor)),
+    post_uuid: uuid,
+    post_public_url: `https://myfans.jp/posts/${uuid}`,
+    title: `Synthetic cumulative title ${index + 1}`,
+    source_page_url: `https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=${page}`,
+    collected_at: `2026-09-${String(Math.min(30, page)).padStart(2, "0")}T00:00:00.000Z`,
+    ...overrides
+  };
+}
+
+function boundedRun({ startPage, pageCount = 5, posts, runId, stopReason = "MAX_PAGE_LIMIT_REACHED" }) {
+  const perPage = Math.max(1, Math.ceil(posts.length / pageCount));
+  const pages = Array.from({ length: pageCount }, (_, offset) => {
+    const page = startPage + offset;
+    return snapshot({
+      source_page_url: `https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=${page}`,
+      collected_at: `2026-09-${String(Math.min(30, page)).padStart(2, "0")}T00:00:00.000Z`,
+      posts: posts.slice(offset * perPage, (offset + 1) * perPage)
+    });
+  });
+  const bundle = plain(core.buildExport(pages, {
+    collected_at: pages.at(-1).collected_at,
+    stop_reason: stopReason
+  }));
+  return plain(core.attachCollectionRunMetadata(bundle, {
+    run_id: runId,
+    mode: startPage === 1 ? "NEW" : "RESUME",
+    expected_start_page: startPage,
+    expected_scope_key: core.canonicalCollectionScope(pages[0].source_page_url).key,
+    next_control: stopReason === "NEXT_CONTROL_ABSENT_OR_DISABLED"
+      ? { present: false, enabled: false, href: null }
+      : {
+          present: true,
+          enabled: true,
+          href: `https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=${startPage + pageCount}`
+        }
+  }));
+}
+
+test("reports collector version 0.2.0 and a five-page hard limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.2.0");
+  assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
 test("strictly accepts a public MyFans post UUID URL", () => {
@@ -928,6 +971,26 @@ test("enforces the five-page pilot limit", async () => {
   assert.equal(bundle.stop_reason, "MAX_PAGE_LIMIT_REACHED");
 });
 
+test("marks exactly five pages complete when the fifth page has no enabled next control", async () => {
+  let page = 1;
+  const makePage = (pageNumber) => snapshot({
+    source_page_url: `https://www.affiliate.myfans.jp/affiliates/search?page=${pageNumber}`,
+    posts: [{ post_uuid: `20000000-0000-4000-8000-${String(pageNumber).padStart(12, "0")}` }]
+  });
+  const bundle = plain(await core.runPagination({
+    max_pages: 5,
+    collect_current: async () => makePage(page),
+    get_next_control: async () => page < 5 ? { label: "次へ" } : null,
+    activate_next: async () => {},
+    wait_for_page_change: async () => {
+      page += 1;
+      return { status: "READY", reason: null, snapshot: makePage(page) };
+    }
+  }));
+  assert.equal(bundle.counts.pages_scanned, 5);
+  assert.equal(bundle.stop_reason, "NEXT_CONTROL_ABSENT_OR_DISABLED");
+});
+
 test("stops on login redirects, anti-bot/rate-limit text, and unexpected modals", () => {
   assert.equal(
     core.detectStopCondition({ url: "https://www.affiliate.myfans.jp/signin", visible_text: "", has_login_form: true }),
@@ -1009,4 +1072,202 @@ test("produces a design-only text staging plan with null image columns and no re
   assert.equal(plan.targets.myfans_posts[0].published_at, null);
   assert.equal(plan.targets.myfans_plans.length, 0);
   assert.equal(plan.unresolved_plan_candidates[0].import_status, "NEEDS_STABLE_PLAN_ID");
+});
+
+test("canonicalizes collection scope without page and rejects cross-scope resume", () => {
+  const first = plain(
+    core.collectionContextFromUrl(
+      "https://www.affiliate.myfans.jp/affiliates/search?sort=popular&page=6&sexual_orientation=woman"
+    )
+  );
+  const same = plain(
+    core.collectionContextFromUrl(
+      "https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=10&sort=popular"
+    )
+  );
+  const other = plain(
+    core.collectionContextFromUrl(
+      "https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=man&page=6&sort=popular"
+    )
+  );
+  assert.equal(first.collection_scope.key, same.collection_scope.key);
+  assert.notEqual(first.collection_scope.key, other.collection_scope.key);
+  assert.equal(first.page, 6);
+  assert.equal(
+    core.collectionContextFromUrl(
+      "https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&unknown_filter=value"
+    ),
+    null
+  );
+
+  const run = boundedRun({
+    startPage: 1,
+    posts: Array.from({ length: 5 }, (_, index) => cumulativePost(index, index + 1)),
+    runId: "scope-run"
+  });
+  const merged = plain(core.mergeCumulativeCatalog(null, run));
+  assert.throws(
+    () => core.validateResumeCheckpoint(merged.catalog.checkpoint_summary, other.collection_scope),
+    /CHECKPOINT_SCOPE_MISMATCH/
+  );
+});
+
+test("checkpoints bounded runs at pages 1-5, resumes 6-10, then 11-15", () => {
+  const firstPosts = Array.from({ length: 5 }, (_, index) => cumulativePost(index, index + 1));
+  const secondPosts = Array.from({ length: 5 }, (_, index) => cumulativePost(index + 5, index + 6));
+  const thirdPosts = Array.from({ length: 5 }, (_, index) => cumulativePost(index + 10, index + 11));
+  const runOne = boundedRun({ startPage: 1, posts: firstPosts, runId: "run-1" });
+  const first = plain(core.mergeCumulativeCatalog(null, runOne)).catalog;
+  assert.equal(first.checkpoint_summary.start_page, 1);
+  assert.equal(first.checkpoint_summary.collection_start_page, 1);
+  assert.equal(first.checkpoint_summary.last_successfully_collected_page, 5);
+  assert.equal(first.checkpoint_summary.next_page_candidate.page, 6);
+  assert.equal(first.checkpoint_summary.pages_collected_this_run, 5);
+  assert.equal(first.checkpoint_summary.cumulative_unique_post_count, 5);
+  assert.equal(first.checkpoint_summary.completion_state, "IN_PROGRESS");
+
+  const resumeOne = plain(
+    core.validateResumeCheckpoint(first.checkpoint_summary, first.collection_scope)
+  );
+  assert.equal(resumeOne.page, 6);
+  const runTwo = boundedRun({ startPage: 6, posts: secondPosts, runId: "run-2" });
+  const second = plain(core.mergeCumulativeCatalog(first, runTwo)).catalog;
+  assert.equal(second.checkpoint_summary.start_page, 6);
+  assert.equal(second.checkpoint_summary.collection_start_page, 1);
+  assert.equal(second.checkpoint_summary.last_successfully_collected_page, 10);
+  assert.equal(second.checkpoint_summary.next_page_candidate.page, 11);
+  assert.equal(second.counts.posts, 10);
+
+  const runThree = boundedRun({
+    startPage: 11,
+    posts: thirdPosts,
+    runId: "run-3",
+    stopReason: "NEXT_CONTROL_ABSENT_OR_DISABLED"
+  });
+  const third = plain(core.mergeCumulativeCatalog(second, runThree)).catalog;
+  assert.equal(third.checkpoint_summary.start_page, 11);
+  assert.equal(third.checkpoint_summary.last_successfully_collected_page, 15);
+  assert.equal(third.checkpoint_summary.completion_state, "COMPLETE");
+  assert.equal(third.checkpoint_summary.next_page_candidate, null);
+  assert.equal(third.counts.posts, 15);
+});
+
+test("falls back to the observed last page plus visible next control without guessing a URL", () => {
+  const pages = Array.from({ length: 5 }, (_, offset) => snapshot({
+    source_page_url: `https://www.affiliate.myfans.jp/affiliates/search?page=${offset + 1}`,
+    posts: [cumulativePost(offset, offset + 1)]
+  }));
+  const bundle = core.buildExport(pages, { stop_reason: "MAX_PAGE_LIMIT_REACHED" });
+  const run = plain(core.attachCollectionRunMetadata(bundle, {
+    run_id: "button-only-next",
+    mode: "NEW",
+    next_control: { present: true, enabled: true, href: null }
+  }));
+  assert.deepEqual(run.collection_run.next_page_candidate, {
+    mode: "VISIBLE_NEXT_FROM_LAST_PAGE",
+    source_page_url: pages.at(-1).source_page_url,
+    page: 5
+  });
+});
+
+test("merges duplicates as no-op, allowed changes as updates, and conflicts fail closed", () => {
+  const original = cumulativePost(0, 1);
+  const firstRun = boundedRun({ startPage: 1, pageCount: 1, posts: [original], runId: "merge-1" });
+  const first = plain(core.mergeCumulativeCatalog(null, firstRun)).catalog;
+
+  const sameObservation = { ...original, collected_at: "2026-09-02T00:00:00.000Z" };
+  const sameRun = boundedRun({ startPage: 1, pageCount: 1, posts: [sameObservation], runId: "merge-2" });
+  const same = plain(core.mergeCumulativeCatalog(first, sameRun));
+  assert.equal(same.merge.posts_unchanged, 1);
+  assert.equal(same.catalog.counts.posts, 1);
+  assert.equal(same.catalog.post_observations[0].first_seen_run, "merge-1");
+  assert.equal(same.catalog.post_observations[0].last_seen_run, "merge-2");
+  assert.equal(same.catalog.post_observations[0].first_seen_at, original.collected_at);
+  assert.equal(same.catalog.post_observations[0].last_seen_at, sameObservation.collected_at);
+
+  const changed = { ...original, title: "Updated allowed visible title" };
+  const changedRun = boundedRun({ startPage: 1, pageCount: 1, posts: [changed], runId: "merge-3" });
+  const updated = plain(core.mergeCumulativeCatalog(same.catalog, changedRun));
+  assert.equal(updated.merge.posts_updated, 1);
+  assert.equal(updated.catalog.posts[0].title, "Updated allowed visible title");
+
+  const conflicting = {
+    ...original,
+    creator_username: "different_stable_creator",
+    creator_profile_url: "https://myfans.jp/different_stable_creator"
+  };
+  const conflictRun = boundedRun({ startPage: 1, pageCount: 1, posts: [conflicting], runId: "merge-4" });
+  assert.throws(
+    () => core.mergeCumulativeCatalog(updated.catalog, conflictRun),
+    /POST_CREATOR_IDENTITY_CONFLICT/
+  );
+  assert.equal(updated.catalog.posts[0].creator_username, original.creator_username);
+});
+
+test("preserves cumulative records and checkpoint after an interrupted run", () => {
+  const initialPosts = [cumulativePost(0, 1), cumulativePost(1, 2)];
+  const initialRun = boundedRun({ startPage: 1, pageCount: 2, posts: initialPosts, runId: "interrupt-1" });
+  const initial = plain(core.mergeCumulativeCatalog(null, initialRun)).catalog;
+  const interruptedBundle = core.buildExport([
+    snapshot({
+      source_page_url: "https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=3",
+      posts: [cumulativePost(2, 3)]
+    })
+  ], {
+    stop_reason: "PAGE_TRANSITION_TIMEOUT",
+    warnings: ["PAGE_TRANSITION_TIMEOUT"]
+  });
+  const interruptedRun = plain(core.attachCollectionRunMetadata(interruptedBundle, {
+    run_id: "interrupt-2",
+    mode: "RESUME",
+    next_control: { present: false, enabled: false, href: null }
+  }));
+  const interrupted = plain(core.mergeCumulativeCatalog(initial, interruptedRun)).catalog;
+  assert.equal(interrupted.counts.posts, 3);
+  assert.equal(interrupted.checkpoint_summary.completion_state, "INTERRUPTED");
+  assert.equal(interrupted.checkpoint_summary.stop_reason, "PAGE_TRANSITION_TIMEOUT");
+  assert.equal(interrupted.checkpoint_summary.resume_supported, true);
+});
+
+test("cumulative absence never deletes records and 100 plus 80 yields 180 unique posts", () => {
+  const firstHundred = Array.from({ length: 100 }, (_, index) => cumulativePost(index, Math.floor(index / 20) + 1));
+  const nextHundred = [
+    ...firstHundred.slice(80),
+    ...Array.from({ length: 80 }, (_, index) => cumulativePost(index + 100, Math.floor(index / 20) + 6))
+  ];
+  const firstRun = boundedRun({ startPage: 1, posts: firstHundred, runId: "coverage-1" });
+  const first = plain(core.mergeCumulativeCatalog(null, firstRun)).catalog;
+  const secondRun = boundedRun({ startPage: 6, posts: nextHundred, runId: "coverage-2" });
+  const second = plain(core.mergeCumulativeCatalog(first, secondRun));
+  assert.equal(first.counts.posts, 100);
+  assert.equal(second.catalog.counts.posts, 180);
+  assert.equal(second.merge.posts_added, 80);
+  assert.equal(second.merge.posts_unchanged, 20);
+  assert.equal(second.merge.deletion_candidates, 0);
+
+  const repeated = plain(core.mergeCumulativeCatalog(second.catalog, boundedRun({
+    startPage: 6,
+    posts: nextHundred,
+    runId: "coverage-3"
+  })));
+  assert.equal(repeated.catalog.counts.posts, 180);
+  assert.equal(repeated.merge.posts_added, 0);
+});
+
+test("incremental import classification never proposes delete or unpublish", () => {
+  const post = cumulativePost(0, 1);
+  const changed = { ...post, title: "Changed title" };
+  const newPost = cumulativePost(1, 1);
+  const result = plain(core.classifyIncrementalCatalog(
+    { posts: [post, newPost], creators: [] },
+    { posts: [changed, cumulativePost(99, 1)], creators: [] }
+  ));
+  assert.deepEqual(result.posts, {
+    NEW: 1,
+    EXISTING_IDENTICAL: 0,
+    UPDATE_NEEDED: 1,
+    CONFLICT: 0
+  });
+  assert.equal(result.deletes, 0);
+  assert.equal(result.unpublishes, 0);
 });

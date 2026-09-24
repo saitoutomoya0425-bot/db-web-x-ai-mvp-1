@@ -624,21 +624,28 @@
     return snapshot;
   }
 
-  function findNextControl() {
+  function nextControlState() {
     const candidates = allVisible(document, "button, a[href], [role='button']");
     for (const candidate of candidates) {
       const label = core.normalizeSpace(candidate.getAttribute("aria-label") || visibleText(candidate));
       if (label !== "次へ" && label !== "次のページ") continue;
-      if (
+      const disabled =
         candidate.hasAttribute("disabled") ||
         candidate.getAttribute("aria-disabled") === "true" ||
-        candidate.getAttribute("data-disabled") === "true"
-      ) {
-        return null;
-      }
-      return candidate;
+        candidate.getAttribute("data-disabled") === "true";
+      const href = candidate instanceof HTMLAnchorElement ? candidate.href : null;
+      return {
+        present: true,
+        enabled: !disabled,
+        href,
+        control: disabled ? null : candidate
+      };
     }
-    return null;
+    return { present: false, enabled: false, href: null, control: null };
+  }
+
+  function findNextControl() {
+    return nextControlState().control;
   }
 
   function waitForPageChange(previousFingerprint, previousUrl, previousSnapshot) {
@@ -705,8 +712,26 @@
     });
   }
 
-  async function collectListBundle() {
-    return core.runPagination({
+  function collectionContext() {
+    const context = core.collectionContextFromUrl(globalThis.location.href);
+    if (!context) throw new Error("SUPPORTED_COLLECTION_SCOPE_REQUIRED");
+    return context;
+  }
+
+  function validateExpectedCollectionContext(message) {
+    const context = collectionContext();
+    if (message.expected_scope_key && message.expected_scope_key !== context.collection_scope.key) {
+      throw new Error("COLLECTION_SCOPE_MISMATCH");
+    }
+    if (message.expected_start_page != null && Number(message.expected_start_page) !== context.page) {
+      throw new Error("COLLECTION_START_PAGE_MISMATCH");
+    }
+    return context;
+  }
+
+  async function collectListBundle(message) {
+    validateExpectedCollectionContext(message);
+    const bundle = await core.runPagination({
       max_pages: 5,
       collect_current: async () => collectCurrentPage(),
       get_next_control: async () => findNextControl(),
@@ -714,6 +739,43 @@
       wait_for_page_change: async (fingerprint, url, snapshot) => waitForPageChange(fingerprint, url, snapshot),
       collected_at: new Date().toISOString()
     });
+    const nextState = nextControlState();
+    return core.attachCollectionRunMetadata(bundle, {
+      run_id: message.run_id,
+      mode: message.mode,
+      expected_scope_key: message.expected_scope_key,
+      expected_start_page: message.expected_start_page,
+      next_control: {
+        present: nextState.present,
+        enabled: nextState.enabled,
+        href: nextState.href
+      }
+    });
+  }
+
+  async function advanceFromCheckpoint(message) {
+    const context = validateExpectedCollectionContext({
+      expected_scope_key: message.expected_scope_key,
+      expected_start_page: message.expected_from_page
+    });
+    const previousSnapshot = collectCurrentPage();
+    if (previousSnapshot.stop_reason) throw new Error(previousSnapshot.stop_reason);
+    const control = findNextControl();
+    if (!control) throw new Error("RESUME_NEXT_CONTROL_NOT_AVAILABLE");
+    control.click();
+    const transition = await waitForPageChange(
+      previousSnapshot.fingerprint,
+      previousSnapshot.source_page_url,
+      previousSnapshot
+    );
+    if (transition.status !== "READY" || !transition.snapshot) {
+      throw new Error(transition.reason || "PAGE_TRANSITION_TIMEOUT");
+    }
+    const nextContext = core.collectionContextFromUrl(transition.snapshot.source_page_url);
+    if (!nextContext || nextContext.collection_scope.key !== context.collection_scope.key) {
+      throw new Error("COLLECTION_SCOPE_CHANGED_DURING_RESUME");
+    }
+    return nextContext;
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -734,8 +796,24 @@
       }
       return false;
     }
+    if (message.type === "MYFANS_COLLECTION_CONTEXT") {
+      try {
+        sendResponse({ ok: true, context: collectionContext() });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "CONTEXT_FAILED" });
+      }
+      return false;
+    }
+    if (message.type === "MYFANS_PREPARE_RESUME") {
+      advanceFromCheckpoint(message)
+        .then((context) => sendResponse({ ok: true, context }))
+        .catch((error) =>
+          sendResponse({ ok: false, error: error instanceof Error ? error.message : "RESUME_PREPARATION_FAILED" })
+        );
+      return true;
+    }
     if (message.type === "MYFANS_COLLECT_LIST") {
-      collectListBundle()
+      collectListBundle(message)
         .then((bundle) => sendResponse({ ok: true, bundle }))
         .catch((error) =>
           sendResponse({ ok: false, error: error instanceof Error ? error.message : "PAGINATION_FAILED" })

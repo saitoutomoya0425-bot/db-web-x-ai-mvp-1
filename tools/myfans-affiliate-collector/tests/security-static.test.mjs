@@ -32,10 +32,10 @@ test("runtime has no network, credential-store, browser-debug, or interception A
   }
 });
 
-test("manifest uses only activeTab and the single Affiliate Center host", () => {
+test("manifest uses only activeTab, local extension storage, and the single Affiliate Center host", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.1.8");
-  assert.deepEqual(manifest.permissions, ["activeTab"]);
+  assert.equal(manifest.version, "0.2.0");
+  assert.deepEqual(manifest.permissions, ["activeTab", "storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.equal("background" in manifest, false);
   assert.equal("web_accessible_resources" in manifest, false);
@@ -50,7 +50,13 @@ test("popup has no image, video, canvas, iframe, or remote script elements", () 
     assert.equal(new RegExp(`<${tag}\\b`, "i").test(popupHtml), false);
   }
   const scriptSources = [...popupHtml.matchAll(/<script\s+src="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(scriptSources, ["popup.js"]);
+  assert.deepEqual(scriptSources, ["collector-core.js", "popup.js"]);
+});
+
+test("checkpoint persistence uses extension storage only and never page storage", () => {
+  assert.match(runtimeSource, /chrome\.storage\.local/);
+  assert.equal(/\b(?:window\.)?localStorage\b/.test(runtimeSource), false);
+  assert.equal(/\b(?:window\.)?sessionStorage\b/.test(runtimeSource), false);
 });
 
 test("runtime never reads form values", () => {

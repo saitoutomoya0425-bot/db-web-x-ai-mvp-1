@@ -1,8 +1,11 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.1.8";
+  const COLLECTOR_VERSION = "0.2.0";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
+  const CHECKPOINT_SCHEMA_VERSION = "myfans-affiliate-checkpoint-v1";
+  const CUMULATIVE_SCHEMA_VERSION = "myfans-affiliate-cumulative-v1";
+  const MAX_RUN_PAGES = 5;
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
   const PUBLIC_SOCIAL_HOSTS = new Set([
@@ -49,6 +52,23 @@
     "報酬額が高い順"
   ]);
   const FORBIDDEN_EXPORT_KEY_RE = /^(?:account_id|account_name|affiliate_id|avatar(?:_url)?|bank(?:_information)?|cookie|dom_html|email|har|headers|html|identity_document|image(?:_src|_url)?|img|local_storage|media_blob|ogp(?:_url)?|password|poster(?:_url)?|raw_dom|raw_html|revenue|session|session_storage|src|thumbnail(?:_url)?|token|video_url)$/i;
+  const COLLECTION_SCOPE_QUERY_KEYS = new Set([
+    "genre_id",
+    "genre_name",
+    "keyword",
+    "media_type",
+    "q",
+    "query",
+    "sexual_orientation",
+    "sort"
+  ]);
+  const VOLATILE_RECORD_FIELDS = new Set([
+    "collected_at",
+    "parser_confidence",
+    "source_page_url",
+    "source_surface",
+    "title_diagnostic"
+  ]);
 
   function normalizeSpace(value) {
     return String(value ?? "")
@@ -1015,6 +1035,502 @@
     return (hash >>> 0).toString(16).padStart(8, "0");
   }
 
+  function canonicalizeObject(value) {
+    if (Array.isArray(value)) return value.map(canonicalizeObject);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalizeObject(value[key])])
+    );
+  }
+
+  function stableJson(value) {
+    return JSON.stringify(canonicalizeObject(value));
+  }
+
+  function pageNumberFromUrl(value) {
+    const url = parseUrl(value);
+    if (!isSafeHttpsUrl(url) || url.hostname !== AFFILIATE_HOST) return null;
+    const pageValues = url.searchParams.getAll("page");
+    if (pageValues.length > 1) return null;
+    const rawPage = pageValues[0] ?? null;
+    if (rawPage === null || rawPage === "") return 1;
+    if (!/^[1-9]\d*$/.test(rawPage)) return null;
+    const page = Number.parseInt(rawPage, 10);
+    return Number.isSafeInteger(page) ? page : null;
+  }
+
+  function safeCollectionPageUrl(value) {
+    const url = parseUrl(value);
+    if (!isSafeHttpsUrl(url) || url.hostname !== AFFILIATE_HOST || !isAllowedPageUrl(url.href)) return null;
+    if ([...url.searchParams.keys()].some((key) => key !== "page" && !COLLECTION_SCOPE_QUERY_KEYS.has(key))) {
+      return null;
+    }
+    url.hash = "";
+    return url.href;
+  }
+
+  function canonicalCollectionScope(value) {
+    const safeUrl = safeCollectionPageUrl(value);
+    const url = parseUrl(safeUrl);
+    if (!url) return null;
+    const sourceSurface = sourceSurfaceFromUrl(url.href);
+    if (!["post_search", "creator_list", "approved_creator_list", "generated_list"].includes(sourceSurface)) {
+      return null;
+    }
+    const path = url.pathname.replace(/\/+$/, "") || "/";
+    const parameters = [...url.searchParams.entries()]
+      .filter(([key]) => COLLECTION_SCOPE_QUERY_KEYS.has(key))
+      .sort(([leftKey, leftValue], [rightKey, rightValue]) =>
+        leftKey === rightKey ? leftValue.localeCompare(rightValue) : leftKey.localeCompare(rightKey)
+      );
+    const canonicalUrl = new URL(`https://${AFFILIATE_HOST}${path}`);
+    for (const [key, parameterValue] of parameters) canonicalUrl.searchParams.append(key, parameterValue);
+    const identity = {
+      source_surface: sourceSurface,
+      path,
+      parameters
+    };
+    return {
+      key: stableHash(stableJson(identity)),
+      ...identity,
+      canonical_url: canonicalUrl.href
+    };
+  }
+
+  function collectionContextFromUrl(value) {
+    const sourcePageUrl = safeCollectionPageUrl(value);
+    const collectionScope = canonicalCollectionScope(sourcePageUrl);
+    const page = pageNumberFromUrl(sourcePageUrl);
+    if (!sourcePageUrl || !collectionScope || page === null) return null;
+    return {
+      collection_scope: collectionScope,
+      source_page_url: sourcePageUrl,
+      page
+    };
+  }
+
+  function sameCollectionScope(left, right) {
+    return Boolean(left?.key && right?.key && left.key === right.key && stableJson(left) === stableJson(right));
+  }
+
+  function exactNextPageCandidate(nextControl, collectionScope, lastPageUrl, lastPage) {
+    if (!nextControl?.present || nextControl.enabled === false || !nextControl.href) return null;
+    const context = collectionContextFromUrl(nextControl.href);
+    if (!context || !sameCollectionScope(context.collection_scope, collectionScope)) return null;
+    if (context.source_page_url === lastPageUrl || context.page <= lastPage) return null;
+    return {
+      mode: "EXACT_URL",
+      source_page_url: context.source_page_url,
+      page: context.page
+    };
+  }
+
+  function attachCollectionRunMetadata(bundle, options) {
+    const pages = bundle?.pages || [];
+    if (pages.length === 0) throw new Error("COLLECTION_RUN_HAS_NO_SUCCESSFUL_PAGES");
+    const contexts = pages.map((page) => collectionContextFromUrl(page.source_page_url));
+    if (contexts.some((context) => !context)) throw new Error("INVALID_COLLECTION_PAGE_CONTEXT");
+    const collectionScope = contexts[0].collection_scope;
+    if (contexts.some((context) => !sameCollectionScope(context.collection_scope, collectionScope))) {
+      throw new Error("COLLECTION_SCOPE_CHANGED_DURING_RUN");
+    }
+    const startPage = contexts[0].page;
+    const lastPage = contexts.at(-1).page;
+    if (options?.expected_scope_key && options.expected_scope_key !== collectionScope.key) {
+      throw new Error("COLLECTION_SCOPE_MISMATCH");
+    }
+    if (options?.expected_start_page != null && Number(options.expected_start_page) !== startPage) {
+      throw new Error("COLLECTION_START_PAGE_MISMATCH");
+    }
+    const completionState = bundle.stop_reason === "NEXT_CONTROL_ABSENT_OR_DISABLED"
+      ? "COMPLETE"
+      : bundle.stop_reason === "MAX_PAGE_LIMIT_REACHED"
+        ? "IN_PROGRESS"
+        : "INTERRUPTED";
+    let nextPageCandidate = null;
+    if (completionState !== "COMPLETE") {
+      nextPageCandidate = exactNextPageCandidate(
+        options?.next_control,
+        collectionScope,
+        contexts.at(-1).source_page_url,
+        lastPage
+      );
+      if (!nextPageCandidate) {
+        nextPageCandidate = {
+          mode: "VISIBLE_NEXT_FROM_LAST_PAGE",
+          source_page_url: contexts.at(-1).source_page_url,
+          page: lastPage
+        };
+      }
+    }
+    const runId = normalizeSpace(options?.run_id);
+    if (!runId || runId.length > 128) throw new Error("INVALID_COLLECTION_RUN_ID");
+    const collectionRun = {
+      run_id: runId,
+      mode: options?.mode === "RESUME" ? "RESUME" : "NEW",
+      collection_scope: collectionScope,
+      start_page: startPage,
+      last_successfully_collected_page: lastPage,
+      next_page_candidate: nextPageCandidate,
+      pages_collected_this_run: pages.length,
+      completion_state: completionState,
+      stop_reason: bundle.stop_reason,
+      resume_supported: completionState !== "COMPLETE" && Boolean(nextPageCandidate),
+      collected_at: bundle.collected_at
+    };
+    const enriched = {
+      ...bundle,
+      export_kind: "RUN",
+      collection_scope: collectionScope,
+      collection_run: collectionRun
+    };
+    assertSafeExport(enriched);
+    return enriched;
+  }
+
+  function validateResumeCheckpoint(checkpoint, currentScope) {
+    if (!checkpoint || checkpoint.schema_version !== CHECKPOINT_SCHEMA_VERSION) {
+      throw new Error("CHECKPOINT_SCHEMA_MISMATCH");
+    }
+    if (checkpoint.collector_version !== COLLECTOR_VERSION) {
+      throw new Error("CHECKPOINT_COLLECTOR_VERSION_MISMATCH");
+    }
+    if (!sameCollectionScope(checkpoint.collection_scope, currentScope)) {
+      throw new Error("CHECKPOINT_SCOPE_MISMATCH");
+    }
+    if (checkpoint.completion_state === "COMPLETE") throw new Error("COLLECTION_SCOPE_ALREADY_COMPLETE");
+    if (!checkpoint.resume_supported || !checkpoint.next_page_candidate) {
+      throw new Error("CHECKPOINT_NOT_RESUMABLE");
+    }
+    const candidate = checkpoint.next_page_candidate;
+    if (!["EXACT_URL", "VISIBLE_NEXT_FROM_LAST_PAGE"].includes(candidate.mode)) {
+      throw new Error("CHECKPOINT_RESUME_MODE_INVALID");
+    }
+    const context = collectionContextFromUrl(candidate.source_page_url);
+    if (!context || !sameCollectionScope(context.collection_scope, currentScope) || context.page !== candidate.page) {
+      throw new Error("CHECKPOINT_RESUME_TARGET_INVALID");
+    }
+    return {
+      mode: candidate.mode,
+      source_page_url: context.source_page_url,
+      page: context.page,
+      collection_scope: currentScope
+    };
+  }
+
+  function comparableRecord(record) {
+    return canonicalizeObject(
+      Object.fromEntries(
+        Object.entries(record || {}).filter(([key]) => !VOLATILE_RECORD_FIELDS.has(key))
+      )
+    );
+  }
+
+  function postCreatorIdentity(post) {
+    if (post?.creator_username) return `username:${String(post.creator_username).toLowerCase()}`;
+    if (post?.creator_profile_url) return `profile:${post.creator_profile_url}`;
+    return null;
+  }
+
+  function assertCompatiblePostIdentity(existingPost, observedPost) {
+    const existingIdentity = parsePostUrl(existingPost?.post_public_url);
+    const observedIdentity = parsePostUrl(observedPost?.post_public_url);
+    if (
+      !existingIdentity ||
+      !observedIdentity ||
+      existingIdentity.post_uuid !== observedIdentity.post_uuid ||
+      existingIdentity.post_uuid !== observedPost.post_uuid ||
+      existingPost.post_uuid !== observedPost.post_uuid
+    ) {
+      throw new Error(`POST_IDENTITY_CONFLICT:${observedPost?.post_uuid || "UNKNOWN"}`);
+    }
+    const existingCreator = postCreatorIdentity(existingPost);
+    const observedCreator = postCreatorIdentity(observedPost);
+    if (existingCreator && observedCreator && existingCreator !== observedCreator) {
+      throw new Error(`POST_CREATOR_IDENTITY_CONFLICT:${observedPost.post_uuid}`);
+    }
+  }
+
+  function creatorFromPost(post) {
+    const username = post.creator_username || null;
+    const profileUrl = post.creator_profile_url || null;
+    if (!username && !profileUrl) return null;
+    return {
+      creator_name: post.creator_name || null,
+      username,
+      profile_url: profileUrl,
+      likes: null,
+      followers: null,
+      following: null,
+      post_count: null,
+      affiliate_enabled_post_count: null,
+      single_reward_rate: null,
+      plan_initial_reward_rate: null,
+      plan_continuation_reward_rate: null,
+      plans: [],
+      social_profile_urls: [],
+      source_surface: post.source_surface,
+      source_page_url: post.source_page_url,
+      collected_at: post.collected_at,
+      parser_confidence: post.parser_confidence
+    };
+  }
+
+  function mergeCreatorRecord(existingCreator, observedCreator) {
+    const merged = { ...existingCreator };
+    for (const [key, value] of Object.entries(observedCreator || {})) {
+      if (VOLATILE_RECORD_FIELDS.has(key)) {
+        merged[key] = value;
+      } else if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) {
+        if (!(key in merged)) merged[key] = value;
+      } else {
+        merged[key] = value;
+      }
+    }
+    return merged;
+  }
+
+  function observationFor(record, identityField, runId, existingObservation) {
+    const identity = record[identityField];
+    const collectedAt = record.collected_at;
+    return {
+      [identityField]: identity,
+      first_seen_at: existingObservation?.first_seen_at || collectedAt,
+      last_seen_at: collectedAt,
+      first_seen_run: existingObservation?.first_seen_run || runId,
+      last_seen_run: runId,
+      first_seen_source_page_url: existingObservation?.first_seen_source_page_url || record.source_page_url,
+      last_seen_source_page_url: record.source_page_url,
+      first_seen_collector_version: existingObservation?.first_seen_collector_version || COLLECTOR_VERSION,
+      last_seen_collector_version: COLLECTOR_VERSION
+    };
+  }
+
+  function buildCheckpoint(collectionRun, posts, existingCheckpoint, updatedAt) {
+    return {
+      schema_version: CHECKPOINT_SCHEMA_VERSION,
+      collector_version: COLLECTOR_VERSION,
+      collection_scope: collectionRun.collection_scope,
+      collection_start_page: existingCheckpoint?.collection_start_page || collectionRun.start_page,
+      start_page: collectionRun.start_page,
+      last_successfully_collected_page: collectionRun.last_successfully_collected_page,
+      next_page_candidate: collectionRun.next_page_candidate,
+      pages_collected_this_run: collectionRun.pages_collected_this_run,
+      cumulative_unique_post_count: posts.length,
+      seen_post_uuids: posts.map((post) => post.post_uuid).sort(),
+      created_at: existingCheckpoint?.created_at || updatedAt,
+      updated_at: updatedAt,
+      completion_state: collectionRun.completion_state,
+      stop_reason: collectionRun.stop_reason,
+      resume_supported: collectionRun.resume_supported
+    };
+  }
+
+  function mergeCumulativeCatalog(existingCatalog, runBundle) {
+    if (runBundle?.collector_version !== COLLECTOR_VERSION || runBundle?.export_kind !== "RUN") {
+      throw new Error("RUN_EXPORT_CONTRACT_MISMATCH");
+    }
+    const validation = validateExportBundle(runBundle);
+    if (!validation.valid) throw new Error(`RUN_EXPORT_INVALID:${validation.errors.join(",")}`);
+    const run = runBundle.collection_run;
+    if (!run || !sameCollectionScope(run.collection_scope, runBundle.collection_scope)) {
+      throw new Error("RUN_SCOPE_CONTRACT_MISMATCH");
+    }
+    if (existingCatalog) {
+      if (existingCatalog.cumulative_schema_version !== CUMULATIVE_SCHEMA_VERSION) {
+        throw new Error("CUMULATIVE_SCHEMA_MISMATCH");
+      }
+      if (!sameCollectionScope(existingCatalog.collection_scope, run.collection_scope)) {
+        throw new Error("CUMULATIVE_SCOPE_MISMATCH");
+      }
+    }
+
+    const postMap = new Map((existingCatalog?.posts || []).map((post) => [post.post_uuid, post]));
+    const creatorMap = new Map((existingCatalog?.creators || []).map((creator) => [creatorKey(creator), creator]));
+    const postObservationMap = new Map(
+      (existingCatalog?.post_observations || []).map((observation) => [observation.post_uuid, observation])
+    );
+    const creatorObservationMap = new Map(
+      (existingCatalog?.creator_observations || []).map((observation) => [observation.creator_key, observation])
+    );
+    const mergeCounts = {
+      posts_added: 0,
+      posts_unchanged: 0,
+      posts_updated: 0,
+      creators_added: 0,
+      creators_unchanged: 0,
+      creators_updated: 0,
+      conflicts: 0,
+      deletion_candidates: 0
+    };
+
+    for (const observedPost of runBundle.posts || []) {
+      const existingPost = postMap.get(observedPost.post_uuid);
+      if (existingPost) {
+        assertCompatiblePostIdentity(existingPost, observedPost);
+        if (stableJson(comparableRecord(existingPost)) === stableJson(comparableRecord(observedPost))) {
+          mergeCounts.posts_unchanged += 1;
+        } else {
+          postMap.set(observedPost.post_uuid, observedPost);
+          mergeCounts.posts_updated += 1;
+        }
+      } else {
+        if (!parsePostUrl(observedPost.post_public_url)) {
+          throw new Error(`POST_IDENTITY_CONFLICT:${observedPost.post_uuid || "UNKNOWN"}`);
+        }
+        postMap.set(observedPost.post_uuid, observedPost);
+        mergeCounts.posts_added += 1;
+      }
+      postObservationMap.set(
+        observedPost.post_uuid,
+        observationFor(
+          observedPost,
+          "post_uuid",
+          run.run_id,
+          postObservationMap.get(observedPost.post_uuid)
+        )
+      );
+    }
+
+    const observedCreators = [
+      ...(runBundle.creators || []),
+      ...(runBundle.posts || []).map(creatorFromPost).filter(Boolean)
+    ];
+    for (const observedCreator of observedCreators) {
+      const key = creatorKey(observedCreator);
+      if (!key) continue;
+      const existingCreator = creatorMap.get(key);
+      if (!existingCreator) {
+        creatorMap.set(key, observedCreator);
+        mergeCounts.creators_added += 1;
+      } else {
+        const mergedCreator = mergeCreatorRecord(existingCreator, observedCreator);
+        if (stableJson(comparableRecord(existingCreator)) === stableJson(comparableRecord(mergedCreator))) {
+          mergeCounts.creators_unchanged += 1;
+        } else {
+          creatorMap.set(key, mergedCreator);
+          mergeCounts.creators_updated += 1;
+        }
+      }
+      const recordForObservation = { ...observedCreator, creator_key: key };
+      creatorObservationMap.set(
+        key,
+        observationFor(
+          recordForObservation,
+          "creator_key",
+          run.run_id,
+          creatorObservationMap.get(key)
+        )
+      );
+    }
+
+    const posts = [...postMap.values()].sort((left, right) => left.post_uuid.localeCompare(right.post_uuid));
+    const creators = [...creatorMap.values()].sort((left, right) => creatorKey(left).localeCompare(creatorKey(right)));
+    const updatedAt = runBundle.collected_at;
+    const priorRuns = existingCatalog?.runs || [];
+    const runSummary = {
+      run_id: run.run_id,
+      mode: run.mode,
+      start_page: run.start_page,
+      last_successfully_collected_page: run.last_successfully_collected_page,
+      pages_collected: run.pages_collected_this_run,
+      posts_observed: runBundle.posts.length,
+      creators_observed: runBundle.creators.length,
+      completion_state: run.completion_state,
+      stop_reason: run.stop_reason,
+      collected_at: run.collected_at
+    };
+    const existingRun = priorRuns.find((item) => item.run_id === run.run_id);
+    if (existingRun && stableJson(existingRun) !== stableJson(runSummary)) throw new Error("RUN_ID_CONFLICT");
+    const runs = existingRun ? [...priorRuns] : [...priorRuns, runSummary];
+    const checkpoint = buildCheckpoint(run, posts, existingCatalog?.checkpoint_summary, updatedAt);
+    const warnings = [...new Set([...(existingCatalog?.warnings || []), ...(runBundle.warnings || [])])];
+    const pages = existingRun
+      ? [...(existingCatalog?.pages || [])]
+      : [...(existingCatalog?.pages || []), ...(runBundle.pages || [])];
+    const catalog = {
+      schema_version: SCHEMA_VERSION,
+      cumulative_schema_version: CUMULATIVE_SCHEMA_VERSION,
+      collector_version: COLLECTOR_VERSION,
+      export_kind: "CUMULATIVE",
+      source: runBundle.source,
+      collection_scope: run.collection_scope,
+      collected_at: updatedAt,
+      first_collected_at: existingCatalog?.first_collected_at || runBundle.collected_at,
+      last_collected_at: updatedAt,
+      stop_reason: run.stop_reason,
+      checkpoint_summary: checkpoint,
+      run_count: runs.length,
+      runs,
+      pages,
+      creators,
+      posts,
+      post_observations: [...postObservationMap.values()].sort((left, right) =>
+        left.post_uuid.localeCompare(right.post_uuid)
+      ),
+      creator_observations: [...creatorObservationMap.values()].sort((left, right) =>
+        left.creator_key.localeCompare(right.creator_key)
+      ),
+      merge_summary: mergeCounts,
+      counts: {
+        pages_scanned: pages.length,
+        creators: creators.length,
+        posts: posts.length,
+        duplicate_creators_skipped: mergeCounts.creators_unchanged,
+        duplicate_posts_skipped: mergeCounts.posts_unchanged,
+        warnings: warnings.length
+      },
+      warnings
+    };
+    assertSafeExport(catalog);
+    return { catalog, merge: mergeCounts };
+  }
+
+  function classifyIncrementalCatalog(catalog, existingState) {
+    const existingPosts = new Map((existingState?.posts || []).map((post) => [post.post_uuid, post]));
+    const existingCreators = new Map(
+      (existingState?.creators || []).map((creator) => [creatorKey(creator), creator])
+    );
+    const result = {
+      posts: { NEW: 0, EXISTING_IDENTICAL: 0, UPDATE_NEEDED: 0, CONFLICT: 0 },
+      creators: { NEW: 0, EXISTING_IDENTICAL: 0, UPDATE_NEEDED: 0, CONFLICT: 0 },
+      deletes: 0,
+      unpublishes: 0
+    };
+    for (const post of catalog?.posts || []) {
+      const existing = existingPosts.get(post.post_uuid);
+      if (!existing) {
+        result.posts.NEW += 1;
+        continue;
+      }
+      try {
+        assertCompatiblePostIdentity(existing, post);
+        if (stableJson(comparableRecord(existing)) === stableJson(comparableRecord(post))) {
+          result.posts.EXISTING_IDENTICAL += 1;
+        } else {
+          result.posts.UPDATE_NEEDED += 1;
+        }
+      } catch {
+        result.posts.CONFLICT += 1;
+      }
+    }
+    for (const creator of catalog?.creators || []) {
+      const key = creatorKey(creator);
+      if (!key) {
+        result.creators.CONFLICT += 1;
+        continue;
+      }
+      const existing = existingCreators.get(key);
+      if (!existing) result.creators.NEW += 1;
+      else if (stableJson(comparableRecord(existing)) === stableJson(comparableRecord(creator))) {
+        result.creators.EXISTING_IDENTICAL += 1;
+      } else result.creators.UPDATE_NEEDED += 1;
+    }
+    return result;
+  }
+
   function creatorKey(creator) {
     if (creator.username) return `username:${String(creator.username).toLowerCase()}`;
     if (creator.profile_url) return `profile:${creator.profile_url}`;
@@ -1061,14 +1577,22 @@
       });
       for (const post of snapshot.posts || []) {
         if (!post.post_uuid) continue;
-        if (posts.has(post.post_uuid)) duplicatePosts += 1;
-        else posts.set(post.post_uuid, post);
+        if (posts.has(post.post_uuid)) {
+          duplicatePosts += 1;
+          const existingPost = posts.get(post.post_uuid);
+          assertCompatiblePostIdentity(existingPost, post);
+          if (stableJson(comparableRecord(existingPost)) !== stableJson(comparableRecord(post))) {
+            posts.set(post.post_uuid, post);
+          }
+        } else posts.set(post.post_uuid, post);
       }
       for (const creator of snapshot.creators || []) {
         const key = creatorKey(creator);
         if (!key) continue;
-        if (creators.has(key)) duplicateCreators += 1;
-        else creators.set(key, creator);
+        if (creators.has(key)) {
+          duplicateCreators += 1;
+          creators.set(key, mergeCreatorRecord(creators.get(key), creator));
+        } else creators.set(key, creator);
       }
       warnings.push(...(snapshot.warnings || []));
     }
@@ -1240,7 +1764,7 @@
   }
 
   async function runPagination(options) {
-    const maxPages = Math.max(1, Math.min(5, Number(options.max_pages) || 5));
+    const maxPages = Math.max(1, Math.min(MAX_RUN_PAGES, Number(options.max_pages) || MAX_RUN_PAGES));
     const pages = [];
     const seen = new Set();
     const warnings = [];
@@ -1264,7 +1788,8 @@
       seen.add(fingerprint);
       pages.push(snapshot);
       if (pages.length >= maxPages) {
-        stopReason = "MAX_PAGE_LIMIT_REACHED";
+        const control = await options.get_next_control();
+        stopReason = control ? "MAX_PAGE_LIMIT_REACHED" : "NEXT_CONTROL_ABSENT_OR_DISABLED";
         break;
       }
       const control = await options.get_next_control();
@@ -1297,12 +1822,19 @@
 
   global.MyFansCollectorCore = Object.freeze({
     AFFILIATE_HOST,
+    CHECKPOINT_SCHEMA_VERSION,
     COLLECTOR_VERSION,
+    CUMULATIVE_SCHEMA_VERSION,
+    MAX_RUN_PAGES,
     SCHEMA_VERSION,
     assertSafeExport,
+    attachCollectionRunMetadata,
     buildExport,
     buildPrivateStagingPlan,
+    canonicalCollectionScope,
+    classifyIncrementalCatalog,
     cleanCreatorName,
+    collectionContextFromUrl,
     creatorKey,
     detectStopCondition,
     extractCreatorFromDescriptor,
@@ -1325,12 +1857,15 @@
     parseLabeledYen,
     parsePostUrl,
     parseRelativePublishedText,
+    pageNumberFromUrl,
+    mergeCumulativeCatalog,
     runPagination,
     scorePostCardContainerCandidate,
     selectPostCardContainerCandidate,
     sourceSurfaceFromUrl,
     stableHash,
     summarizePostTitleSegmentWindow,
+    validateResumeCheckpoint,
     validateExportBundle,
     waitForDistinctPage
   });

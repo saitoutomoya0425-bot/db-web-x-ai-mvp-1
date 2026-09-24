@@ -16,7 +16,8 @@
 
       <section class="actions" aria-label="収集操作">
         <button id="collect-current" type="button">現在ページを取得</button>
-        <button id="collect-list" class="primary" type="button">一覧を収集（最大5ページ）</button>
+        <button id="collect-new" class="primary" type="button">新規収集（最大5ページ）</button>
+        <button id="collect-resume" type="button">続きから収集（最大5ページ）</button>
         <button id="collect-probe" class="quiet" type="button">Diagnostic / Probe</button>
       </section>
 
@@ -28,12 +29,14 @@
           <div><dt>Detected creators</dt><dd id="creator-count">0</dd></div>
           <div><dt>Pages scanned</dt><dd id="page-count">0</dd></div>
           <div><dt>Warnings</dt><dd id="warning-count">0</dd></div>
+          <div><dt>Cumulative posts</dt><dd id="cumulative-post-count">0</dd></div>
         </dl>
         <div id="samples" class="samples" aria-label="最大3件のsample"></div>
       </section>
 
       <footer>Phase 1: affiliate URL生成・DB更新・画像取得は行いません。</footer>
     </main>
+    <script src="collector-core.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

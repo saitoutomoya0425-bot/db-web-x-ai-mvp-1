@@ -6,7 +6,7 @@ The Phase 6J collector is a Chrome Manifest V3 extension that exports text catal
 
 The text-only boundary follows the MyFans support response received on 2026-09-17: information visible on the official site may be used by the registered/approved affiliate media, while creator images, work thumbnails, OGP, and video require prior creator permission. Phase 6J therefore excludes every media asset even when the DOM contains it.
 
-The extension deliberately does not reproduce private APIs. It observes the current rendered DOM, visible labels, semantic links, accessible labels, and normal UI controls. It does not access cookies, tokens, session values, browser storage, raw HTML, request/response bodies, or the browser profile.
+The extension deliberately does not reproduce private APIs. It observes the current rendered DOM, visible labels, semantic links, accessible labels, and normal UI controls. It does not access cookies, tokens, session values, page local/session storage, raw HTML, request/response bodies, or the browser profile. Collector checkpoints use only the extension's own `chrome.storage.local` area.
 
 Implementation: [tools/myfans-affiliate-collector/README.md](../tools/myfans-affiliate-collector/README.md)
 
@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-The JSON root contains:
+Collector `0.2.0` keeps the existing text-only catalog record schema and adds bounded run/cumulative metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -31,6 +31,8 @@ The JSON root contains:
 - `pages` with URL, surface, time, anonymous fingerprint, counts, and warnings
 - deduplicated `creators` and `posts`
 - aggregate `counts` and warnings
+
+List collection produces two files: a five-page-or-less run export and a cumulative export for the same canonical scope. The cumulative export adds checkpoint, run summaries, first/last collection time, and per-identity observation sidecars. It remains compatible with the dry-run importer's allowed post/creator record shapes.
 
 Every catalog record includes `source_surface`, `source_page_url`, `collected_at`, and `parser_confidence`. Posts are deduplicated by strict UUID parsed from `https://myfans.jp/posts/<UUID>`. Creators are deduplicated by username, falling back to a visible public profile URL.
 
@@ -67,7 +69,9 @@ The collector also excludes account name, email, affiliate ID, bank details, das
 
 The parser prioritizes public MyFans URL shapes, button and visible Japanese labels, roles, accessible labels, headings, and relative semantic containers such as articles and list items. Generated or Tailwind class names are not used as primary identifiers.
 
-The multi-page action uses only a visible, enabled `次へ` or `次のページ` control. After a click it waits up to 10 seconds for the URL to change, the expected catalog rows to be present, and the rendered-record fingerprint to differ. A URL change alone is not page-ready. It stops on:
+The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. After a click the collector waits up to 10 seconds for the URL to change, the expected catalog rows to be present, and the rendered-record fingerprint to differ. A URL change alone is not page-ready. Every invocation remains capped at five successful pages.
+
+**新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
 
 - five scanned pages
 - missing or disabled next control
@@ -77,7 +81,9 @@ The multi-page action uses only a visible, enabled `次へ` or `次のページ`
 - rate-limit, anti-bot, or CAPTCHA indication
 - an unexpected visible modal
 
-It does not retry around these boundaries or attempt to bypass them. If the site performs a full document navigation rather than client-side navigation, the popup connection may close; current-page collection remains available and the Phase 1 collector does not add background persistence to work around that condition.
+Only an absent/disabled next control marks a scope `COMPLETE`. The five-page bound leaves an `IN_PROGRESS` checkpoint. Login redirects, rate limits/anti-bot responses, unexpected modals, timeouts, and duplicate pages preserve an `INTERRUPTED` checkpoint and are never treated as completion or bypassed.
+
+The cumulative merge is UUID-based: new observations add, identical observations no-op, allowed-field changes become update candidates, and identity conflicts fail closed. Absence from a later run never means deletion or unpublication. Per-record observation sidecars preserve first/last seen time, run, source page, and collector version.
 
 ## Diagnostic / Probe
 
@@ -91,7 +97,7 @@ It does not save creator names, post titles, price/rate values, raw DOM, HTML, c
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select `tools/myfans-affiliate-collector/`.
 4. Open a supported signed-in Affiliate Center page and reload it once after installation.
-5. Open the extension and choose **現在ページを取得** or **一覧を収集（最大5ページ）**.
+5. Open the extension and choose **現在ページを取得**, **新規収集（最大5ページ）**, or **続きから収集（最大5ページ）**.
 
 Chrome downloads the JSON locally. No upload or database operation follows. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
 
@@ -103,4 +109,4 @@ A production importer, affiliate URL handling, image handling, and publication r
 
 ## Uninstall
 
-Open `chrome://extensions`, locate **MyFans Affiliate Catalog Local Collector**, and select **Remove**. The extension has no background worker or persistent extension storage. Delete any locally downloaded JSON separately if it is no longer required.
+Open `chrome://extensions`, locate **MyFans Affiliate Catalog Local Collector**, and select **Remove**. The extension has no background worker. Its checkpoint/cumulative state is stored only in extension-local storage and is removed with the extension; delete any downloaded JSON separately if it is no longer required.
