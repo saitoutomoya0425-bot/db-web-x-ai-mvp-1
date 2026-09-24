@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyFansPublicSitemapWorks } from "@/lib/queries/myfans-public";
 
 const PAGE_SIZE = 50_000;
 function xml(value: string) {
@@ -12,8 +13,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pag
   const start = page * PAGE_SIZE;
   const { data } = await supabase.from("videos").select("product_code,updated_at").eq("is_published", true).order("id").range(start, start + PAGE_SIZE - 1);
   const staticUrls = page === 0 ? ["", "/works", "/makers", "/genres", "/ranking", "/rankings", "/rankings/actress", "/rankings/maker", "/rankings/series", "/about", "/contact", "/privacy", "/disclaimer"].map((path) => ({ url: `${site}${path}`, modified: new Date().toISOString() })) : [];
-  const urls = [...staticUrls, ...(data ?? []).map((work) => ({ url: `${site}/work/${encodeURIComponent(work.product_code)}`, modified: work.updated_at }))]
-    .map((item) => `<url><loc>${xml(item.url)}</loc><lastmod>${xml(item.modified)}</lastmod></url>`).join("");
+  const myFansWorks = page === 0 ? await getMyFansPublicSitemapWorks() : [];
+  const urls = [
+    ...staticUrls,
+    ...(data ?? []).map((work) => ({ url: `${site}/work/${encodeURIComponent(work.product_code)}`, modified: work.updated_at as string | null })),
+    ...myFansWorks.map((work) => ({ url: `${site}${work.detailHref}`, modified: null })),
+  ].map((item) => `<url><loc>${xml(item.url)}</loc>${item.modified ? `<lastmod>${xml(item.modified)}</lastmod>` : ""}</url>`).join("");
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`, {
     headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
   });

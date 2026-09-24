@@ -66,6 +66,23 @@ export type Video = {
   updated_at: string;
 };
 
+export type MyFansApprovedPublicationProjection = {
+  external_post_id: string;
+  title: string;
+  canonical_outbound_url: string;
+  price: number | null;
+  currency: string;
+  media_type: string;
+  affiliate_link_status: string;
+  affiliate_url: string | null;
+  show_affiliate_cta: boolean;
+  external_creator_id: string;
+  creator_profile_slug: string;
+  creator_display_name: string;
+  creator_canonical_url: string;
+  source_badge: string;
+};
+
 type Table<Row, Insert = Partial<Row>> = {
   Row: Row;
   Insert: Insert;
@@ -227,7 +244,12 @@ export type Database = {
         { id?: string; product_code: string; source?: string; user_agent?: string | null; referrer?: string | null; session_id?:string|null; created_at?: string }
       >;
     };
-    Views: Record<string, never>;
+    Views: {
+      myfans_approved_publication_projection: {
+        Row: MyFansApprovedPublicationProjection;
+        Relationships: [];
+      };
+    };
     Functions: {
       get_popular_works: {
         Args: { result_limit?: number };

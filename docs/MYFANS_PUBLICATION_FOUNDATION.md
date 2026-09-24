@@ -62,3 +62,7 @@ There is deliberately no page, route, navigation link, sitemap entry, public que
 ## Read-only pre-review
 
 Phase 6K.7 adds a deterministic pre-review in `src/lib/myfans/publication-review.ts` and an aggregate-only database runner in `scripts/myfans-publication-review.ts`. It treats current fail-closed publication state as an output rather than a reason for circular human review. The production aggregate result and simulation are recorded in [MyFans publication review classification](./MYFANS_PUBLICATION_REVIEW_CLASSIFICATION.md).
+
+## Disabled public UI integration
+
+Phase 6K.9 adds the source-neutral query and UI adapters described in [MyFans public UI integration](./MYFANS_PUBLIC_UI_INTEGRATION.md). They remain server-gated by `MYFANS_PUBLIC_ENABLED=false`; MyFans still has no anonymous database access, active data source, public route response, sitemap row, remote image, or affiliate CTA.

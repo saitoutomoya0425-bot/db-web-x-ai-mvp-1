@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { Search } from "lucide-react";
 import { SearchBox } from "@/components/search-box";
 import { RecentlyViewedCarousel } from "@/components/recently-viewed";
-import { LoadMoreWorkGrid } from "@/components/load-more-work-grid";
-import { searchVideos, type SearchSort } from "@/lib/queries/public-works";
-import type { WorkDetail } from "@/types/database";
+import { SourceAwareLoadMoreWorkGrid } from "@/components/source-aware-load-more-work-grid";
+import type { SearchSort } from "@/lib/queries/public-works";
+import { searchSourceAwarePublicWorks } from "@/lib/queries/source-aware-public";
+import type { SourceAwarePublicWork } from "@/lib/public-catalog/source-aware";
 import { saveSearchLog } from "@/lib/search-log";
 
 export const metadata: Metadata = { title: "作品検索", robots: { index: false, follow: true } };
@@ -17,11 +18,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const maker = typeof params.maker === "string" ? params.maker.trim().slice(0, 100) : "";
   const series = typeof params.series === "string" ? params.series.trim().slice(0, 100) : "";
   const pageSize = 96;
-  let works: WorkDetail[] = [];
+  let works: SourceAwarePublicWork[] = [];
   let searchError = false;
   try {
     if (q || actress || maker || series) await saveSearchLog({ productCode: q || actress || maker || series, source: "web_search", userAgent: null, referrer: null });
-    works = q || actress || maker || series ? await searchVideos(q, pageSize, 0, sort, { actress, maker, series }) : [];
+    works = q || actress || maker || series
+      ? (await searchSourceAwarePublicWorks(q, pageSize, 0, sort, { actress, maker, series })).works
+      : [];
   } catch (error) {
     console.error("SearchPage failed:", error);
     searchError = true;
@@ -45,7 +48,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       </form>}
       {searchError && <p className="mt-8 rounded-xl border border-amber-800 bg-amber-950/30 p-5 text-center text-amber-200">検索処理で一時的な問題が発生しました。時間をおいて再度お試しください。</p>}
       {(q || actress || maker || series) && <div className="mt-8 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-slate-400">検索結果：{works.length}件</p></div>}
-      {works.length > 0 ? <LoadMoreWorkGrid works={works} className="mt-5" />
+      {works.length > 0 ? <SourceAwareLoadMoreWorkGrid works={works} className="mt-5" />
         : (q || actress || maker || series) && !searchError && <div className="mt-8 rounded-2xl border border-dashed border-slate-700 bg-slate-900/35 p-8 text-center">
           <p className="text-lg font-bold text-slate-200">一致する作品が見つかりませんでした</p>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-400">品番の一部、ハイフンなし表記、女優名・メーカー名・ジャンル名など、条件を少し変えてお試しください。</p>
