@@ -1,6 +1,6 @@
 "use strict";
 
-importScripts("collector-core.js", "orchestrator-core.js");
+importScripts("collector-core.js", "export-artifacts.js", "orchestrator-core.js");
 
 const collector = globalThis.MyFansCollectorCore;
 const durable = globalThis.MyFansOrchestratorCore;
@@ -126,10 +126,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return respond(sendResponse, () => orchestrator.claimExports(message.operation_id));
   }
 
+  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_STARTED") {
+    return respond(sendResponse, () => orchestrator.markExportsDeliveryStarted(
+      message.operation_id,
+      message.claim_token,
+      message.artifact_types
+    ));
+  }
+
   if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED") {
     return respond(sendResponse, () => orchestrator.markExportsDelivered(
       message.operation_id,
-      message.claim_token
+      message.claim_token,
+      message.artifact_types
+    ));
+  }
+
+  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_FAILED") {
+    return respond(sendResponse, () => orchestrator.markExportsDeliveryFailed(
+      message.operation_id,
+      message.claim_token,
+      message.artifact_types,
+      message.reason
+    ));
+  }
+
+  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_AMBIGUOUS") {
+    return respond(sendResponse, () => orchestrator.markExportsDeliveryAmbiguous(
+      message.operation_id,
+      message.claim_token,
+      message.artifact_types,
+      message.reason
     ));
   }
 

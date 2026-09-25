@@ -8,6 +8,7 @@ const testDir = path.dirname(fileURLToPath(import.meta.url));
 const extensionRoot = path.resolve(testDir, "..");
 const runtimeFiles = [
   "src/collector-core.js",
+  "src/export-artifacts.js",
   "src/orchestrator-core.js",
   "src/background.js",
   "src/content-script.js",
@@ -19,6 +20,7 @@ const sources = Object.fromEntries(await Promise.all(runtimeFiles.map(async (fil
 ])));
 const runtimeSource = Object.values(sources).join("\n");
 const contentScriptSource = sources["src/content-script.js"];
+const exportArtifactSource = sources["src/export-artifacts.js"];
 const orchestratorSource = sources["src/orchestrator-core.js"];
 const backgroundSource = sources["src/background.js"];
 const popupSource = sources["src/popup.js"];
@@ -45,7 +47,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest adds only an MV3 service worker and keeps the prior least privileges", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.3.1");
+  assert.equal(manifest.version, "0.3.2");
   assert.deepEqual(manifest.permissions, ["activeTab", "storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
@@ -61,7 +63,7 @@ test("popup has no image, video, canvas, iframe, or remote script elements", () 
     assert.equal(new RegExp(`<${tag}\\b`, "i").test(popupHtml), false);
   }
   const scriptSources = [...popupHtml.matchAll(/<script\s+src="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(scriptSources, ["popup.js"]);
+  assert.deepEqual(scriptSources, ["export-artifacts.js", "popup.js"]);
 });
 
 test("journal and cumulative persistence use extension storage only", () => {
@@ -139,6 +141,13 @@ test("formal cumulative catalog is committed only by the durable commit operatio
   assert.ok(atomicSet > commitStart);
   assert.ok(catalogsWrite > atomicSet);
   assert.ok(completedWrite > catalogsWrite);
+});
+
+test("completed exports hash and download the same canonical serialized text", () => {
+  assert.match(exportArtifactSource, /JSON\.stringify\(canonicalize\(value\), null, 2\)/);
+  assert.match(exportArtifactSource, /sha256Utf8\(artifact\.serialized_text\)/);
+  assert.match(popupSource, /new Blob\(\[artifact\.serialized_text\]/);
+  assert.equal(orchestratorSource.includes("catalogHash(catalog) !== operation.generated_export.cumulative_hash"), false);
 });
 
 test("popup receives status from the journal and cannot broaden collection limits", () => {

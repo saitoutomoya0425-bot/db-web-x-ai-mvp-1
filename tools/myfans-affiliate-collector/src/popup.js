@@ -1,6 +1,8 @@
 (function installPopupController() {
   "use strict";
 
+  const exportArtifacts = globalThis.MyFansExportArtifacts;
+  if (!exportArtifacts) throw new Error("MYFANS_EXPORT_ARTIFACTS_REQUIRED");
   const buttons = [...document.querySelectorAll("button")];
   const status = document.getElementById("status");
   const results = document.getElementById("results");
@@ -37,6 +39,18 @@
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
     anchor.download = `${prefix}-${safeFileTimestamp(value.collected_at || value.updated_at)}.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  function downloadArtifact(artifact) {
+    const blob = new Blob([artifact.serialized_text], { type: "application/json" });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = artifact.filename;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
@@ -118,7 +132,7 @@
     cancelButton.disabled = !cancellable;
     exportButton.hidden = !(
       currentOperation?.state === "COMPLETED" &&
-      ["GENERATED", "DELIVERING"].includes(currentOperation.export_state)
+      ["GENERATED", "DELIVERY_FAILED"].includes(currentOperation.export_state)
     );
     exportButton.disabled = exportButton.hidden;
     refreshButton.disabled = false;
@@ -141,6 +155,11 @@
 
     if (isOperationActive(currentOperation)) {
       setStatus(`background収集中: ${currentOperation.stage}（${currentOperation.pages_staged}/${currentOperation.max_pages}ページ）`);
+    } else if (
+      currentOperation?.state === "COMPLETED" &&
+      ["DELIVERING", "DELIVERY_AMBIGUOUS"].includes(currentOperation.export_state)
+    ) {
+      setStatus("JSON保存の完了状態を確定できません。重複防止のため自動再保存しません。", true);
     } else if (currentOperation?.state === "COMPLETED") {
       setStatus(
         `収集完了: ${currentOperation.result?.pages_collected || 0}ページ、累積${currentOperation.result?.cumulative_posts || 0}作品。JSONを保存できます。`
@@ -228,24 +247,67 @@
   async function exportCompleted() {
     if (!currentOperation?.operation_id) return;
     setBusy(true);
+    let claimed = null;
+    let deliveryStarted = false;
+    const deliveredTypes = new Set();
     try {
-      const claimed = await sendToBackground({
+      claimed = await sendToBackground({
         type: "MYFANS_ORCHESTRATOR_CLAIM_EXPORT",
         operation_id: currentOperation.operation_id
       });
       if (!claimed?.claimed || !claimed.artifacts) throw new Error(`EXPORT_NOT_AVAILABLE:${claimed?.export_state || "UNKNOWN"}`);
-      renderBundle(claimed.artifacts.run, claimed.artifacts.cumulative);
-      downloadJson(claimed.artifacts.run, "myfans-affiliate-catalog-run");
-      downloadJson(claimed.artifacts.cumulative, "myfans-affiliate-catalog-cumulative");
+      const artifacts = [claimed.artifacts.run, claimed.artifacts.cumulative].filter(Boolean);
+      if (artifacts.length === 0) throw new Error("EXPORT_ARTIFACT_PACKAGE_EMPTY");
+      for (const artifact of artifacts) await exportArtifacts.verifyExportArtifact(artifact);
+      const logical = Object.fromEntries(artifacts.map((artifact) => [
+        artifact.artifact_type,
+        JSON.parse(artifact.serialized_text)
+      ]));
+      if (logical.RUN && logical.CUMULATIVE) renderBundle(logical.RUN, logical.CUMULATIVE);
+      const artifactTypes = artifacts.map((artifact) => artifact.artifact_type);
       await sendToBackground({
-        type: "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED",
+        type: "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_STARTED",
         operation_id: currentOperation.operation_id,
-        claim_token: claimed.claim_token
+        claim_token: claimed.claim_token,
+        artifact_types: artifactTypes
       });
+      deliveryStarted = true;
+      for (const artifact of artifacts) {
+        downloadArtifact(artifact);
+        await sendToBackground({
+          type: "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED",
+          operation_id: currentOperation.operation_id,
+          claim_token: claimed.claim_token,
+          artifact_types: [artifact.artifact_type]
+        });
+        deliveredTypes.add(artifact.artifact_type);
+      }
       setStatus("run/cumulative JSONを保存しました。");
       await refreshStatus({ quiet: true });
     } catch (error) {
+      if (claimed?.claimed && claimed.claim_token) {
+        const pendingTypes = Object.values(claimed.artifacts || {})
+          .map((artifact) => artifact.artifact_type)
+          .filter((type) => !deliveredTypes.has(type));
+        if (pendingTypes.length > 0) {
+          const messageType = deliveryStarted
+            ? "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_AMBIGUOUS"
+            : "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_FAILED";
+          try {
+            await sendToBackground({
+              type: messageType,
+              operation_id: currentOperation.operation_id,
+              claim_token: claimed.claim_token,
+              artifact_types: pendingTypes,
+              reason: error instanceof Error ? error.message : "EXPORT_DELIVERY_FAILED"
+            });
+          } catch {
+            // An unacknowledged claim stays fail-closed and cannot auto-redownload.
+          }
+        }
+      }
       setStatus(`JSONを保存できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+      await refreshStatus({ quiet: true });
     } finally {
       setBusy(false);
     }

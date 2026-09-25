@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
@@ -8,12 +9,15 @@ import { fileURLToPath } from "node:url";
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const extensionRoot = path.resolve(testDir, "..");
 const collectorSource = await readFile(path.join(extensionRoot, "src/collector-core.js"), "utf8");
+const exportArtifactSource = await readFile(path.join(extensionRoot, "src/export-artifacts.js"), "utf8");
 const orchestratorSource = await readFile(path.join(extensionRoot, "src/orchestrator-core.js"), "utf8");
-const sandbox = { URL, console };
+const sandbox = { URL, console, crypto: webcrypto, TextEncoder };
 vm.createContext(sandbox);
 vm.runInContext(collectorSource, sandbox, { filename: "collector-core.js" });
+vm.runInContext(exportArtifactSource, sandbox, { filename: "export-artifacts.js" });
 vm.runInContext(orchestratorSource, sandbox, { filename: "orchestrator-core.js" });
 const core = sandbox.MyFansCollectorCore;
+const artifactCore = sandbox.MyFansExportArtifacts;
 const durable = sandbox.MyFansOrchestratorCore;
 
 function clone(value) {
@@ -66,7 +70,7 @@ function pageSnapshot(page, options = {}) {
   return snapshot;
 }
 
-function seedCatalog({ checkpointVersion = "0.3.1", visibleNext = false } = {}) {
+function seedCatalog({ checkpointVersion = "0.3.2", visibleNext = false } = {}) {
   const snapshots = Array.from({ length: 5 }, (_, index) => pageSnapshot(index + 1));
   const raw = core.buildExport(snapshots, {
     collected_at: snapshots.at(-1).collected_at,
@@ -248,6 +252,63 @@ async function stepUntil(harness, operationId, predicate, options = {}) {
   throw new Error("TEST_OPERATION_CONDITION_NOT_REACHED");
 }
 
+async function deliverClaim(orchestrator, operationId, claim) {
+  const artifactTypes = Object.values(claim.artifacts).map((artifact) => artifact.artifact_type);
+  await orchestrator.markExportsDeliveryStarted(operationId, claim.claim_token, artifactTypes);
+  for (const artifactType of artifactTypes) {
+    await orchestrator.markExportsDelivered(operationId, claim.claim_token, [artifactType]);
+  }
+}
+
+function pageSixWithOnePriorOverlap() {
+  const snapshot = pageSnapshot(6);
+  const overlapping = postFor(100, 6);
+  overlapping.source_page_url = snapshot.source_page_url;
+  snapshot.posts[0] = overlapping;
+  snapshot.fingerprint = core.fingerprintPage(snapshot);
+  return snapshot;
+}
+
+async function completed199Harness(operationId = "completed-199") {
+  const catalog = seedCatalog({ visibleNext: true });
+  const pageSix = pageSixWithOnePriorOverlap();
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [pageSix, pageSix] }
+  });
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: operationId, mode: "RESUME", tab_id: 7 });
+  const terminal = await stepToTerminal(harness, operationId);
+  assert.equal(terminal.operation.state, "COMPLETED");
+  const state = await orchestrator.readState();
+  const saved = state.catalogs[harness.scope.key];
+  assert.equal(saved.counts.posts, 199);
+  assert.equal(new Set(saved.posts.map((post) => post.post_uuid)).size, 199);
+  assert.equal(saved.run_count, 2);
+  assert.equal(saved.checkpoint_summary.last_successfully_collected_page, 10);
+  return { harness, orchestrator, operationId };
+}
+
+async function convertCompletedOperationToLegacy031(fixture) {
+  const state = await fixture.orchestrator.readState();
+  const active = clone(state.active);
+  const runBundle = JSON.parse(active.generated_export.artifacts.run.serialized_text);
+  active.collector_version = "0.3.1";
+  active.generated_export = {
+    run_bundle: runBundle,
+    cumulative_scope_key: active.scope.key,
+    cumulative_hash: "legacy-order-sensitive-hash",
+    generated_at: active.updated_at
+  };
+  active.export_state = "GENERATED";
+  fixture.harness.storage.data[durable.ACTIVE_OPERATION_KEY] = active;
+  const catalog = fixture.harness.storage.data[durable.CATALOG_KEY][fixture.harness.scope.key];
+  catalog.collector_version = "0.3.1";
+  catalog.checkpoint_summary.collector_version = "0.3.1";
+  return { active, runBundle, catalog };
+}
+
 test("journal schema persists the requested durable operation contract", async () => {
   const harness = createHarness();
   const orchestrator = durable.createDurableOrchestrator(harness.adapters);
@@ -320,7 +381,7 @@ test("a third background run resumes pages 11-15 without resetting cumulative st
   await stepToTerminal(harness, "second-run-6-10");
   orchestrator = durable.createDurableOrchestrator(harness.adapters);
   const claim = await orchestrator.claimExports("second-run-6-10");
-  await orchestrator.markExportsDelivered("second-run-6-10", claim.claim_token);
+  await deliverClaim(orchestrator, "second-run-6-10", claim);
 
   await orchestrator.start({ operation_id: "third-run-11-15", mode: "RESUME", tab_id: 7 });
   const terminal = await stepToTerminal(harness, "third-run-11-15");
@@ -671,10 +732,10 @@ test("successful commit, run count, checkpoint advance, and export generation oc
   const claim = await orchestrator.claimExports("commit-once");
   const retry = await orchestrator.claimExports("commit-once");
   assert.equal(claim.claimed, true);
-  assert.equal(retry.claimed, true);
-  assert.equal(retry.claim_token, claim.claim_token);
-  assert.equal(retry.artifacts.cumulative.run_count, 2);
-  await orchestrator.markExportsDelivered("commit-once", claim.claim_token);
+  assert.equal(retry.claimed, false);
+  assert.equal(retry.export_state, "DELIVERY_AMBIGUOUS");
+  assert.equal(JSON.parse(claim.artifacts.cumulative.serialized_text).run_count, 2);
+  await deliverClaim(orchestrator, "commit-once", claim);
   const unavailable = await orchestrator.claimExports("commit-once");
   assert.equal(unavailable.claimed, false);
   assert.equal(unavailable.export_state, "DELIVERED");
@@ -690,4 +751,145 @@ test("repeated resume data remains UUID-deduplicated and snapshot absence never 
   assert.equal(saved.counts.posts, 200);
   assert.equal(new Set(saved.posts.map((post) => post.post_uuid)).size, 200);
   assert.equal(saved.merge_summary.deletion_candidates, 0);
+});
+
+test("run and cumulative artifacts survive storage and worker restart before claim", async () => {
+  const fixture = await completed199Harness("restart-before-claim");
+  const restarted = durable.createDurableOrchestrator(fixture.harness.adapters);
+  const claim = await restarted.claimExports(fixture.operationId);
+  assert.equal(claim.claimed, true);
+  assert.equal(Object.keys(claim.artifacts).length, 2);
+  await artifactCore.verifyExportArtifact(claim.artifacts.run);
+  await artifactCore.verifyExportArtifact(claim.artifacts.cumulative);
+  assert.equal(JSON.parse(claim.artifacts.cumulative.serialized_text).counts.posts, 199);
+});
+
+test("popup close and reopen before claim leaves generated artifacts claimable", async () => {
+  const fixture = await completed199Harness("popup-reopen-before-claim");
+  const firstView = await fixture.orchestrator.getStatus(7);
+  assert.equal(firstView.operation.export_state, "GENERATED");
+  const reopened = durable.createDurableOrchestrator(fixture.harness.adapters);
+  const secondView = await reopened.getStatus(7);
+  assert.equal(secondView.operation.export_state, "GENERATED");
+  const claim = await reopened.claimExports(fixture.operationId);
+  assert.equal(claim.claimed, true);
+  assert.equal(Object.keys(claim.artifacts).length, 2);
+});
+
+test("failed hash verification never marks an artifact delivered", async () => {
+  const fixture = await completed199Harness("tampered-artifact");
+  const active = fixture.harness.storage.data[durable.ACTIVE_OPERATION_KEY];
+  active.generated_export.artifacts.run.serialized_text = active.generated_export.artifacts.run.serialized_text.replace(
+    "myfans-affiliate-catalog-local-v1",
+    "tampered"
+  );
+  await assert.rejects(
+    fixture.orchestrator.claimExports(fixture.operationId),
+    /EXPORT_ARTIFACT_(?:BYTE_LENGTH_MISMATCH|HASH_MISMATCH)/
+  );
+  const state = await fixture.orchestrator.readState();
+  assert.equal(state.active.export_state, "GENERATED");
+  assert.equal(state.active.generated_export.artifacts.run.delivery_state, "GENERATED");
+  assert.equal(state.active.generated_export.artifacts.cumulative.delivery_state, "GENERATED");
+});
+
+test("failed pre-download delivery is retryable and successful artifacts are delivered once", async () => {
+  const fixture = await completed199Harness("delivery-retry");
+  const first = await fixture.orchestrator.claimExports(fixture.operationId);
+  const types = Object.values(first.artifacts).map((artifact) => artifact.artifact_type);
+  await fixture.orchestrator.markExportsDeliveryFailed(
+    fixture.operationId,
+    first.claim_token,
+    types,
+    "POPUP_VALIDATION_FAILED"
+  );
+  const retry = await fixture.orchestrator.claimExports(fixture.operationId);
+  assert.equal(retry.claimed, true);
+  assert.notEqual(retry.claim_token, first.claim_token);
+  await deliverClaim(fixture.orchestrator, fixture.operationId, retry);
+  const unavailable = await fixture.orchestrator.claimExports(fixture.operationId);
+  assert.equal(unavailable.claimed, false);
+  assert.equal(unavailable.export_state, "DELIVERED");
+  const state = await fixture.orchestrator.readState();
+  assert.equal(state.active.generated_export.artifacts.run.delivery_attempts, 2);
+  assert.equal(state.active.generated_export.artifacts.cumulative.delivery_attempts, 2);
+});
+
+test("popup loss after download start becomes ambiguous and never auto-redownloads", async () => {
+  const fixture = await completed199Harness("ambiguous-delivery");
+  const claim = await fixture.orchestrator.claimExports(fixture.operationId);
+  const types = Object.values(claim.artifacts).map((artifact) => artifact.artifact_type);
+  await fixture.orchestrator.markExportsDeliveryStarted(fixture.operationId, claim.claim_token, types);
+  const reopened = durable.createDurableOrchestrator(fixture.harness.adapters);
+  const view = await reopened.getStatus(7);
+  assert.equal(view.operation.export_state, "DELIVERY_AMBIGUOUS");
+  const retry = await reopened.claimExports(fixture.operationId);
+  assert.equal(retry.claimed, false);
+  assert.equal(retry.export_state, "DELIVERY_AMBIGUOUS");
+  const state = await reopened.readState();
+  assert.equal(state.active.generated_export.artifacts.run.delivery_state, "DELIVERY_AMBIGUOUS");
+  assert.equal(state.active.generated_export.artifacts.cumulative.delivery_state, "DELIVERY_AMBIGUOUS");
+});
+
+test("legacy 0.3.1 completed 199-post operation recovers artifacts only and recovery is idempotent", async () => {
+  const fixture = await completed199Harness("legacy-199-recovery");
+  await convertCompletedOperationToLegacy031(fixture);
+  const before = await fixture.orchestrator.readState();
+  const catalogBefore = clone(before.catalogs[fixture.harness.scope.key]);
+  const uuidSetBefore = catalogBefore.posts.map((post) => post.post_uuid).sort();
+  const checkpointBefore = clone(catalogBefore.checkpoint_summary);
+  const runCountBefore = catalogBefore.run_count;
+  const navigationBefore = fixture.harness.navigationCount;
+  const collectionCallsBefore = Array.from({ length: 10 }, (_, index) => fixture.harness.collectCount(index + 1))
+    .reduce((total, count) => total + count, 0);
+
+  const first = await fixture.orchestrator.recoverExportArtifacts(fixture.operationId);
+  assert.equal(first.recovered, true);
+  const afterFirst = await fixture.orchestrator.readState();
+  const firstArtifacts = clone(afterFirst.active.generated_export.artifacts);
+  const setCountAfterFirst = fixture.harness.storage.setCount;
+  const second = await durable.createDurableOrchestrator(fixture.harness.adapters)
+    .recoverExportArtifacts(fixture.operationId);
+  assert.equal(second.recovered, false);
+  assert.equal(fixture.harness.storage.setCount, setCountAfterFirst);
+
+  const after = await fixture.orchestrator.readState();
+  const catalogAfter = after.catalogs[fixture.harness.scope.key];
+  assert.deepEqual(catalogAfter, catalogBefore);
+  assert.deepEqual(catalogAfter.posts.map((post) => post.post_uuid).sort(), uuidSetBefore);
+  assert.deepEqual(catalogAfter.checkpoint_summary, checkpointBefore);
+  assert.equal(catalogAfter.run_count, runCountBefore);
+  assert.equal(after.active.operation_id, fixture.operationId);
+  assert.equal(after.active.result.cumulative_posts, 199);
+  assert.deepEqual(after.active.generated_export.artifacts, firstArtifacts);
+  assert.equal(fixture.harness.navigationCount, navigationBefore);
+  const collectionCallsAfter = Array.from({ length: 10 }, (_, index) => fixture.harness.collectCount(index + 1))
+    .reduce((total, count) => total + count, 0);
+  assert.equal(collectionCallsAfter, collectionCallsBefore);
+  assert.equal(after.active.generated_export.recovered_from_legacy, true);
+  await artifactCore.verifyExportArtifact(after.active.generated_export.artifacts.run);
+  await artifactCore.verifyExportArtifact(after.active.generated_export.artifacts.cumulative);
+
+  const claim = await fixture.orchestrator.claimExports(fixture.operationId);
+  assert.equal(claim.claimed, true);
+  assert.equal(claim.recovered_from_legacy, false);
+  assert.equal(JSON.parse(claim.artifacts.cumulative.serialized_text).counts.posts, 199);
+  assert.equal(JSON.parse(claim.artifacts.run.serialized_text).collection_run.start_page, 6);
+  assert.equal(JSON.parse(claim.artifacts.run.serialized_text).collection_run.last_successfully_collected_page, 10);
+});
+
+test("one claim recovers and returns both artifacts from a legacy 0.3.1 completed operation", async () => {
+  const fixture = await completed199Harness("legacy-one-click-recovery");
+  await convertCompletedOperationToLegacy031(fixture);
+  const before = clone((await fixture.orchestrator.readState()).catalogs[fixture.harness.scope.key]);
+  const restarted = durable.createDurableOrchestrator(fixture.harness.adapters);
+  const claim = await restarted.claimExports(fixture.operationId);
+  assert.equal(claim.claimed, true);
+  assert.equal(claim.recovered_from_legacy, true);
+  assert.equal(Object.keys(claim.artifacts).length, 2);
+  const after = await restarted.readState();
+  assert.deepEqual(after.catalogs[fixture.harness.scope.key], before);
+  assert.equal(after.active.result.cumulative_posts, 199);
+  assert.equal(after.active.result.run_count, 2);
+  assert.equal(after.active.result.last_successfully_collected_page, 10);
 });

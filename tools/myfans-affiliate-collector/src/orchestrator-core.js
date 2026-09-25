@@ -3,8 +3,11 @@
 
   const collector = global.MyFansCollectorCore;
   if (!collector) throw new Error("MYFANS_COLLECTOR_CORE_REQUIRED");
+  const exportArtifacts = global.MyFansExportArtifacts;
+  if (!exportArtifacts) throw new Error("MYFANS_EXPORT_ARTIFACTS_REQUIRED");
 
   const ORCHESTRATOR_SCHEMA_VERSION = "myfans-background-operation-v1";
+  const EXPORT_PACKAGE_SCHEMA_VERSION = "myfans-export-package-v2";
   const ACTIVE_OPERATION_KEY = "myfansActiveCollectionOperationV1";
   const LAST_OPERATION_KEY = "myfansLastCollectionOperationV1";
   const CATALOG_KEY = "myfansCumulativeCatalogsV1";
@@ -30,6 +33,8 @@
     GENERATING: "GENERATING",
     GENERATED: "GENERATED",
     DELIVERING: "DELIVERING",
+    DELIVERY_FAILED: "DELIVERY_FAILED",
+    DELIVERY_AMBIGUOUS: "DELIVERY_AMBIGUOUS",
     DELIVERED: "DELIVERED"
   });
   const COMMIT_STATES = Object.freeze({
@@ -77,6 +82,88 @@
 
   function catalogHash(catalog) {
     return collector.stableHash(JSON.stringify(catalog || null));
+  }
+
+  function artifactKey(artifactType) {
+    if (artifactType === exportArtifacts.ARTIFACT_TYPES.RUN) return "run";
+    if (artifactType === exportArtifacts.ARTIFACT_TYPES.CUMULATIVE) return "cumulative";
+    throw new Error("EXPORT_ARTIFACT_TYPE_INVALID");
+  }
+
+  function artifactEntries(generatedExport) {
+    if (generatedExport?.schema_version !== EXPORT_PACKAGE_SCHEMA_VERSION) return [];
+    return [
+      [exportArtifacts.ARTIFACT_TYPES.RUN, generatedExport.artifacts?.run],
+      [exportArtifacts.ARTIFACT_TYPES.CUMULATIVE, generatedExport.artifacts?.cumulative]
+    ].filter(([, artifact]) => Boolean(artifact));
+  }
+
+  function summarizeArtifacts(generatedExport) {
+    return Object.fromEntries(artifactEntries(generatedExport).map(([type, artifact]) => [artifactKey(type), {
+      artifact_type: type,
+      filename: artifact.filename,
+      byte_length: artifact.byte_length,
+      content_hash: artifact.content_hash,
+      generation_state: artifact.generation_state,
+      delivery_state: artifact.delivery_state,
+      delivery_attempts: artifact.delivery_attempts,
+      delivery_failure_reason: artifact.delivery_failure_reason
+    }]));
+  }
+
+  async function buildCanonicalExportPackage(operation, runBundle, cumulative, generatedAt, recoveredFromLegacy) {
+    const [runArtifact, cumulativeArtifact] = await Promise.all([
+      exportArtifacts.serializeExportArtifact(runBundle, {
+        artifact_type: exportArtifacts.ARTIFACT_TYPES.RUN,
+        generated_at: generatedAt
+      }),
+      exportArtifacts.serializeExportArtifact(cumulative, {
+        artifact_type: exportArtifacts.ARTIFACT_TYPES.CUMULATIVE,
+        generated_at: generatedAt
+      })
+    ]);
+    return {
+      schema_version: EXPORT_PACKAGE_SCHEMA_VERSION,
+      operation_id: operation.operation_id,
+      cumulative_scope_key: operation.scope.key,
+      generated_at: generatedAt,
+      recovered_from_legacy: Boolean(recoveredFromLegacy),
+      artifacts: {
+        run: runArtifact,
+        cumulative: cumulativeArtifact
+      }
+    };
+  }
+
+  function validateLegacyExportRecovery(operation, catalog) {
+    const legacy = operation.generated_export;
+    const runBundle = legacy?.run_bundle;
+    if (
+      operation.collector_version !== "0.3.1" ||
+      operation.state !== OPERATION_STATES.COMPLETED ||
+      operation.commit_state !== COMMIT_STATES.COMMITTED ||
+      operation.export_state !== EXPORT_STATES.GENERATED ||
+      !runBundle ||
+      legacy?.artifacts ||
+      legacy?.cumulative_scope_key !== operation.scope.key
+    ) throw new Error("LEGACY_EXPORT_RECOVERY_NOT_APPLICABLE");
+    if (!catalog || catalog.collection_scope?.key !== operation.scope.key) {
+      throw new Error("LEGACY_EXPORT_CUMULATIVE_MISSING");
+    }
+    if (runBundle.collection_run?.run_id !== operation.operation_id) {
+      throw new Error("LEGACY_EXPORT_RUN_ID_MISMATCH");
+    }
+    if (!(catalog.runs || []).some((run) => run.run_id === operation.operation_id)) {
+      throw new Error("LEGACY_EXPORT_COMMITTED_RUN_MISSING");
+    }
+    if (
+      catalog.counts?.posts !== operation.result?.cumulative_posts ||
+      catalog.run_count !== operation.result?.run_count ||
+      catalog.checkpoint_summary?.last_successfully_collected_page !== operation.result?.last_successfully_collected_page
+    ) throw new Error("LEGACY_EXPORT_FORMAL_STATE_MISMATCH");
+    collector.assertSafeExport(runBundle);
+    collector.assertSafeExport(catalog);
+    return runBundle;
   }
 
   function transition(operation, nextState, patch, adapters) {
@@ -171,6 +258,7 @@
       completion_state: operation.completion_state,
       stop_reason: operation.stop_reason,
       readiness: clone(operation.readiness),
+      export_artifacts: summarizeArtifacts(operation.generated_export),
       result: clone(operation.result)
     };
   }
@@ -514,16 +602,19 @@
       const cumulative = alreadyCommitted
         ? current
         : collector.mergeCumulativeCatalog(current, bundle).catalog;
+      const generatedAt = isoNow(adapters);
+      const generatedExport = await buildCanonicalExportPackage(
+        operation,
+        bundle,
+        cumulative,
+        generatedAt,
+        false
+      );
       const completed = transition(operation, OPERATION_STATES.COMPLETED, {
         commit_state: COMMIT_STATES.COMMITTED,
         export_state: EXPORT_STATES.GENERATED,
         completion_state: bundle.collection_run.completion_state,
-        generated_export: {
-          run_bundle: bundle,
-          cumulative_scope_key: operation.scope.key,
-          cumulative_hash: catalogHash(cumulative),
-          generated_at: isoNow(adapters)
-        },
+        generated_export: generatedExport,
         result: {
           pages_collected: operation.pages_staged,
           cumulative_posts: cumulative.counts.posts,
@@ -847,8 +938,40 @@
       return drive(active.operation_id);
     }
 
+    async function failClosedInterruptedDelivery(operation) {
+      if (
+        operation?.state !== OPERATION_STATES.COMPLETED ||
+        operation.export_state !== EXPORT_STATES.DELIVERING ||
+        operation.generated_export?.schema_version !== EXPORT_PACKAGE_SCHEMA_VERSION
+      ) return operation;
+      const generatedExport = clone(operation.generated_export);
+      let changed = false;
+      for (const [, artifact] of artifactEntries(generatedExport)) {
+        if ([
+          exportArtifacts.DELIVERY_STATES.CLAIMED,
+          exportArtifacts.DELIVERY_STATES.DELIVERING
+        ].includes(artifact.delivery_state)) {
+          artifact.delivery_state = exportArtifacts.DELIVERY_STATES.DELIVERY_AMBIGUOUS;
+          artifact.delivery_failure_reason = "POPUP_LIFECYCLE_INTERRUPTED";
+          changed = true;
+        }
+      }
+      if (!changed) return operation;
+      const ambiguous = {
+        ...operation,
+        export_state: EXPORT_STATES.DELIVERY_AMBIGUOUS,
+        export_claim_token: null,
+        generated_export: generatedExport,
+        updated_at: isoNow(adapters),
+        revision: operation.revision + 1
+      };
+      await writeOperation(ambiguous);
+      return ambiguous;
+    }
+
     async function getStatus(tabId) {
       const state = await readState();
+      state.active = await failClosedInterruptedDelivery(state.active);
       let scopeKey = state.active?.scope?.key || null;
       let currentPage = null;
       if (tabId != null) {
@@ -872,51 +995,208 @@
       };
     }
 
-    async function claimExports(operationId) {
+    async function recoverExportArtifacts(operationId) {
       const state = await readState();
       const operation = state.active;
       if (!operation || operation.operation_id !== operationId || operation.state !== OPERATION_STATES.COMPLETED) {
         throw new Error("COMPLETED_OPERATION_NOT_FOUND");
       }
-      if (![EXPORT_STATES.GENERATED, EXPORT_STATES.DELIVERING].includes(operation.export_state)) {
+      if (operation.generated_export?.schema_version === EXPORT_PACKAGE_SCHEMA_VERSION) {
+        return { operation, recovered: false };
+      }
+      const catalog = state.catalogs[operation.generated_export?.cumulative_scope_key];
+      const runBundle = validateLegacyExportRecovery(operation, catalog);
+      const generatedAt = operation.generated_export.generated_at || operation.updated_at || runBundle.collected_at;
+      const generatedExport = await buildCanonicalExportPackage(
+        operation,
+        runBundle,
+        catalog,
+        generatedAt,
+        true
+      );
+      const recovered = {
+        ...operation,
+        generated_export: generatedExport,
+        updated_at: isoNow(adapters),
+        revision: operation.revision + 1
+      };
+      await writeOperation(recovered);
+      return { operation: recovered, recovered: true };
+    }
+
+    async function claimExports(operationId) {
+      const recovered = await recoverExportArtifacts(operationId);
+      const operation = recovered.operation;
+      if ([EXPORT_STATES.DELIVERING, EXPORT_STATES.DELIVERY_AMBIGUOUS].includes(operation.export_state)) {
+        return { claimed: false, export_state: EXPORT_STATES.DELIVERY_AMBIGUOUS, artifacts: null };
+      }
+      if (![EXPORT_STATES.GENERATED, EXPORT_STATES.DELIVERY_FAILED].includes(operation.export_state)) {
         return { claimed: false, export_state: operation.export_state, artifacts: null };
       }
-      const catalog = state.catalogs[operation.generated_export.cumulative_scope_key];
-      if (!catalog || catalogHash(catalog) !== operation.generated_export.cumulative_hash) {
-        throw new Error("GENERATED_EXPORT_HASH_MISMATCH");
+      const generatedExport = clone(operation.generated_export);
+      const entries = artifactEntries(generatedExport);
+      if (entries.length !== 2) throw new Error("EXPORT_ARTIFACT_PACKAGE_INCOMPLETE");
+      if (entries.some(([, artifact]) => [
+        exportArtifacts.DELIVERY_STATES.CLAIMED,
+        exportArtifacts.DELIVERY_STATES.DELIVERING,
+        exportArtifacts.DELIVERY_STATES.DELIVERY_AMBIGUOUS
+      ].includes(artifact.delivery_state))) {
+        return { claimed: false, export_state: EXPORT_STATES.DELIVERY_AMBIGUOUS, artifacts: null };
       }
-      const token = operation.export_claim_token || adapters.uuid();
+      const claimable = entries.filter(([, artifact]) => [
+        exportArtifacts.DELIVERY_STATES.GENERATED,
+        exportArtifacts.DELIVERY_STATES.DELIVERY_FAILED
+      ].includes(artifact.delivery_state));
+      if (claimable.length === 0) {
+        return { claimed: false, export_state: EXPORT_STATES.DELIVERED, artifacts: null };
+      }
+      for (const [, artifact] of claimable) await exportArtifacts.verifyExportArtifact(artifact);
+      const token = adapters.uuid();
+      const claimedAt = isoNow(adapters);
+      for (const [, artifact] of claimable) {
+        artifact.delivery_state = exportArtifacts.DELIVERY_STATES.CLAIMED;
+        artifact.claim_token = token;
+        artifact.delivery_attempts = (artifact.delivery_attempts || 0) + 1;
+        artifact.claimed_at = claimedAt;
+        artifact.delivery_started_at = null;
+        artifact.delivery_failure_reason = null;
+      }
       const claimed = {
         ...operation,
         export_state: EXPORT_STATES.DELIVERING,
         export_claim_token: token,
         export_delivery_attempts: (operation.export_delivery_attempts || 0) + 1,
-        updated_at: isoNow(adapters),
+        generated_export: generatedExport,
+        updated_at: claimedAt,
         revision: operation.revision + 1
       };
       await writeOperation(claimed);
+      const responseArtifacts = Object.fromEntries(claimable.map(([type, artifact]) => [
+        artifactKey(type),
+        clone(artifact)
+      ]));
       return {
         claimed: true,
         export_state: claimed.export_state,
         claim_token: token,
-        artifacts: {
-          run: clone(operation.generated_export.run_bundle),
-          cumulative: clone(catalog)
-        }
+        recovered_from_legacy: recovered.recovered,
+        artifacts: responseArtifacts
       };
     }
 
-    async function markExportsDelivered(operationId, token) {
-      const operation = await replaceOperation(operationId, (current) => {
-        if (current.export_state !== EXPORT_STATES.DELIVERING || current.export_claim_token !== token) {
-          throw new Error("EXPORT_CLAIM_MISMATCH");
+    function updateArtifactDelivery(current, token, artifactTypes, fromStates, toState, patch) {
+      if (current.export_claim_token !== token) throw new Error("EXPORT_CLAIM_MISMATCH");
+      const generatedExport = clone(current.generated_export);
+      const selected = new Set(artifactTypes || []);
+      if (selected.size === 0) throw new Error("EXPORT_ARTIFACT_SELECTION_EMPTY");
+      for (const type of selected) {
+        const key = artifactKey(type);
+        const artifact = generatedExport.artifacts?.[key];
+        if (!artifact || artifact.claim_token !== token || !fromStates.includes(artifact.delivery_state)) {
+          throw new Error("EXPORT_ARTIFACT_CLAIM_MISMATCH");
         }
+        Object.assign(artifact, patch, { delivery_state: toState });
+      }
+      return generatedExport;
+    }
+
+    async function markExportsDeliveryStarted(operationId, token, artifactTypes) {
+      const operation = await replaceOperation(operationId, (current) => {
+        if (current.export_state !== EXPORT_STATES.DELIVERING) throw new Error("EXPORT_CLAIM_MISMATCH");
+        const timestamp = isoNow(adapters);
+        const generatedExport = updateArtifactDelivery(
+          current,
+          token,
+          artifactTypes,
+          [exportArtifacts.DELIVERY_STATES.CLAIMED],
+          exportArtifacts.DELIVERY_STATES.DELIVERING,
+          { delivery_started_at: timestamp }
+        );
         return {
           ...current,
-          export_state: EXPORT_STATES.DELIVERED,
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+      return summarizeOperation(operation);
+    }
+
+    async function markExportsDelivered(operationId, token, artifactTypes) {
+      const operation = await replaceOperation(operationId, (current) => {
+        if (current.export_state !== EXPORT_STATES.DELIVERING) throw new Error("EXPORT_CLAIM_MISMATCH");
+        const timestamp = isoNow(adapters);
+        const generatedExport = updateArtifactDelivery(
+          current,
+          token,
+          artifactTypes,
+          [exportArtifacts.DELIVERY_STATES.DELIVERING],
+          exportArtifacts.DELIVERY_STATES.DELIVERED,
+          { delivered_at: timestamp, claim_token: null }
+        );
+        const allDelivered = artifactEntries(generatedExport).every(([, artifact]) =>
+          artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED
+        );
+        return {
+          ...current,
+          export_state: allDelivered ? EXPORT_STATES.DELIVERED : EXPORT_STATES.DELIVERING,
+          export_claim_token: allDelivered ? null : current.export_claim_token,
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+      return summarizeOperation(operation);
+    }
+
+    async function markExportsDeliveryFailed(operationId, token, artifactTypes, reason) {
+      const operation = await replaceOperation(operationId, (current) => {
+        if (current.export_state !== EXPORT_STATES.DELIVERING) throw new Error("EXPORT_CLAIM_MISMATCH");
+        const timestamp = isoNow(adapters);
+        const generatedExport = updateArtifactDelivery(
+          current,
+          token,
+          artifactTypes,
+          [exportArtifacts.DELIVERY_STATES.CLAIMED],
+          exportArtifacts.DELIVERY_STATES.DELIVERY_FAILED,
+          {
+            claim_token: null,
+            delivery_failure_reason: String(reason || "EXPORT_DELIVERY_FAILED")
+          }
+        );
+        return {
+          ...current,
+          export_state: EXPORT_STATES.DELIVERY_FAILED,
           export_claim_token: null,
-          generated_export: null,
-          updated_at: isoNow(adapters),
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+      return summarizeOperation(operation);
+    }
+
+    async function markExportsDeliveryAmbiguous(operationId, token, artifactTypes, reason) {
+      const operation = await replaceOperation(operationId, (current) => {
+        if (current.export_state !== EXPORT_STATES.DELIVERING) throw new Error("EXPORT_CLAIM_MISMATCH");
+        const timestamp = isoNow(adapters);
+        const generatedExport = updateArtifactDelivery(
+          current,
+          token,
+          artifactTypes,
+          [
+            exportArtifacts.DELIVERY_STATES.CLAIMED,
+            exportArtifacts.DELIVERY_STATES.DELIVERING
+          ],
+          exportArtifacts.DELIVERY_STATES.DELIVERY_AMBIGUOUS,
+          { delivery_failure_reason: String(reason || "EXPORT_DELIVERY_AMBIGUOUS") }
+        );
+        return {
+          ...current,
+          export_state: EXPORT_STATES.DELIVERY_AMBIGUOUS,
+          export_claim_token: null,
+          generated_export: generatedExport,
+          updated_at: timestamp,
           revision: current.revision + 1
         };
       });
@@ -929,9 +1209,13 @@
       drive,
       driveOne,
       getStatus,
+      markExportsDeliveryAmbiguous,
+      markExportsDeliveryFailed,
+      markExportsDeliveryStarted,
       markExportsDelivered,
       readState,
       recoverActive,
+      recoverExportArtifacts,
       start
     });
   }
@@ -941,6 +1225,7 @@
     CANCELLATION_STATES,
     CATALOG_KEY,
     COMMIT_STATES,
+    EXPORT_PACKAGE_SCHEMA_VERSION,
     EXPORT_STATES,
     LAST_OPERATION_KEY,
     OPERATION_STATES,

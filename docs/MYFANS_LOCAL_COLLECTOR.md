@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-Collector `0.3.1` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
+Collector `0.3.2` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -73,7 +73,9 @@ The multi-page actions use only a visible, enabled `次へ` or `次のページ`
 
 The popup is a controller/view only. Closing it destroys no operation state; reopening it reads the durable journal and shows the current stage and progress. The journal and temporary staged pages live in extension-owned `chrome.storage.local`. Hydration start/deadline, last observed page/record count/fingerprint, and the settle candidate are journaled. Worker startup, content readiness, or a popup status refresh resumes the remaining original deadline after service-worker suspension or browser restart; it never starts a fresh ten-second allowance.
 
-Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0`, `0.2.1`, and `0.3.0` checkpoints remain resumable; loading version `0.3.1` alone does not migrate or rewrite them. A terminal `FAILED` journal is preserved as prior evidence but does not block a new resume operation from the formal checkpoint.
+Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0`, `0.2.1`, `0.3.0`, and `0.3.1` checkpoints remain resumable; loading version `0.3.2` alone does not rewrite them. A terminal `FAILED` journal is preserved as prior evidence but does not block a new resume operation from the formal checkpoint.
+
+Completed run and cumulative exports are canonical artifacts: object keys are recursively sorted, array order is retained, JSON is pretty-printed with one trailing newline, and SHA-256 covers the exact UTF-8 text delivered to the file. Each artifact has an independent delivery state. A validation failure before download remains retryable; an interrupted delivery becomes fail-closed `DELIVERY_AMBIGUOUS` and is not automatically repeated. Legacy `0.3.1` completed operations can rebuild only these export artifacts from their committed run/catalog data without changing UUIDs, run count, checkpoint, or collection result.
 
 **新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
 
