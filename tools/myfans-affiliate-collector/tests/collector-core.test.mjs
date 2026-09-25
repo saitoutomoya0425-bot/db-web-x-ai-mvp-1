@@ -223,8 +223,8 @@ function navigationHarness(options = {}) {
   };
 }
 
-test("reports collector version 0.3.0 and a five-page hard limit", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.3.0");
+test("reports collector version 0.3.1 and a five-page hard limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.3.1");
   assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
@@ -1572,7 +1572,7 @@ test("login, anti-bot, and modal stops preserve the old cumulative state after a
   }
 });
 
-test("collector 0.3.0 resumes the saved 0.2.x checkpoint without mutating it", () => {
+test("collector 0.3.1 resumes saved 0.2.x and 0.3.0 checkpoints without mutating them", () => {
   const first = plain(core.mergeCumulativeCatalog(null, boundedRun({
     startPage: 1,
     posts: Array.from({ length: 5 }, (_, index) => cumulativePost(index, index + 1)),
@@ -1584,6 +1584,9 @@ test("collector 0.3.0 resumes the saved 0.2.x checkpoint without mutating it", (
   const plan = plain(core.validateResumeCheckpoint(checkpoint, first.collection_scope));
   assert.equal(plan.page, 6);
   assert.equal(JSON.stringify(checkpoint), frozenBefore);
+  assert.doesNotThrow(
+    () => core.validateResumeCheckpoint({ ...checkpoint, collector_version: "0.3.0" }, first.collection_scope)
+  );
   assert.throws(
     () => core.validateResumeCheckpoint({ ...checkpoint, collector_version: "0.1.8" }, first.collection_scope),
     /CHECKPOINT_COLLECTOR_VERSION_MISMATCH/

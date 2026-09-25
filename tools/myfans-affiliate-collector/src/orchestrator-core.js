@@ -9,6 +9,8 @@
   const LAST_OPERATION_KEY = "myfansLastCollectionOperationV1";
   const CATALOG_KEY = "myfansCumulativeCatalogsV1";
   const READY_TIMEOUT_MS = 10000;
+  const READY_POLL_INTERVAL_MS = 250;
+  const READY_SETTLE_MS = 250;
   const OPERATION_STATES = Object.freeze({
     STARTING: "STARTING",
     COLLECTING_CURRENT_PAGE: "COLLECTING_CURRENT_PAGE",
@@ -122,6 +124,7 @@
       pending_snapshot: null,
       navigation_base_snapshot: null,
       navigation: null,
+      readiness: null,
       resume_plan: clone(input.resume_plan || null),
       warnings: [],
       failure_reason: null,
@@ -167,8 +170,133 @@
       export_state: operation.export_state,
       completion_state: operation.completion_state,
       stop_reason: operation.stop_reason,
+      readiness: clone(operation.readiness),
       result: clone(operation.result)
     };
+  }
+
+  function makeReadinessState(adapters, expectedPage, existingDeadline) {
+    const now = adapters.now();
+    const parsedDeadline = Date.parse(existingDeadline || "");
+    const deadlineAt = Number.isFinite(parsedDeadline)
+      ? new Date(parsedDeadline).toISOString()
+      : new Date(now + READY_TIMEOUT_MS).toISOString();
+    return {
+      readiness_started_at: new Date(now).toISOString(),
+      readiness_deadline: deadlineAt,
+      expected_page: expectedPage,
+      last_observed_at: null,
+      last_observed_page: null,
+      last_observed_record_count: 0,
+      last_observed_fingerprint: null,
+      settle_candidate_fingerprint: null,
+      settle_candidate_record_count: 0,
+      settle_candidate_at: null,
+      stable_observations: 0,
+      saw_expected_page: false,
+      saw_records: false,
+      saw_changed_fingerprint: false,
+      status: "WAITING_FOR_DOCUMENT"
+    };
+  }
+
+  function ensureReadinessState(operation, adapters) {
+    if (operation.readiness?.readiness_deadline) return clone(operation.readiness);
+    return makeReadinessState(
+      adapters,
+      operation.expected_page,
+      operation.navigation?.deadline_at
+    );
+  }
+
+  function expectedRecordCount(snapshot, operation) {
+    const previous = operation.navigation_base_snapshot;
+    if ((previous?.posts || []).length > 0 || operation.scope?.source_surface === "post_search") {
+      return (snapshot.posts || []).length;
+    }
+    if ((previous?.creators || []).length > 0) return (snapshot.creators || []).length;
+    return (snapshot.posts || []).length + (snapshot.creators || []).length;
+  }
+
+  function readinessFailureReason(readiness) {
+    if (!readiness.saw_expected_page) return "PAGE_TRANSITION_TIMEOUT";
+    if (!readiness.saw_records || readiness.last_observed_record_count < 1) {
+      return "CATALOG_ROWS_NOT_READY";
+    }
+    if (!readiness.saw_changed_fingerprint) return "PAGE_FINGERPRINT_UNCHANGED";
+    return "PAGE_SNAPSHOT_NOT_STABLE";
+  }
+
+  function observeReadinessSnapshot(operation, snapshot, adapters) {
+    if (!snapshot || typeof snapshot !== "object") throw new Error("PAGE_SNAPSHOT_MISSING");
+    snapshot.fingerprint = snapshot.fingerprint || collector.fingerprintPage(snapshot);
+    if (snapshot.stop_reason) throw new Error(snapshot.stop_reason);
+    const context = collector.collectionContextFromUrl(snapshot.source_page_url);
+    if (!context) throw new Error("PAGE_CONTEXT_INVALID");
+    if (context.collection_scope.key !== operation.scope.key) throw new Error("COLLECTION_SCOPE_MISMATCH");
+    if (context.page !== operation.expected_page) throw new Error("EXPECTED_PAGE_MISMATCH");
+
+    const now = adapters.now();
+    const observedAt = new Date(now).toISOString();
+    const readiness = ensureReadinessState(operation, adapters);
+    const recordCount = expectedRecordCount(snapshot, operation);
+    const changedFingerprint = snapshot.fingerprint !== operation.previous_fingerprint;
+    const sameSettleCandidate = Boolean(
+      readiness.settle_candidate_fingerprint &&
+      readiness.settle_candidate_fingerprint === snapshot.fingerprint &&
+      readiness.settle_candidate_record_count === recordCount
+    );
+    const next = {
+      ...readiness,
+      last_observed_at: observedAt,
+      last_observed_page: context.page,
+      last_observed_record_count: recordCount,
+      last_observed_fingerprint: snapshot.fingerprint,
+      saw_expected_page: true,
+      saw_records: readiness.saw_records || recordCount > 0,
+      saw_changed_fingerprint: readiness.saw_changed_fingerprint || (recordCount > 0 && changedFingerprint)
+    };
+
+    if (recordCount < 1) {
+      Object.assign(next, {
+        settle_candidate_fingerprint: null,
+        settle_candidate_record_count: 0,
+        settle_candidate_at: null,
+        stable_observations: 0,
+        status: "WAITING_FOR_ROWS"
+      });
+    } else if (!changedFingerprint) {
+      Object.assign(next, {
+        settle_candidate_fingerprint: null,
+        settle_candidate_record_count: 0,
+        settle_candidate_at: null,
+        stable_observations: 0,
+        status: "WAITING_FOR_CHANGED_FINGERPRINT"
+      });
+    } else if (!sameSettleCandidate) {
+      Object.assign(next, {
+        settle_candidate_fingerprint: snapshot.fingerprint,
+        settle_candidate_record_count: recordCount,
+        settle_candidate_at: observedAt,
+        stable_observations: 1,
+        status: "SETTLING"
+      });
+    } else {
+      next.stable_observations = readiness.stable_observations + 1;
+      const candidateAt = Date.parse(readiness.settle_candidate_at || "");
+      if (Number.isFinite(candidateAt) && now - candidateAt >= READY_SETTLE_MS) {
+        next.status = "READY";
+        collector.assertSafeExport(snapshot);
+        return { status: "READY", snapshot, context, readiness: next };
+      }
+      next.status = "SETTLING";
+    }
+
+    const deadline = Date.parse(next.readiness_deadline || "");
+    if (Number.isFinite(deadline) && now >= deadline) {
+      throw new Error(readinessFailureReason(next));
+    }
+    return { status: "WAIT", snapshot: null, context, readiness: next };
   }
 
   function validateSnapshot(snapshot, operation, options = {}) {
@@ -359,7 +487,9 @@
     }
 
     function deadlineExpired(operation) {
-      const deadline = Date.parse(operation.navigation?.deadline_at || "");
+      const deadline = Date.parse(
+        operation.readiness?.readiness_deadline || operation.navigation?.deadline_at || ""
+      );
       return Number.isFinite(deadline) && adapters.now() >= deadline;
     }
 
@@ -440,13 +570,15 @@
             }
             const plan = active.resume_plan;
             if (context.page !== plan.page) {
+              const readiness = makeReadinessState(adapters, plan.page);
               const waiting = transition(active, OPERATION_STATES.WAITING_FOR_NEW_DOCUMENT, {
                 expected_page: plan.page,
+                readiness,
                 navigation: {
                   kind: "POSITION",
                   source_page_url: plan.source_page_url,
                   expected_page: plan.page,
-                  deadline_at: new Date(adapters.now() + READY_TIMEOUT_MS).toISOString()
+                  deadline_at: readiness.readiness_deadline
                 }
               }, adapters);
               await writeOperation(waiting);
@@ -549,10 +681,12 @@
               throw new Error("NAVIGATION_ACK_NEXT_PAGE_INVALID");
             }
             const nonce = adapters.uuid();
+            const readiness = makeReadinessState(adapters, ack.expected_next_page);
             const waiting = transition(active, OPERATION_STATES.WAITING_FOR_NEW_DOCUMENT, {
               expected_page: ack.expected_next_page,
               expected_next_evidence: ack.next_control,
               previous_fingerprint: previous.fingerprint,
+              readiness,
               navigation: {
                 kind: "NEXT",
                 nonce,
@@ -560,7 +694,7 @@
                 expected_page: ack.expected_next_page,
                 previous_fingerprint: previous.fingerprint,
                 dispatched: false,
-                deadline_at: new Date(adapters.now() + READY_TIMEOUT_MS).toISOString()
+                deadline_at: readiness.readiness_deadline
               }
             }, adapters);
             await writeOperation(waiting);
@@ -589,17 +723,29 @@
                 await adapters.navigate_tab(active.tab_id, active.navigation.source_page_url);
                 return summarizeOperation(active);
               }
-              validateSnapshot(snapshot, active, { expected_page: active.navigation.expected_page });
+              const observed = observeReadinessSnapshot(active, snapshot, adapters);
+              if (observed.status !== "READY") {
+                const waiting = {
+                  ...active,
+                  readiness: observed.readiness,
+                  updated_at: isoNow(adapters),
+                  revision: active.revision + 1
+                };
+                await writeOperation(waiting);
+                return summarizeOperation(waiting);
+              }
               if (active.resume_plan?.mode === "VISIBLE_NEXT_FROM_LAST_PAGE") {
                 await writeOperation(transition(active, OPERATION_STATES.PREPARING_NAVIGATION, {
-                  navigation_base_snapshot: snapshot,
-                  previous_fingerprint: snapshot.fingerprint,
-                  navigation: null
+                  navigation_base_snapshot: observed.snapshot,
+                  previous_fingerprint: observed.snapshot.fingerprint,
+                  navigation: null,
+                  readiness: observed.readiness
                 }, adapters));
               } else {
                 await writeOperation(transition(active, OPERATION_STATES.VALIDATING_NEW_DOCUMENT, {
-                  pending_snapshot: snapshot,
-                  navigation: null
+                  pending_snapshot: observed.snapshot,
+                  navigation: null,
+                  readiness: observed.readiness
                 }, adapters));
               }
               continue;
@@ -627,8 +773,20 @@
             if (context.page !== active.navigation.expected_page) {
               return summarizeOperation(await pause(operationId, "EXPECTED_PAGE_MISMATCH"));
             }
+            const observed = observeReadinessSnapshot(active, snapshot, adapters);
+            if (observed.status !== "READY") {
+              const waiting = {
+                ...active,
+                readiness: observed.readiness,
+                updated_at: isoNow(adapters),
+                revision: active.revision + 1
+              };
+              await writeOperation(waiting);
+              return summarizeOperation(waiting);
+            }
             await writeOperation(transition(active, OPERATION_STATES.VALIDATING_NEW_DOCUMENT, {
-              pending_snapshot: snapshot
+              pending_snapshot: observed.snapshot,
+              readiness: observed.readiness
             }, adapters));
             continue;
           }
@@ -788,8 +946,12 @@
     OPERATION_STATES,
     ORCHESTRATOR_SCHEMA_VERSION,
     READY_TIMEOUT_MS,
+    READY_POLL_INTERVAL_MS,
+    READY_SETTLE_MS,
     createDurableOrchestrator,
+    ensureReadinessState,
     makeOperation,
+    observeReadinessSnapshot,
     operationActive,
     stageSnapshot,
     summarizeOperation,

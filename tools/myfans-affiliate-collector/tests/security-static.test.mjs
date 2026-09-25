@@ -45,7 +45,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest adds only an MV3 service worker and keeps the prior least privileges", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.3.0");
+  assert.equal(manifest.version, "0.3.1");
   assert.deepEqual(manifest.permissions, ["activeTab", "storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
@@ -83,8 +83,19 @@ test("missing-title segment diagnostics use rendered innerText only", () => {
   );
 });
 
-test("readiness is bounded to ten seconds with 250ms heartbeats", () => {
+test("readiness is bounded to ten seconds with 250ms polling and settle windows", () => {
   assert.match(orchestratorSource, /READY_TIMEOUT_MS\s*=\s*10000/);
+  assert.match(orchestratorSource, /READY_POLL_INTERVAL_MS\s*=\s*250/);
+  assert.match(orchestratorSource, /READY_SETTLE_MS\s*=\s*250/);
+  for (const field of [
+    "readiness_started_at",
+    "readiness_deadline",
+    "last_observed_page",
+    "last_observed_record_count",
+    "last_observed_fingerprint",
+    "settle_candidate_fingerprint",
+    "settle_candidate_at"
+  ]) assert.match(orchestratorSource, new RegExp(field));
   assert.match(contentScriptSource, /setInterval\([\s\S]*?250/);
   assert.match(contentScriptSource, /},\s*10000\)/);
 });

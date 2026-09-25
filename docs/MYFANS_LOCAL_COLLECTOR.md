@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-Collector `0.3.0` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
+Collector `0.3.1` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -69,17 +69,19 @@ The collector also excludes account name, email, affiliate ID, bank details, das
 
 The parser prioritizes public MyFans URL shapes, button and visible Japanese labels, roles, accessible labels, headings, and relative semantic containers such as articles and list items. Generated or Tailwind class names are not used as primary identifiers.
 
-The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a background-service-worker-orchestrated, one-page-at-a-time state machine. The current content script parses only its document, returns a preparation ACK without navigating, then accepts a separate navigation command and returns that ACK before scheduling the visible click. The SPA-updated or newly loaded content script signals readiness to the service worker, which requires the expected scope/page, catalog rows, and a changed rendered-record fingerprint. A URL change alone is not page-ready. Every operation remains capped at five successful pages.
+The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a background-service-worker-orchestrated, one-page-at-a-time state machine. The current content script parses only its document, returns a preparation ACK without navigating, then accepts a separate navigation command and returns that ACK before scheduling the visible click. The SPA-updated or newly loaded content script signals only that it is reachable; each signal triggers a bounded re-evaluation. The service worker waits up to ten seconds for the expected scope/page, catalog UUID records, a changed rendered-record fingerprint, and the same fingerprint after a 250ms settle window. A URL change, content-script signal, catalog shell, or changed empty fingerprint alone is not page-ready. Every operation remains capped at five successful pages.
 
-The popup is a controller/view only. Closing it destroys no operation state; reopening it reads the durable journal and shows the current stage and progress. The journal and temporary staged pages live in extension-owned `chrome.storage.local`. Worker startup, content readiness, or a popup status refresh resumes an idempotent stage after service-worker suspension or browser restart.
+The popup is a controller/view only. Closing it destroys no operation state; reopening it reads the durable journal and shows the current stage and progress. The journal and temporary staged pages live in extension-owned `chrome.storage.local`. Hydration start/deadline, last observed page/record count/fingerprint, and the settle candidate are journaled. Worker startup, content readiness, or a popup status refresh resumes the remaining original deadline after service-worker suspension or browser restart; it never starts a fresh ten-second allowance.
 
-Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0` and `0.2.1` checkpoints remain resumable; loading version `0.3.0` alone does not migrate or rewrite them.
+Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0`, `0.2.1`, and `0.3.0` checkpoints remain resumable; loading version `0.3.1` alone does not migrate or rewrite them. A terminal `FAILED` journal is preserved as prior evidence but does not block a new resume operation from the formal checkpoint.
 
 **新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
 
 - five scanned pages
 - missing or disabled next control
 - repeated page fingerprint
+- catalog rows not ready before the hydration deadline
+- populated page that does not stabilize before the deadline
 - page-change timeout
 - login redirect
 - rate-limit, anti-bot, or CAPTCHA indication

@@ -46,7 +46,7 @@ function postFor(index, page) {
 }
 
 function pageSnapshot(page, options = {}) {
-  const postsPerPage = options.posts_per_page || 20;
+  const postsPerPage = options.posts_per_page ?? 20;
   const start = (page - 1) * postsPerPage + 1;
   const sourcePageUrl = options.source_page_url || pageUrl(page, options.query);
   const snapshot = {
@@ -66,7 +66,7 @@ function pageSnapshot(page, options = {}) {
   return snapshot;
 }
 
-function seedCatalog({ checkpointVersion = "0.3.0", visibleNext = false } = {}) {
+function seedCatalog({ checkpointVersion = "0.3.1", visibleNext = false } = {}) {
   const snapshots = Array.from({ length: 5 }, (_, index) => pageSnapshot(index + 1));
   const raw = core.buildExport(snapshots, {
     collected_at: snapshots.at(-1).collected_at,
@@ -120,6 +120,7 @@ function createHarness(options = {}) {
   let uuidCounter = 0;
   let navigationCount = 0;
   let prepareCount = 0;
+  const collectCounts = new Map();
   const failures = new Map(Object.entries(options.failures || {}).map(([page, reason]) => [Number(page), reason]));
   const adapters = {
     storage,
@@ -128,8 +129,26 @@ function createHarness(options = {}) {
     tab_exists: async () => tabExists,
     get_context: async () => core.collectionContextFromUrl(pageUrl(currentPage, query)),
     collect_page: async () => {
+      const callIndex = collectCounts.get(currentPage) || 0;
+      collectCounts.set(currentPage, callIndex + 1);
       const reason = failures.get(currentPage);
       if (reason) throw new Error(reason);
+      const sequence = options.page_sequences?.[currentPage];
+      if (sequence?.length) {
+        const value = sequence[Math.min(callIndex, sequence.length - 1)];
+        if (value === "PREVIOUS") {
+          const stale = pageSnapshot(Math.max(1, currentPage - 1), {
+            query,
+            source_page_url: pageUrl(currentPage, query)
+          });
+          stale.fingerprint = core.fingerprintPage(stale);
+          return stale;
+        }
+        if (typeof value === "number") {
+          return pageSnapshot(currentPage, { query, posts_per_page: value });
+        }
+        return clone(value);
+      }
       if (options.stale_fingerprint && currentPage > 1) {
         const stale = pageSnapshot(1, { query, source_page_url: pageUrl(currentPage, query) });
         stale.fingerprint = core.fingerprintPage(stale);
@@ -198,6 +217,9 @@ function createHarness(options = {}) {
     },
     get prepareCount() {
       return prepareCount;
+    },
+    collectCount(page) {
+      return collectCounts.get(page) || 0;
     }
   };
 }
@@ -211,8 +233,19 @@ async function stepToTerminal(harness, operationId, options = {}) {
       return { operation: state.active, states };
     }
     await durable.createDurableOrchestrator(harness.adapters).driveOne(operationId);
+    harness.advance(durable.READY_POLL_INTERVAL_MS);
   }
   throw new Error("TEST_OPERATION_DID_NOT_TERMINATE");
+}
+
+async function stepUntil(harness, operationId, predicate, options = {}) {
+  for (let step = 0; step < (options.max_steps || 100); step += 1) {
+    const state = await durable.createDurableOrchestrator(harness.adapters).readState();
+    if (predicate(state.active)) return state.active;
+    await durable.createDurableOrchestrator(harness.adapters).driveOne(operationId);
+    harness.advance(durable.READY_POLL_INTERVAL_MS);
+  }
+  throw new Error("TEST_OPERATION_CONDITION_NOT_REACHED");
 }
 
 test("journal schema persists the requested durable operation contract", async () => {
@@ -225,7 +258,7 @@ test("journal schema persists the requested durable operation contract", async (
     "operation_id", "mode", "scope", "tab_id", "state", "stage", "started_at", "updated_at",
     "start_page", "expected_page", "last_confirmed_page", "pages_staged", "max_pages",
     "previous_fingerprint", "expected_next_evidence", "warnings", "failure_reason",
-    "cancellation_state", "commit_state", "export_state", "staged_snapshots"
+    "cancellation_state", "commit_state", "export_state", "staged_snapshots", "readiness"
   ]) assert.ok(key in operation, key);
   assert.equal(operation.max_pages, 5);
 });
@@ -324,6 +357,192 @@ test("SPA-like navigation validates URL, rows, and changed fingerprint before st
   const terminal = await stepToTerminal(harness, "spa-navigation");
   assert.equal(terminal.operation.state, "COMPLETED");
   assert.equal(new Set(terminal.operation.staged_snapshots.map((item) => item.fingerprint)).size, 5);
+});
+
+test("expected page waits through empty hydration and accepts only a settled 20-record snapshot", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [0, 20, 20] }
+  });
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "hydrate-zero-to-twenty", mode: "RESUME", tab_id: 7 });
+  const terminal = await stepToTerminal(harness, "hydrate-zero-to-twenty");
+  assert.equal(terminal.operation.state, "COMPLETED");
+  assert.equal(terminal.operation.result.start_page, 6);
+  assert.equal(terminal.operation.result.last_successfully_collected_page, 10);
+  assert.ok(harness.collectCount(6) >= 3);
+  const pageSix = terminal.operation.staged_snapshots.find((snapshot) => (
+    core.collectionContextFromUrl(snapshot.source_page_url)?.page === 6
+  ));
+  assert.equal(pageSix.posts.length, 20);
+});
+
+test("partial hydration resets the settle candidate until the 20-record UUID set is stable", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [0, 8, 20, 20] }
+  });
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "hydrate-partial-to-stable", mode: "RESUME", tab_id: 7 });
+  const terminal = await stepToTerminal(harness, "hydrate-partial-to-stable");
+  assert.equal(terminal.operation.state, "COMPLETED");
+  assert.ok(harness.collectCount(6) >= 4);
+  const pageSix = terminal.operation.staged_snapshots.find((snapshot) => (
+    core.collectionContextFromUrl(snapshot.source_page_url)?.page === 6
+  ));
+  assert.equal(pageSix.posts.length, 20);
+});
+
+test("a reachable catalog shell with permanent zero rows times out without changing formal state", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const before = clone(catalog);
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [0] }
+  });
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "catalog-shell-only", mode: "RESUME", tab_id: 7 });
+  const terminal = await stepToTerminal(harness, "catalog-shell-only");
+  assert.equal(terminal.operation.state, "FAILED");
+  assert.equal(terminal.operation.failure_stage, "WAITING_FOR_NEW_DOCUMENT");
+  assert.equal(terminal.operation.failure_reason, "CATALOG_ROWS_NOT_READY");
+  assert.equal(terminal.operation.pages_staged, 0);
+  assert.equal(terminal.operation.readiness.last_observed_record_count, 0);
+  const saved = (await orchestrator.readState()).catalogs[harness.scope.key];
+  assert.deepEqual(saved, before);
+  assert.equal(saved.counts.posts, 100);
+  assert.equal(saved.checkpoint_summary.last_successfully_collected_page, 5);
+});
+
+test("new URL with the previous page UUID fingerprint waits until deadline then fails closed", async () => {
+  const harness = createHarness({
+    page_sequences: { 2: ["PREVIOUS"] }
+  });
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "old-dom-new-url", mode: "NEW", tab_id: 7 });
+  const terminal = await stepToTerminal(harness, "old-dom-new-url");
+  assert.equal(terminal.operation.state, "FAILED");
+  assert.equal(terminal.operation.failure_reason, "PAGE_FINGERPRINT_UNCHANGED");
+  assert.equal(terminal.operation.readiness.saw_records, true);
+  assert.equal(terminal.operation.readiness.saw_changed_fingerprint, false);
+  assert.equal((await orchestrator.readState()).catalogs[harness.scope.key], undefined);
+});
+
+test("duplicate READY recovery calls share one readiness observation", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [0, 20, 20] }
+  });
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "duplicate-ready-hydration", mode: "RESUME", tab_id: 7 });
+  await stepUntil(
+    harness,
+    "duplicate-ready-hydration",
+    (operation) => operation?.readiness?.status === "WAITING_FOR_ROWS"
+  );
+  const before = harness.collectCount(6);
+  const results = await Promise.all([
+    orchestrator.recoverActive(7),
+    orchestrator.recoverActive(7),
+    orchestrator.recoverActive(7)
+  ]);
+  assert.equal(harness.collectCount(6), before + 1);
+  assert.deepEqual(results[0], results[1]);
+  assert.deepEqual(results[1], results[2]);
+});
+
+test("worker restart during hydration preserves the original deadline and resumes settling", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [0, 20, 20] }
+  });
+  let orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "restart-during-hydration", mode: "RESUME", tab_id: 7 });
+  const empty = await stepUntil(
+    harness,
+    "restart-during-hydration",
+    (operation) => operation?.readiness?.status === "WAITING_FOR_ROWS"
+  );
+  const originalStartedAt = empty.readiness.readiness_started_at;
+  const originalDeadline = empty.readiness.readiness_deadline;
+
+  orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  const candidate = await orchestrator.recoverActive(7);
+  assert.equal(candidate.readiness.status, "SETTLING");
+  assert.equal(candidate.readiness.readiness_started_at, originalStartedAt);
+  assert.equal(candidate.readiness.readiness_deadline, originalDeadline);
+
+  harness.advance(durable.READY_SETTLE_MS);
+  orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.recoverActive(7);
+  const terminal = await stepToTerminal(harness, "restart-during-hydration");
+  assert.equal(terminal.operation.state, "COMPLETED");
+  assert.equal(terminal.operation.result.last_successfully_collected_page, 10);
+});
+
+test("worker restart cannot reset an expired hydration deadline", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const harness = createHarness({
+    catalog,
+    current_page: 5,
+    page_sequences: { 6: [0] }
+  });
+  let orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  await orchestrator.start({ operation_id: "restart-after-deadline", mode: "RESUME", tab_id: 7 });
+  const waiting = await stepUntil(
+    harness,
+    "restart-after-deadline",
+    (operation) => operation?.readiness?.status === "WAITING_FOR_ROWS"
+  );
+  const remaining = Date.parse(waiting.readiness.readiness_deadline) - Date.parse(waiting.readiness.last_observed_at);
+  harness.advance(remaining + 1);
+
+  orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  const failed = await orchestrator.driveOne("restart-after-deadline");
+  assert.equal(failed.state, "FAILED");
+  assert.equal(failed.failure_reason, "CATALOG_ROWS_NOT_READY");
+  assert.equal(failed.readiness.readiness_deadline, waiting.readiness.readiness_deadline);
+  const saved = (await orchestrator.readState()).catalogs[harness.scope.key];
+  assert.equal(saved.counts.posts, 100);
+  assert.equal(saved.checkpoint_summary.last_successfully_collected_page, 5);
+});
+
+test("a preserved terminal FAILED journal does not block a fresh resume operation", async () => {
+  const catalog = seedCatalog({ visibleNext: true });
+  const harness = createHarness({ catalog, current_page: 5 });
+  const failedBase = durable.makeOperation({
+    operation_id: "preserved-failed-pilot",
+    mode: "RESUME",
+    scope: harness.scope,
+    tab_id: 7,
+    expected_page: 6,
+    last_confirmed_page: 5,
+    resume_plan: core.validateResumeCheckpoint(catalog.checkpoint_summary, harness.scope),
+    base_catalog_hash: "preserved"
+  }, harness.adapters);
+  const failed = durable.transition(failedBase, durable.OPERATION_STATES.FAILED, {
+    failure_reason: "NO_CATALOG_RECORDS_DETECTED",
+    failure_stage: durable.OPERATION_STATES.VALIDATING_NEW_DOCUMENT,
+    completion_state: "INTERRUPTED"
+  }, harness.adapters);
+  await harness.storage.set({ [durable.ACTIVE_OPERATION_KEY]: failed });
+
+  const orchestrator = durable.createDurableOrchestrator(harness.adapters);
+  const started = await orchestrator.start({ operation_id: "fresh-after-failed", mode: "RESUME", tab_id: 7 });
+  assert.equal(started.state, "STARTING");
+  assert.equal(started.operation_id, "fresh-after-failed");
+  const state = await orchestrator.readState();
+  assert.equal(state.last.operation_id, "preserved-failed-pilot");
+  assert.equal(state.catalogs[harness.scope.key].counts.posts, 100);
 });
 
 test("unexpected page and unchanged fingerprint fail closed before cumulative commit", async () => {
