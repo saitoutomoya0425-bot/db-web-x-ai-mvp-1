@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-Collector `0.2.1` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
+Collector `0.3.0` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -69,9 +69,11 @@ The collector also excludes account name, email, affiliate ID, bank details, das
 
 The parser prioritizes public MyFans URL shapes, button and visible Japanese labels, roles, accessible labels, headings, and relative semantic containers such as articles and list items. Generated or Tailwind class names are not used as primary identifiers.
 
-The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a popup-orchestrated, one-page-at-a-time state machine: the current content script collects one document, returns a synchronous ACK before scheduling the visible next click, and is never expected to answer after navigation. The popup then reconnects to the SPA-updated or newly loaded content script and waits up to 10 seconds for the expected scope/page, catalog rows, and a changed rendered-record fingerprint. A URL change alone is not page-ready. Every invocation remains capped at five successful pages.
+The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a background-service-worker-orchestrated, one-page-at-a-time state machine. The current content script parses only its document, returns a preparation ACK without navigating, then accepts a separate navigation command and returns that ACK before scheduling the visible click. The SPA-updated or newly loaded content script signals readiness to the service worker, which requires the expected scope/page, catalog rows, and a changed rendered-record fingerprint. A URL change alone is not page-ready. Every operation remains capped at five successful pages.
 
-Run state stays in popup memory until the bounded run succeeds. Only then are merge, checkpoint update, cumulative update, and both exports performed. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. A saved `0.2.0` checkpoint remains resumable in `0.2.1`; no storage migration is performed merely by loading the extension.
+The popup is a controller/view only. Closing it destroys no operation state; reopening it reads the durable journal and shows the current stage and progress. The journal and temporary staged pages live in extension-owned `chrome.storage.local`. Worker startup, content readiness, or a popup status refresh resumes an idempotent stage after service-worker suspension or browser restart.
+
+Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0` and `0.2.1` checkpoints remain resumable; loading version `0.3.0` alone does not migrate or rewrite them.
 
 **新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
 
@@ -100,8 +102,9 @@ It does not save creator names, post titles, price/rate values, raw DOM, HTML, c
 3. Choose **Load unpacked** and select `tools/myfans-affiliate-collector/`.
 4. Open a supported signed-in Affiliate Center page and reload it once after installation.
 5. Open the extension and choose **現在ページを取得**, **新規収集（最大5ページ）**, or **続きから収集（最大5ページ）**.
+6. The popup may be closed while the background run proceeds. Reopen it to view progress; after completion, choose **完了したJSONを保存**.
 
-Chrome downloads the JSON locally. No upload or database operation follows. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
+Chrome downloads the JSON locally only after the user selects the save action. Generated artifacts remain in extension storage until delivery succeeds. No broad `downloads` permission, upload, or database operation is used. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
 
 ## Import handoff design
 
@@ -111,4 +114,4 @@ A production importer, affiliate URL handling, image handling, and publication r
 
 ## Uninstall
 
-Open `chrome://extensions`, locate **MyFans Affiliate Catalog Local Collector**, and select **Remove**. The extension has no background worker. Its checkpoint/cumulative state is stored only in extension-local storage and is removed with the extension; delete any downloaded JSON separately if it is no longer required.
+Open `chrome://extensions`, locate **MyFans Affiliate Catalog Local Collector**, and select **Remove**. Its background journal, staged snapshots, checkpoint, and cumulative state are stored only in extension-local storage and are removed with the extension; delete any downloaded JSON separately if it is no longer required.

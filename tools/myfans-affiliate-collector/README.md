@@ -19,15 +19,19 @@ Open the extension popup on a supported page, then select one action:
 - **続きから収集（最大5ページ）** resumes that same scope from its saved checkpoint.
 - **Diagnostic / Probe** exports an anonymized structure summary when parsing does not match the current UI.
 
-Each bounded list run downloads a run export and a cumulative export. The cumulative state is also held in extension-local storage, keyed by a canonical scope that excludes `page` but includes the route, category/search filters, media filter, and sort. A checkpoint is never reused across different scopes.
+Each successful bounded run generates a run export and a cumulative export in extension-local storage. Reopen the popup and select **完了したJSONを保存** to deliver both local files. The cumulative state is keyed by a canonical scope that excludes `page` but includes the route, category/search filters, media filter, and sort. A checkpoint is never reused across different scopes.
 
 Unknown or duplicate pagination/filter query keys are not discarded into a broader scope; resumable collection stops until the scope contract is updated.
 
 Every run remains capped at five successfully collected pages. Resume uses either the exact URL from the visible `次へ` link or returns to the last observed page and activates its normal visible `次へ` control. It never computes or guesses a future page URL.
 
-Collector `0.2.1` orchestrates each page from the popup instead of holding one message channel across navigation. For every transition, the current content script validates the page and visible next control, returns a synchronous navigation ACK, and only then schedules the click. The popup waits for the new content script, matching scope/page, populated catalog rows, and a changed fingerprint before requesting the next page. This works for both SPA-like changes and full document reloads.
+Collector `0.3.0` moves bounded-run ownership to an MV3 background service worker. Its persistent operation journal in `chrome.storage.local` is the source of truth; the popup is only a controller and status view. Closing the popup does not stop a run. Reopening it restores the active stage, pages staged, expected/current page, warning/error state, and completed export state.
 
-Snapshots collected during a run remain in popup memory. The run, checkpoint, and cumulative catalog are written to extension storage once, only after the entire bounded run succeeds. A channel failure, timeout, login redirect, anti-bot indication, modal, page mismatch, or duplicate fingerprint leaves the previously saved checkpoint/cumulative catalog unchanged. Existing `0.2.0` checkpoints are accepted for this one-way resume upgrade and become `0.2.1` only after a successful commit.
+For every transition, the current content script validates the page and visible next control and returns a preparation ACK without navigating. The service worker first journals the expected transition, then sends a separate navigation command. That command returns its ACK before scheduling the visible click. The next document emits bounded readiness signals; the worker accepts it only after scope/page, populated catalog rows, and a changed fingerprint match. This works for SPA-like changes and full document reloads without keeping a message response open across navigation.
+
+Staged page snapshots remain in the operation journal, not popup memory. Formal checkpoint/cumulative data is updated in one storage commit only after the entire bounded run succeeds. A channel failure, timeout, login redirect, anti-bot indication, modal, page mismatch, duplicate fingerprint, cancellation, or worker restart before commit leaves the previously saved checkpoint/cumulative catalog unchanged. Existing `0.2.0` and `0.2.1` checkpoints are accepted and become `0.3.0` only after a successful run commit.
+
+The worker recovers the journal after extension/browser startup, a new content-document readiness signal, or a popup status refresh. State transitions are explicit and invalid transitions fail closed. A worker restart during collection, navigation waiting, staging, or commit replays the idempotent stage. Operation ID and run ID prevent double merge, checkpoint advance, run-count increment, or export generation.
 
 The popup shows run post, creator, page, warning counts, cumulative unique post count, and at most three text-only samples.
 
@@ -46,7 +50,7 @@ The content script is not installed on report, account, media-management, or pay
 - Text and visible public URLs only
 - No image, avatar, thumbnail, OGP, poster, media blob, or video URL fields
 - No cookies, tokens, page local/session storage, credential values, raw HTML, screenshots, network capture, or request interception
-- Checkpoint and cumulative catalogs use only `chrome.storage.local`; the page's storage is never read
+- Operation journal, staged snapshots, checkpoint, and cumulative catalogs use only `chrome.storage.local`; the page's storage is never read
 - No extension-originated `fetch` or XHR
 - No copy/generate button activation; only the normal visible `次へ` control may be clicked
 - Login redirects, rate-limit/anti-bot text, unexpected visible modals, timeouts, and duplicate page fingerprints stop collection
@@ -58,7 +62,7 @@ The checkpoint records collector version, canonical scope, start/last page, an o
 
 Cumulative merge uses the strict post UUID as identity. A new UUID is added, an identical allowed-field observation is a no-op, an allowed-field change replaces the latest observation as an update candidate, and a UUID/creator identity conflict fails closed before storage is changed. Records absent from later snapshots are never deleted or unpublished. Per-post and per-creator sidecars retain first/last seen time, run, source page, and collector version without raw HTML or media URLs.
 
-The run export remains the existing `myfans-affiliate-catalog-local-v1` record shape with run metadata. The cumulative export uses the same catalog record schema plus `cumulative_schema_version`, checkpoint/run summaries, and observation sidecars. The dry-run importer accepts collector `0.1.8`, `0.2.0`, and `0.2.1`; it still performs no database or network operation.
+The run export remains the existing `myfans-affiliate-catalog-local-v1` record shape with run metadata. The cumulative export uses the same catalog record schema plus `cumulative_schema_version`, checkpoint/run summaries, and observation sidecars. Export artifacts are generated once in the service-worker commit and retained until the popup claims and delivers them. Delivery can be retried after a popup interruption with the same claim token. No `downloads` permission was added; local file delivery keeps the existing user-initiated Blob/anchor mechanism. The dry-run importer accepts collector `0.1.8`, `0.2.0`, `0.2.1`, and `0.3.0`; it still performs no database or network operation.
 
 See [MYFANS_LOCAL_COLLECTOR.md](../../docs/MYFANS_LOCAL_COLLECTOR.md) for the field policy and operational notes.
 
@@ -70,6 +74,8 @@ From the repository root:
 node --test tools/myfans-affiliate-collector/tests/*.test.mjs
 node --check tools/myfans-affiliate-collector/src/collector-core.js
 node --check tools/myfans-affiliate-collector/src/content-script.js
+node --check tools/myfans-affiliate-collector/src/orchestrator-core.js
+node --check tools/myfans-affiliate-collector/src/background.js
 node --check tools/myfans-affiliate-collector/src/popup.js
 ```
 
@@ -77,7 +83,7 @@ All fixtures are synthetic and sanitized. No real creator, post, account, or Aff
 
 ## DB dry-run preview
 
-Collector `0.1.8` snapshot exports and `0.2.x` run/cumulative exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
+Collector `0.1.8` snapshot exports and `0.2.x`/`0.3.0` run/cumulative exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
 
 ```bash
 node tools/myfans-affiliate-collector/bin/dry-run-import.mjs \

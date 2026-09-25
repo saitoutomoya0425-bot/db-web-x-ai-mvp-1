@@ -1,20 +1,29 @@
-(function installPopup() {
+(function installPopupController() {
   "use strict";
 
-  const core = globalThis.MyFansCollectorCore;
-  const STORAGE_KEY = "myfansCumulativeCatalogsV1";
   const buttons = [...document.querySelectorAll("button")];
   const status = document.getElementById("status");
   const results = document.getElementById("results");
   const samples = document.getElementById("samples");
+  const cancelButton = document.getElementById("cancel-operation");
+  const exportButton = document.getElementById("export-completed");
+  const refreshButton = document.getElementById("refresh-status");
+  let currentOperation = null;
+  let busy = false;
 
-  function setBusy(busy) {
-    for (const button of buttons) button.disabled = busy;
+  function setBusy(nextBusy) {
+    busy = nextBusy;
+    for (const button of buttons) button.disabled = nextBusy;
+    if (!nextBusy) updateActionAvailability();
   }
 
   function setStatus(message, isError) {
     status.textContent = message;
     status.classList.toggle("error", Boolean(isError));
+  }
+
+  function setText(id, value) {
+    document.getElementById(id).textContent = value == null ? "—" : String(value);
   }
 
   function safeFileTimestamp(value) {
@@ -27,7 +36,7 @@
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = `${prefix}-${safeFileTimestamp(value.collected_at)}.json`;
+    anchor.download = `${prefix}-${safeFileTimestamp(value.collected_at || value.updated_at)}.json`;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
@@ -42,13 +51,11 @@
   }
 
   function renderBundle(bundle, cumulativeCatalog) {
-    document.getElementById("post-count").textContent = String(bundle.counts.posts);
-    document.getElementById("creator-count").textContent = String(bundle.counts.creators);
-    document.getElementById("page-count").textContent = String(bundle.counts.pages_scanned);
-    document.getElementById("warning-count").textContent = String(bundle.counts.warnings);
-    document.getElementById("cumulative-post-count").textContent = String(
-      cumulativeCatalog?.counts?.posts ?? bundle.counts.posts
-    );
+    setText("post-count", bundle.counts.posts);
+    setText("creator-count", bundle.counts.creators);
+    setText("page-count", bundle.counts.pages_scanned);
+    setText("warning-count", bundle.counts.warnings);
+    setText("cumulative-post-count", cumulativeCatalog?.counts?.posts ?? bundle.counts.posts);
     samples.replaceChildren();
     const records = [
       ...bundle.posts.map((record) => ({ type: "post", record })),
@@ -79,52 +86,87 @@
     return chrome.tabs.sendMessage(tabId, message);
   }
 
-  async function currentContext(tabId) {
-    const response = await sendToTab(tabId, { type: "MYFANS_COLLECTION_CONTEXT" });
-    if (!response?.ok || !response.context) throw new Error(response?.error || "COLLECTION_CONTEXT_FAILED");
-    return response.context;
+  async function sendToBackground(message) {
+    const response = await chrome.runtime.sendMessage(message);
+    if (!response?.ok) throw new Error(response?.error || "BACKGROUND_OPERATION_FAILED");
+    return response.result;
   }
 
-  async function waitForContext(tabId, expectedScopeKey, expectedPage, operationId) {
-    const startedAt = Date.now();
-    while (Date.now() - startedAt <= 15000) {
-      try {
-        const context = await currentContext(tabId);
-        if (
-          context.collection_scope.key === expectedScopeKey &&
-          (expectedPage == null || context.page === expectedPage)
-        ) {
-          return context;
-        }
-      } catch {
-        // A normal full-page navigation can temporarily unload the content script.
-      }
-      await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
-    }
-    throw core.operationError(
-      operationId,
-      core.OPERATION_STAGES.WAIT_NEW_DOCUMENT,
-      "RESUME_NAVIGATION_TIMEOUT"
+  function createOperationId() {
+    return `operation-${new Date().toISOString()}-${globalThis.crypto.randomUUID()}`;
+  }
+
+  function isOperationActive(operation) {
+    return Boolean(operation && ![
+      "COMPLETED",
+      "FAILED",
+      "CANCELLED",
+      "PAUSED_REQUIRES_RECOVERY"
+    ].includes(operation.state));
+  }
+
+  function updateActionAvailability() {
+    if (busy) return;
+    const active = isOperationActive(currentOperation);
+    const pendingExport = Boolean(
+      currentOperation?.state === "COMPLETED" && currentOperation.export_state !== "DELIVERED"
     );
+    const cancellable = active && currentOperation?.state !== "COMMITTING";
+    document.getElementById("collect-new").disabled = active || pendingExport;
+    document.getElementById("collect-resume").disabled = active || pendingExport;
+    cancelButton.hidden = !cancellable;
+    cancelButton.disabled = !cancellable;
+    exportButton.hidden = !(
+      currentOperation?.state === "COMPLETED" &&
+      ["GENERATED", "DELIVERING"].includes(currentOperation.export_state)
+    );
+    exportButton.disabled = exportButton.hidden;
+    refreshButton.disabled = false;
+    document.getElementById("collect-current").disabled = false;
+    document.getElementById("collect-probe").disabled = false;
   }
 
-  async function navigateToObservedPage(tabId, sourcePageUrl, scopeKey, page, operationId) {
-    await chrome.tabs.update(tabId, { url: sourcePageUrl });
-    return waitForContext(tabId, scopeKey, page, operationId);
+  function renderStatusView(view) {
+    currentOperation = view?.operation || null;
+    setText("collector-version", view?.collector_version);
+    setText("stored-post-count", view?.cumulative_posts ?? 0);
+    setText("checkpoint-page", view?.checkpoint_last_page);
+    setText("operation-state", currentOperation?.state || "IDLE");
+    setText("operation-stage", currentOperation?.stage || "—");
+    setText("operation-pages", currentOperation ? `${currentOperation.pages_staged}/${currentOperation.max_pages}` : "0/5");
+    setText("operation-page", currentOperation?.expected_page ?? view?.current_page);
+    setText("operation-warning-count", currentOperation?.warnings?.length || 0);
+    setText("operation-error", currentOperation?.failure_reason || "—");
+    updateActionAvailability();
+
+    if (isOperationActive(currentOperation)) {
+      setStatus(`background収集中: ${currentOperation.stage}（${currentOperation.pages_staged}/${currentOperation.max_pages}ページ）`);
+    } else if (currentOperation?.state === "COMPLETED") {
+      setStatus(
+        `収集完了: ${currentOperation.result?.pages_collected || 0}ページ、累積${currentOperation.result?.cumulative_posts || 0}作品。JSONを保存できます。`
+      );
+    } else if (["FAILED", "PAUSED_REQUIRES_RECOVERY"].includes(currentOperation?.state)) {
+      setStatus(`収集停止: ${currentOperation.failure_reason || currentOperation.state}。正式checkpoint/cumulativeは未変更です。`, true);
+    }
   }
 
-  async function loadCatalogMap() {
-    const stored = await chrome.storage.local.get(STORAGE_KEY);
-    const value = stored?.[STORAGE_KEY];
-    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  }
-
-  async function saveCatalogMap(catalogMap) {
-    await chrome.storage.local.set({ [STORAGE_KEY]: catalogMap });
-  }
-
-  function createRunId() {
-    return `run-${new Date().toISOString()}-${globalThis.crypto.randomUUID()}`;
+  async function refreshStatus(options = {}) {
+    try {
+      let tabId = null;
+      try {
+        const tab = await activeTab();
+        if (tab.url?.startsWith("https://www.affiliate.myfans.jp/affiliates/")) tabId = tab.id;
+      } catch {
+        // Durable journal status is still readable without a supported active tab.
+      }
+      const view = await sendToBackground({
+        type: "MYFANS_ORCHESTRATOR_STATUS",
+        tab_id: tabId
+      });
+      renderStatusView(view);
+    } catch (error) {
+      if (!options.quiet) setStatus(`状態を取得できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+    }
   }
 
   async function collectCurrentPage() {
@@ -145,186 +187,65 @@
     }
   }
 
-  async function collectPageSnapshot(tabId, message) {
-    const response = await sendToTab(tabId, {
-      type: "MYFANS_COLLECT_CURRENT_PAGE",
-      operation_id: message.operation_id,
-      operation_stage: message.operation_stage,
-      expected_scope_key: message.expected_scope_key,
-      expected_page: message.expected_page
-    });
-    if (!response?.ok || !response.snapshot) {
-      throw new Error(response?.error || "PAGE_COLLECTION_FAILED");
-    }
-    return response.snapshot;
-  }
-
-  async function prepareNavigation(tabId, message) {
-    let response;
-    try {
-      response = await sendToTab(tabId, {
-        type: "MYFANS_NAVIGATE_NEXT_PREPARE",
-        operation_id: message.operation_id,
-        operation_stage: message.operation_stage,
-        expected_scope_key: message.expected_scope_key,
-        expected_page: core.collectionContextFromUrl(message.previous_snapshot.source_page_url)?.page,
-        expected_fingerprint: message.previous_snapshot.fingerprint
-      });
-    } catch (error) {
-      const code = core.isMessageChannelClosedError(error)
-        ? "CHANNEL_CLOSED_BEFORE_ACK"
-        : "NAVIGATION_PREPARE_FAILED";
-      throw core.operationError(message.operation_id, message.operation_stage, code, error);
-    }
-    if (!response?.ok || !response.ack) {
-      throw core.operationError(
-        message.operation_id,
-        message.operation_stage,
-        response?.error || "NAVIGATION_PREPARE_FAILED"
-      );
-    }
-    return response.ack;
-  }
-
-  async function inspectNext(tabId, message) {
-    const response = await sendToTab(tabId, {
-      type: "MYFANS_INSPECT_NEXT",
-      operation_id: message.operation_id,
-      operation_stage: core.OPERATION_STAGES.VALIDATE_NEXT_PAGE,
-      expected_scope_key: message.expected_scope_key,
-      expected_page: message.expected_page,
-      expected_fingerprint: message.expected_fingerprint
-    });
-    if (!response?.ok || !response.next_control) {
-      throw new Error(response?.error || "NEXT_INSPECTION_FAILED");
-    }
-    return response.next_control;
-  }
-
-  function waitForReady(tabId, expectedScopeKey, operationId, navigation) {
-    return core.waitForNavigationReady({
-      operation_id: operationId,
-      ack: navigation.ack,
-      previous_snapshot: navigation.previous_snapshot,
-      ack_delivered: navigation.ack_delivered,
-      expected_scope_key: expectedScopeKey,
-      collect_current: () => collectPageSnapshot(tabId, {
-        operation_id: operationId,
-        operation_stage: core.OPERATION_STAGES.WAIT_NEW_DOCUMENT,
-        expected_scope_key: expectedScopeKey,
-        expected_page: null
-      }),
-      timeout_ms: 10000,
-      poll_interval_ms: 250
-    });
-  }
-
-  async function resumeState(tab, checkpoint, currentScope, operationId) {
-    const plan = core.validateResumeCheckpoint(checkpoint, currentScope);
-    await navigateToObservedPage(
-      tab.id,
-      plan.source_page_url,
-      currentScope.key,
-      plan.page,
-      operationId
-    );
-    const observedSnapshot = await collectPageSnapshot(tab.id, {
-      operation_id: operationId,
-      operation_stage: core.OPERATION_STAGES.PREPARE_RESUME,
-      expected_scope_key: currentScope.key,
-      expected_page: plan.page
-    });
-    if (plan.mode === "EXACT_URL") {
-      return { initial_snapshot: observedSnapshot, expected_start_page: plan.page };
-    }
-    return { resume_from_snapshot: observedSnapshot, resume_from_page: plan.page };
-  }
-
-  async function collectBounded(mode) {
+  async function startCollection(mode) {
     setBusy(true);
-    setStatus(mode === "RESUME" ? "checkpointから最大5ページを収集中です…" : "新規に最大5ページを収集中です…");
+    setStatus(mode === "RESUME" ? "backgroundへ続きからの収集を依頼中です…" : "backgroundへ新規収集を依頼中です…");
     try {
       const tab = await activeTab();
       assertSupportedTab(tab);
-      const initialContext = await currentContext(tab.id);
-      const catalogMap = await loadCatalogMap();
-      const existingCatalog = catalogMap[initialContext.collection_scope.key] || null;
-      const operationId = createRunId();
-      const runStartedAt = new Date().toISOString();
-      let startState = { expected_start_page: initialContext.page };
-
-      if (mode === "NEW") {
-        if (initialContext.page !== 1) throw new Error("NEW_COLLECTION_REQUIRES_FIRST_PAGE");
-      } else {
-        if (!existingCatalog?.checkpoint_summary) throw new Error("CHECKPOINT_NOT_FOUND_FOR_SCOPE");
-        startState = await resumeState(
-          tab,
-          existingCatalog.checkpoint_summary,
-          initialContext.collection_scope,
-          operationId
-        );
-      }
-
-      const committed = await core.executeNavigationSafeRun({
-        operation_id: operationId,
-        max_pages: 5,
-        expected_scope_key: initialContext.collection_scope.key,
-        ...startState,
-        collect_current: () => collectPageSnapshot(tab.id, {
-          operation_id: operationId,
-          operation_stage: core.OPERATION_STAGES.COLLECT_PAGE,
-          expected_scope_key: initialContext.collection_scope.key,
-          expected_page: null
-        }),
-        prepare_navigation: (message) => prepareNavigation(tab.id, {
-          ...message,
-          expected_scope_key: initialContext.collection_scope.key
-        }),
-        wait_for_ready: (navigation) => waitForReady(
-          tab.id,
-          initialContext.collection_scope.key,
-          operationId,
-          navigation
-        ),
-        inspect_next: (message) => inspectNext(tab.id, message),
-        commit_run: async (run) => {
-          const rawBundle = core.buildExport(run.page_snapshots, {
-            collected_at: runStartedAt,
-            stop_reason: run.stop_reason
-          });
-          const firstContext = core.collectionContextFromUrl(run.page_snapshots[0]?.source_page_url);
-          const bundle = core.attachCollectionRunMetadata(rawBundle, {
-            run_id: operationId,
-            mode,
-            expected_scope_key: initialContext.collection_scope.key,
-            expected_start_page: firstContext?.page,
-            next_control: run.next_control
-          });
-          const merged = core.mergeCumulativeCatalog(existingCatalog, bundle);
-          const updatedCatalogMap = {
-            ...catalogMap,
-            [initialContext.collection_scope.key]: merged.catalog
-          };
-          await saveCatalogMap(updatedCatalogMap);
-          return { bundle, merged };
-        }
+      const operation = await sendToBackground({
+        type: "MYFANS_ORCHESTRATOR_START",
+        operation_id: createOperationId(),
+        mode,
+        tab_id: tab.id
       });
-      const { bundle, merged } = committed;
-      renderBundle(bundle, merged.catalog);
-      downloadJson(bundle, "myfans-affiliate-catalog-run");
-      downloadJson(merged.catalog, "myfans-affiliate-catalog-cumulative");
-
-      const checkpoint = merged.catalog.checkpoint_summary;
-      const hasSafetyStop = checkpoint.completion_state === "INTERRUPTED";
-      setStatus(
-        `run/cumulative JSONを保存しました。今回${bundle.counts.pages_scanned}ページ、累積${merged.catalog.counts.posts}作品、状態: ${checkpoint.completion_state} (${checkpoint.stop_reason})`,
-        hasSafetyStop
-      );
+      currentOperation = operation;
+      setStatus(`background収集を開始しました: ${operation.operation_id}`);
+      await refreshStatus({ quiet: true });
     } catch (error) {
-      setStatus(
-        `取得できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}。checkpoint/cumulative stateは上書きしていません。`,
-        true
-      );
+      setStatus(`開始できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelCollection() {
+    if (!currentOperation?.operation_id) return;
+    setBusy(true);
+    try {
+      await sendToBackground({
+        type: "MYFANS_ORCHESTRATOR_CANCEL",
+        operation_id: currentOperation.operation_id
+      });
+      await refreshStatus();
+    } catch (error) {
+      setStatus(`キャンセルできませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportCompleted() {
+    if (!currentOperation?.operation_id) return;
+    setBusy(true);
+    try {
+      const claimed = await sendToBackground({
+        type: "MYFANS_ORCHESTRATOR_CLAIM_EXPORT",
+        operation_id: currentOperation.operation_id
+      });
+      if (!claimed?.claimed || !claimed.artifacts) throw new Error(`EXPORT_NOT_AVAILABLE:${claimed?.export_state || "UNKNOWN"}`);
+      renderBundle(claimed.artifacts.run, claimed.artifacts.cumulative);
+      downloadJson(claimed.artifacts.run, "myfans-affiliate-catalog-run");
+      downloadJson(claimed.artifacts.cumulative, "myfans-affiliate-catalog-cumulative");
+      await sendToBackground({
+        type: "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED",
+        operation_id: currentOperation.operation_id,
+        claim_token: claimed.claim_token
+      });
+      setStatus("run/cumulative JSONを保存しました。");
+      await refreshStatus({ quiet: true });
+    } catch (error) {
+      setStatus(`JSONを保存できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
     } finally {
       setBusy(false);
     }
@@ -349,7 +270,14 @@
   }
 
   document.getElementById("collect-current").addEventListener("click", collectCurrentPage);
-  document.getElementById("collect-new").addEventListener("click", () => collectBounded("NEW"));
-  document.getElementById("collect-resume").addEventListener("click", () => collectBounded("RESUME"));
+  document.getElementById("collect-new").addEventListener("click", () => startCollection("NEW"));
+  document.getElementById("collect-resume").addEventListener("click", () => startCollection("RESUME"));
   document.getElementById("collect-probe").addEventListener("click", probe);
+  refreshButton.addEventListener("click", () => refreshStatus());
+  cancelButton.addEventListener("click", cancelCollection);
+  exportButton.addEventListener("click", exportCompleted);
+  chrome.storage.onChanged.addListener((_changes, areaName) => {
+    if (areaName === "local") refreshStatus({ quiet: true });
+  });
+  refreshStatus();
 })();

@@ -66,6 +66,11 @@ button.quiet {
   color: #44504b;
 }
 
+button.danger {
+  border-color: #9f3b32;
+  color: #8a281e;
+}
+
 button:disabled {
   cursor: progress;
   opacity: 0.55;
@@ -109,6 +114,18 @@ button:disabled {
   margin: 3px 0 0;
   font-size: 18px;
   font-weight: 750;
+}
+
+.operation-metrics dd {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.operation-error {
+  margin: 0 0 12px;
+  color: #8a281e;
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .samples {

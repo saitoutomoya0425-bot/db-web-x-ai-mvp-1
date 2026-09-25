@@ -1,12 +1,12 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.2.1";
+  const COLLECTOR_VERSION = "0.3.0";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const CHECKPOINT_SCHEMA_VERSION = "myfans-affiliate-checkpoint-v1";
   const CUMULATIVE_SCHEMA_VERSION = "myfans-affiliate-cumulative-v1";
   const MAX_RUN_PAGES = 5;
-  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", COLLECTOR_VERSION]);
+  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", "0.2.1", COLLECTOR_VERSION]);
   const OPERATION_STAGES = Object.freeze({
     PREPARE_RESUME: "PREPARE_RESUME",
     COLLECT_PAGE: "COLLECT_PAGE",

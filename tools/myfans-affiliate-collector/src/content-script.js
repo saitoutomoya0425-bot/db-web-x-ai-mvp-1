@@ -4,6 +4,10 @@
   const core = globalThis.MyFansCollectorCore;
   if (!core || globalThis.__MYFANS_LOCAL_COLLECTOR_INSTALLED__) return;
   globalThis.__MYFANS_LOCAL_COLLECTOR_INSTALLED__ = true;
+  const dispatchedNavigationNonces = new Set();
+  let readyHeartbeatInterval = null;
+  let readyHeartbeatTimeout = null;
+  let readySignalDebounce = null;
 
   const SAFE_QUERY_KEYS = new Set([
     "genre_id",
@@ -737,9 +741,7 @@
 
   function prepareNavigation(message) {
     if (!message.operation_id) throw new Error("OPERATION_ID_REQUIRED");
-    if (![core.OPERATION_STAGES.PREPARE_RESUME, core.OPERATION_STAGES.PREPARE_NEXT].includes(message.operation_stage)) {
-      throw new Error("OPERATION_STAGE_INVALID");
-    }
+    if (!message.operation_stage) throw new Error("OPERATION_STAGE_REQUIRED");
     const { context, snapshot } = collectValidatedSnapshot({
       expected_scope_key: message.expected_scope_key,
       expected_page: message.expected_page,
@@ -762,10 +764,44 @@
         navigation_expected: Boolean(state.present && state.enabled),
         from_page: context.page,
         expected_next_page: expectedNextPage,
-        previous_fingerprint: snapshot.fingerprint
+        previous_fingerprint: snapshot.fingerprint,
+        next_control: {
+          present: state.present,
+          enabled: state.enabled,
+          href: state.href
+        }
       },
       control: state.control
     };
+  }
+
+  function signalBackground(type) {
+    chrome.runtime.sendMessage({ type }).catch(() => {
+      // A service-worker restart is recoverable; the next bounded heartbeat retries.
+    });
+  }
+
+  function startReadyHeartbeat() {
+    if (readyHeartbeatInterval !== null) globalThis.clearInterval(readyHeartbeatInterval);
+    if (readyHeartbeatTimeout !== null) globalThis.clearTimeout(readyHeartbeatTimeout);
+    signalBackground("MYFANS_CONTENT_READY");
+    readyHeartbeatInterval = globalThis.setInterval(
+      () => signalBackground("MYFANS_CONTENT_READY"),
+      250
+    );
+    readyHeartbeatTimeout = globalThis.setTimeout(() => {
+      globalThis.clearInterval(readyHeartbeatInterval);
+      readyHeartbeatInterval = null;
+      signalBackground("MYFANS_CONTENT_TIMEOUT");
+    }, 10000);
+  }
+
+  function scheduleReadySignal() {
+    if (readySignalDebounce !== null) globalThis.clearTimeout(readySignalDebounce);
+    readySignalDebounce = globalThis.setTimeout(() => {
+      readySignalDebounce = null;
+      signalBackground("MYFANS_CONTENT_READY");
+    }, 100);
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -811,13 +847,10 @@
       }
       return false;
     }
-    if (message.type === "MYFANS_NAVIGATE_NEXT_PREPARE") {
+    if (message.type === "MYFANS_PREPARE_NAVIGATION") {
       try {
         const prepared = prepareNavigation(message);
         sendResponse({ ok: true, ack: prepared.ack });
-        if (prepared.control) {
-          globalThis.setTimeout(() => prepared.control.click(), 0);
-        }
       } catch (error) {
         sendResponse({
           ok: false,
@@ -828,6 +861,53 @@
       }
       return false;
     }
+    if (message.type === "MYFANS_NAVIGATE_NOW") {
+      try {
+        if (!message.navigation_nonce) throw new Error("NAVIGATION_NONCE_REQUIRED");
+        if (dispatchedNavigationNonces.has(message.navigation_nonce)) {
+          sendResponse({
+            ok: true,
+            ack: {
+              ok: true,
+              operation_id: message.operation_id,
+              operation_stage: message.operation_stage,
+              navigation_nonce: message.navigation_nonce,
+              already_dispatched: true
+            }
+          });
+          return false;
+        }
+        const prepared = prepareNavigation(message);
+        if (!prepared.ack.navigation_expected || !prepared.control) {
+          throw new Error("NAVIGATION_CONTROL_NOT_AVAILABLE");
+        }
+        dispatchedNavigationNonces.add(message.navigation_nonce);
+        sendResponse({
+          ok: true,
+          ack: {
+            ...prepared.ack,
+            navigation_nonce: message.navigation_nonce,
+            already_dispatched: false
+          }
+        });
+        startReadyHeartbeat();
+        globalThis.setTimeout(() => prepared.control.click(), 0);
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          operation_id: message.operation_id || null,
+          operation_stage: message.operation_stage || null,
+          error: error instanceof Error ? error.message : "NAVIGATION_DISPATCH_FAILED"
+        });
+      }
+      return false;
+    }
     return false;
   });
+
+  const readyObserver = new MutationObserver(scheduleReadySignal);
+  readyObserver.observe(document.documentElement, { childList: true, subtree: true });
+  globalThis.addEventListener("popstate", startReadyHeartbeat);
+  globalThis.addEventListener("hashchange", startReadyHeartbeat);
+  startReadyHeartbeat();
 })();

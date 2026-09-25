@@ -2,7 +2,7 @@
 
 Status: `LOCAL_NORMALIZATION_ONLY / APPLY_FALSE / NO_DB_CONNECTION`
 
-This importer validates MyFans Affiliate Collector `0.1.8` snapshot JSON and `0.2.0`/`0.2.1` bounded run/cumulative JSON, then produces a deterministic migration-029-shaped preview. The `0.2.x` checkpoint/run/observation sidecars are validated by the collector boundary but are not mapped into migration 029. The importer has no Supabase/Postgres dependency, performs no network request, and cannot apply its output.
+This importer validates MyFans Affiliate Collector `0.1.8` snapshot JSON and `0.2.0`/`0.2.1`/`0.3.0` bounded run/cumulative JSON, then produces a deterministic migration-029-shaped preview. The resumable checkpoint/run/observation sidecars are validated by the collector boundary but are not mapped into migration 029. The importer has no Supabase/Postgres dependency, performs no network request, and cannot apply its output.
 
 ## Command
 

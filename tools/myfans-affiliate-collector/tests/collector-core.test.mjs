@@ -223,8 +223,8 @@ function navigationHarness(options = {}) {
   };
 }
 
-test("reports collector version 0.2.1 and a five-page hard limit", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.2.1");
+test("reports collector version 0.3.0 and a five-page hard limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.3.0");
   assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
@@ -1572,7 +1572,7 @@ test("login, anti-bot, and modal stops preserve the old cumulative state after a
   }
 });
 
-test("collector 0.2.1 resumes the saved 0.2.0 checkpoint without mutating it", () => {
+test("collector 0.3.0 resumes the saved 0.2.x checkpoint without mutating it", () => {
   const first = plain(core.mergeCumulativeCatalog(null, boundedRun({
     startPage: 1,
     posts: Array.from({ length: 5 }, (_, index) => cumulativePost(index, index + 1)),

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 export const IMPORTER_VERSION = "myfans-catalog-dry-run-v1";
 export const EXPECTED_SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
-export const SUPPORTED_COLLECTOR_VERSIONS = Object.freeze(["0.1.8", "0.2.0", "0.2.1"]);
+export const SUPPORTED_COLLECTOR_VERSIONS = Object.freeze(["0.1.8", "0.2.0", "0.2.1", "0.3.0"]);
 
 const SOURCE_NAME = "MYFANS_AFFILIATE_CENTER";
 const SOURCE_TYPE = "OFFICIAL_AUTH_UI";

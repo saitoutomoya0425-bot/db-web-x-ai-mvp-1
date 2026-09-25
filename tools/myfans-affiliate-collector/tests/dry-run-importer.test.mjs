@@ -166,8 +166,8 @@ test("rejects an unsupported collector version", () => {
   assert.equal(report.counts.accepted, 0);
 });
 
-test("accepts collector 0.2.x run and cumulative metadata without changing dry-run semantics", () => {
-  for (const collectorVersion of ["0.2.0", "0.2.1"]) {
+test("accepts collector 0.2.x/0.3.0 run and cumulative metadata without changing dry-run semantics", () => {
+  for (const collectorVersion of ["0.2.0", "0.2.1", "0.3.0"]) {
     const bundle = syntheticImportBundle([syntheticImportPost()], {
       collector_version: collectorVersion,
       export_kind: "CUMULATIVE",
