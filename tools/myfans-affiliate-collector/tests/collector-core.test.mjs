@@ -108,8 +108,123 @@ function boundedRun({ startPage, pageCount = 5, posts, runId, stopReason = "MAX_
   }));
 }
 
-test("reports collector version 0.2.0 and a five-page hard limit", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.2.0");
+function navigationSnapshot(page, overrides = {}) {
+  const value = snapshot({
+    source_page_url: `https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=${page}`,
+    collected_at: `2026-09-${String(Math.min(page, 30)).padStart(2, "0")}T00:00:00.000Z`,
+    posts: [cumulativePost(500 + page, page)],
+    ...overrides
+  });
+  value.fingerprint = core.fingerprintPage(value);
+  return value;
+}
+
+function navigationHarness(options = {}) {
+  let currentPage = options.startPage || 1;
+  let closedPolls = 0;
+  let stalePolls = 0;
+  let navigationCount = 0;
+  let commitCount = 0;
+  const trace = [];
+  const clock = fakeClock();
+  const scope = core.collectionContextFromUrl(navigationSnapshot(currentPage).source_page_url).collection_scope;
+  let previousBeforeNavigation = null;
+
+  function currentSnapshot() {
+    if (options.safetyStopPage === currentPage) {
+      return navigationSnapshot(currentPage, {
+        posts: [],
+        stop_reason: options.safetyStopReason || "LOGIN_REDIRECT"
+      });
+    }
+    if (stalePolls > 0 && previousBeforeNavigation) {
+      stalePolls -= 1;
+      return navigationSnapshot(currentPage, {
+        posts: previousBeforeNavigation.posts
+      });
+    }
+    return navigationSnapshot(currentPage);
+  }
+
+  const adapters = {
+    collect_current: async () => currentSnapshot(),
+    prepare_navigation: async (message) => {
+      if (options.channelCloseBeforeAckAtPage === currentPage) {
+        throw new Error("A listener indicated an asynchronous response, but the message channel closed before a response was received");
+      }
+      previousBeforeNavigation = message.previous_snapshot;
+      const fromPage = currentPage;
+      const nextPage = fromPage + 1;
+      const ack = {
+        ok: true,
+        operation_id: message.operation_id,
+        operation_stage: message.operation_stage,
+        navigation_expected: options.endPage == null || fromPage < options.endPage,
+        from_page: fromPage,
+        expected_next_page: options.endPage != null && fromPage >= options.endPage ? null : nextPage,
+        previous_fingerprint: message.previous_snapshot.fingerprint
+      };
+      trace.push(`ACK:${message.operation_stage}:${fromPage}`);
+      if (ack.navigation_expected) {
+        trace.push(`NAVIGATE:${fromPage}->${nextPage}`);
+        currentPage = options.pageMismatchAtPage === fromPage ? nextPage + 1 : nextPage;
+        navigationCount += 1;
+        closedPolls = options.fullReloadClosedPolls || 0;
+        stalePolls = options.staleDomPolls || 0;
+      }
+      return ack;
+    },
+    wait_for_ready: async ({ ack, previous_snapshot, ack_delivered }) => core.waitForNavigationReady({
+      operation_id: ack.operation_id,
+      ack,
+      previous_snapshot,
+      ack_delivered,
+      expected_scope_key: scope.key,
+      collect_current: async () => {
+        if (closedPolls > 0) {
+          closedPolls -= 1;
+          throw new Error("A listener indicated an asynchronous response, but the message channel closed before a response was received");
+        }
+        return currentSnapshot();
+      },
+      timeout_ms: options.timeoutMs || 1000,
+      poll_interval_ms: 250,
+      now: clock.now,
+      sleep: clock.sleep
+    }),
+    inspect_next: async () => ({
+      present: options.endPage == null || currentPage < options.endPage,
+      enabled: options.endPage == null || currentPage < options.endPage,
+      href: options.endPage != null && currentPage >= options.endPage
+        ? null
+        : `https://www.affiliate.myfans.jp/affiliates/search?sexual_orientation=woman&page=${currentPage + 1}`
+    }),
+    commit_run: async (result) => {
+      commitCount += 1;
+      trace.push(`COMMIT:${result.pages_collected}`);
+      return result;
+    }
+  };
+
+  return {
+    adapters,
+    clock,
+    scope,
+    trace,
+    get commitCount() {
+      return commitCount;
+    },
+    get currentPage() {
+      return currentPage;
+    },
+    get navigationCount() {
+      return navigationCount;
+    }
+  };
+}
+
+test("reports collector version 0.2.1 and a five-page hard limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.2.1");
   assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
@@ -1270,4 +1385,207 @@ test("incremental import classification never proposes delete or unpublish", () 
   });
   assert.equal(result.deletes, 0);
   assert.equal(result.unpublishes, 0);
+});
+
+test("navigation-safe new collection commits pages 1-5 exactly once", async () => {
+  const harness = navigationHarness({ startPage: 1 });
+  const result = plain(await core.executeNavigationSafeRun({
+    operation_id: "new-pages-1-5",
+    max_pages: 5,
+    expected_scope_key: harness.scope.key,
+    expected_start_page: 1,
+    ...harness.adapters
+  }));
+  assert.deepEqual(
+    result.page_snapshots.map((page) => core.collectionContextFromUrl(page.source_page_url).page),
+    [1, 2, 3, 4, 5]
+  );
+  assert.equal(result.stop_reason, "MAX_PAGE_LIMIT_REACHED");
+  assert.equal(harness.commitCount, 1);
+  assert.equal(harness.navigationCount, 4);
+  for (let index = 0; index < 4; index += 1) {
+    assert.match(harness.trace[index * 2], /^ACK:/);
+    assert.match(harness.trace[index * 2 + 1], /^NAVIGATE:/);
+  }
+});
+
+test("visible-next resume starts at page 6 and collects pages 6-10 after full document reloads", async () => {
+  const harness = navigationHarness({ startPage: 5, fullReloadClosedPolls: 2 });
+  const result = plain(await core.executeNavigationSafeRun({
+    operation_id: "resume-pages-6-10",
+    max_pages: 5,
+    expected_scope_key: harness.scope.key,
+    resume_from_snapshot: navigationSnapshot(5),
+    resume_from_page: 5,
+    ...harness.adapters
+  }));
+  assert.deepEqual(
+    result.page_snapshots.map((page) => core.collectionContextFromUrl(page.source_page_url).page),
+    [6, 7, 8, 9, 10]
+  );
+  assert.equal(harness.commitCount, 1);
+  assert.equal(harness.trace[0], "ACK:PREPARE_RESUME:5");
+  assert.equal(harness.trace[1], "NAVIGATE:5->6");
+  assert.equal(harness.clock.elapsed(), 2500);
+});
+
+test("a third bounded resume starts at page 11 and collects pages 11-15", async () => {
+  const harness = navigationHarness({ startPage: 10 });
+  const result = plain(await core.executeNavigationSafeRun({
+    operation_id: "resume-pages-11-15",
+    max_pages: 5,
+    expected_scope_key: harness.scope.key,
+    resume_from_snapshot: navigationSnapshot(10),
+    resume_from_page: 10,
+    ...harness.adapters
+  }));
+  assert.deepEqual(
+    result.page_snapshots.map((page) => core.collectionContextFromUrl(page.source_page_url).page),
+    [11, 12, 13, 14, 15]
+  );
+  assert.equal(harness.commitCount, 1);
+});
+
+test("SPA navigation reconnects immediately without requiring a long-lived message channel", async () => {
+  const harness = navigationHarness({ startPage: 1, fullReloadClosedPolls: 0 });
+  const result = plain(await core.executeNavigationSafeRun({
+    operation_id: "spa-navigation",
+    max_pages: 2,
+    expected_scope_key: harness.scope.key,
+    expected_start_page: 1,
+    ...harness.adapters
+  }));
+  assert.equal(result.pages_collected, 2);
+  assert.equal(harness.clock.elapsed(), 0);
+  assert.equal(harness.commitCount, 1);
+});
+
+test("URL change with stale DOM waits for a new fingerprint before accepting the page", async () => {
+  const harness = navigationHarness({ startPage: 1, staleDomPolls: 2 });
+  const result = plain(await core.executeNavigationSafeRun({
+    operation_id: "stale-dom",
+    max_pages: 2,
+    expected_scope_key: harness.scope.key,
+    expected_start_page: 1,
+    ...harness.adapters
+  }));
+  assert.equal(result.pages_collected, 2);
+  assert.equal(harness.clock.elapsed(), 500);
+  assert.equal(harness.commitCount, 1);
+});
+
+test("expected page mismatch fails closed with its operation stage and does not commit", async () => {
+  const harness = navigationHarness({ startPage: 1, pageMismatchAtPage: 1 });
+  await assert.rejects(
+    core.executeNavigationSafeRun({
+      operation_id: "page-mismatch",
+      max_pages: 5,
+      expected_scope_key: harness.scope.key,
+      expected_start_page: 1,
+      ...harness.adapters
+    }),
+    (error) => {
+      assert.equal(error.operation_id, "page-mismatch");
+      assert.equal(error.operation_stage, "VALIDATE_NEXT_PAGE");
+      assert.equal(error.code, "EXPECTED_PAGE_MISMATCH");
+      return true;
+    }
+  );
+  assert.equal(harness.commitCount, 0);
+});
+
+test("unchanged fingerprints time out fail-closed without committing partial pages", async () => {
+  const persistedCheckpoint = { cumulative_unique_post_count: 100, updated_at: "before-run" };
+  const harness = navigationHarness({ startPage: 1, staleDomPolls: 20, timeoutMs: 1000 });
+  await assert.rejects(
+    core.executeNavigationSafeRun({
+      operation_id: "duplicate-timeout",
+      max_pages: 5,
+      expected_scope_key: harness.scope.key,
+      expected_start_page: 1,
+      ...harness.adapters
+    }),
+    (error) => {
+      assert.equal(error.operation_stage, "VALIDATE_NEXT_PAGE");
+      assert.equal(error.code, "PAGE_FINGERPRINT_UNCHANGED");
+      return true;
+    }
+  );
+  assert.equal(harness.commitCount, 0);
+  assert.deepEqual(persistedCheckpoint, { cumulative_unique_post_count: 100, updated_at: "before-run" });
+});
+
+test("channel close after navigation ACK is transient, while close before ACK is fatal", async () => {
+  const afterAck = navigationHarness({ startPage: 1, fullReloadClosedPolls: 1 });
+  const successful = plain(await core.executeNavigationSafeRun({
+    operation_id: "close-after-ack",
+    max_pages: 2,
+    expected_scope_key: afterAck.scope.key,
+    expected_start_page: 1,
+    ...afterAck.adapters
+  }));
+  assert.equal(successful.pages_collected, 2);
+  assert.equal(afterAck.commitCount, 1);
+
+  const beforeAck = navigationHarness({ startPage: 1, channelCloseBeforeAckAtPage: 1 });
+  await assert.rejects(
+    core.executeNavigationSafeRun({
+      operation_id: "close-before-ack",
+      max_pages: 2,
+      expected_scope_key: beforeAck.scope.key,
+      expected_start_page: 1,
+      ...beforeAck.adapters
+    }),
+    (error) => {
+      assert.equal(error.operation_stage, "PREPARE_NEXT");
+      assert.equal(error.code, "CHANNEL_CLOSED_BEFORE_ACK");
+      return true;
+    }
+  );
+  assert.equal(beforeAck.commitCount, 0);
+});
+
+test("login, anti-bot, and modal stops preserve the old cumulative state after a partial run", async () => {
+  for (const stopReason of ["LOGIN_REDIRECT", "RATE_LIMIT_OR_ANTI_BOT", "UNEXPECTED_MODAL"]) {
+    const persistedCatalog = { counts: { posts: 100 }, marker: "unchanged" };
+    const harness = navigationHarness({
+      startPage: 1,
+      safetyStopPage: 4,
+      safetyStopReason: stopReason
+    });
+    await assert.rejects(
+      core.executeNavigationSafeRun({
+        operation_id: `safety-${stopReason}`,
+        max_pages: 5,
+        expected_scope_key: harness.scope.key,
+        expected_start_page: 1,
+        ...harness.adapters
+      }),
+      (error) => {
+        assert.equal(error.operation_stage, "VALIDATE_NEXT_PAGE");
+        assert.equal(error.code, stopReason);
+        return true;
+      }
+    );
+    assert.equal(harness.commitCount, 0);
+    assert.deepEqual(persistedCatalog, { counts: { posts: 100 }, marker: "unchanged" });
+  }
+});
+
+test("collector 0.2.1 resumes the saved 0.2.0 checkpoint without mutating it", () => {
+  const first = plain(core.mergeCumulativeCatalog(null, boundedRun({
+    startPage: 1,
+    posts: Array.from({ length: 5 }, (_, index) => cumulativePost(index, index + 1)),
+    runId: "legacy-checkpoint"
+  }))).catalog;
+  const checkpoint = plain(first.checkpoint_summary);
+  checkpoint.collector_version = "0.2.0";
+  const frozenBefore = JSON.stringify(checkpoint);
+  const plan = plain(core.validateResumeCheckpoint(checkpoint, first.collection_scope));
+  assert.equal(plan.page, 6);
+  assert.equal(JSON.stringify(checkpoint), frozenBefore);
+  assert.throws(
+    () => core.validateResumeCheckpoint({ ...checkpoint, collector_version: "0.1.8" }, first.collection_scope),
+    /CHECKPOINT_COLLECTOR_VERSION_MISMATCH/
+  );
 });

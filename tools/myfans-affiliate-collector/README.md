@@ -25,6 +25,10 @@ Unknown or duplicate pagination/filter query keys are not discarded into a broad
 
 Every run remains capped at five successfully collected pages. Resume uses either the exact URL from the visible `次へ` link or returns to the last observed page and activates its normal visible `次へ` control. It never computes or guesses a future page URL.
 
+Collector `0.2.1` orchestrates each page from the popup instead of holding one message channel across navigation. For every transition, the current content script validates the page and visible next control, returns a synchronous navigation ACK, and only then schedules the click. The popup waits for the new content script, matching scope/page, populated catalog rows, and a changed fingerprint before requesting the next page. This works for both SPA-like changes and full document reloads.
+
+Snapshots collected during a run remain in popup memory. The run, checkpoint, and cumulative catalog are written to extension storage once, only after the entire bounded run succeeds. A channel failure, timeout, login redirect, anti-bot indication, modal, page mismatch, or duplicate fingerprint leaves the previously saved checkpoint/cumulative catalog unchanged. Existing `0.2.0` checkpoints are accepted for this one-way resume upgrade and become `0.2.1` only after a successful commit.
+
 The popup shows run post, creator, page, warning counts, cumulative unique post count, and at most three text-only samples.
 
 ## Supported pages
@@ -54,7 +58,7 @@ The checkpoint records collector version, canonical scope, start/last page, an o
 
 Cumulative merge uses the strict post UUID as identity. A new UUID is added, an identical allowed-field observation is a no-op, an allowed-field change replaces the latest observation as an update candidate, and a UUID/creator identity conflict fails closed before storage is changed. Records absent from later snapshots are never deleted or unpublished. Per-post and per-creator sidecars retain first/last seen time, run, source page, and collector version without raw HTML or media URLs.
 
-The run export remains the existing `myfans-affiliate-catalog-local-v1` record shape with run metadata. The cumulative export uses the same catalog record schema plus `cumulative_schema_version`, checkpoint/run summaries, and observation sidecars. The dry-run importer accepts both collector `0.1.8` and `0.2.0`; it still performs no database or network operation.
+The run export remains the existing `myfans-affiliate-catalog-local-v1` record shape with run metadata. The cumulative export uses the same catalog record schema plus `cumulative_schema_version`, checkpoint/run summaries, and observation sidecars. The dry-run importer accepts collector `0.1.8`, `0.2.0`, and `0.2.1`; it still performs no database or network operation.
 
 See [MYFANS_LOCAL_COLLECTOR.md](../../docs/MYFANS_LOCAL_COLLECTOR.md) for the field policy and operational notes.
 
@@ -73,7 +77,7 @@ All fixtures are synthetic and sanitized. No real creator, post, account, or Aff
 
 ## DB dry-run preview
 
-Collector `0.1.8` snapshot exports and `0.2.0` run/cumulative exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
+Collector `0.1.8` snapshot exports and `0.2.x` run/cumulative exports can be validated and normalized into a migration-029-shaped preview without opening a database connection:
 
 ```bash
 node tools/myfans-affiliate-collector/bin/dry-run-import.mjs \

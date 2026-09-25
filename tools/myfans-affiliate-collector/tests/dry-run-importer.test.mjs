@@ -166,34 +166,36 @@ test("rejects an unsupported collector version", () => {
   assert.equal(report.counts.accepted, 0);
 });
 
-test("accepts collector 0.2.0 run and cumulative metadata without changing dry-run semantics", () => {
-  const bundle = syntheticImportBundle([syntheticImportPost()], {
-    collector_version: "0.2.0",
-    export_kind: "CUMULATIVE",
-    cumulative_schema_version: "myfans-affiliate-cumulative-v1",
-    collection_scope: {
-      key: "synthetic-scope",
-      source_surface: "post_search",
-      path: "/affiliates/search",
-      parameters: [],
-      canonical_url: "https://www.affiliate.myfans.jp/affiliates/search"
-    },
-    checkpoint_summary: {
-      schema_version: "myfans-affiliate-checkpoint-v1",
-      cumulative_unique_post_count: 1
-    },
-    run_count: 1,
-    runs: [],
-    post_observations: [],
-    creator_observations: [],
-    merge_summary: { deletion_candidates: 0 },
-    first_collected_at: "2026-09-23T15:59:52.088Z",
-    last_collected_at: "2026-09-23T15:59:52.088Z"
-  });
-  const report = dryRunCatalogImport(bundle);
-  assert.equal(report.status, "PASS");
-  assert.equal(report.counts.accepted, 1);
-  assert.equal(report.db_write_count, 0);
+test("accepts collector 0.2.x run and cumulative metadata without changing dry-run semantics", () => {
+  for (const collectorVersion of ["0.2.0", "0.2.1"]) {
+    const bundle = syntheticImportBundle([syntheticImportPost()], {
+      collector_version: collectorVersion,
+      export_kind: "CUMULATIVE",
+      cumulative_schema_version: "myfans-affiliate-cumulative-v1",
+      collection_scope: {
+        key: "synthetic-scope",
+        source_surface: "post_search",
+        path: "/affiliates/search",
+        parameters: [],
+        canonical_url: "https://www.affiliate.myfans.jp/affiliates/search"
+      },
+      checkpoint_summary: {
+        schema_version: "myfans-affiliate-checkpoint-v1",
+        cumulative_unique_post_count: 1
+      },
+      run_count: 1,
+      runs: [],
+      post_observations: [],
+      creator_observations: [],
+      merge_summary: { deletion_candidates: 0 },
+      first_collected_at: "2026-09-23T15:59:52.088Z",
+      last_collected_at: "2026-09-23T15:59:52.088Z"
+    });
+    const report = dryRunCatalogImport(bundle);
+    assert.equal(report.status, "PASS", collectorVersion);
+    assert.equal(report.counts.accepted, 1, collectorVersion);
+    assert.equal(report.db_write_count, 0, collectorVersion);
+  }
 });
 
 test("rejects an unsupported collector schema", () => {

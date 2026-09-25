@@ -85,7 +85,7 @@
     return response.context;
   }
 
-  async function waitForContext(tabId, expectedScopeKey, expectedPage) {
+  async function waitForContext(tabId, expectedScopeKey, expectedPage, operationId) {
     const startedAt = Date.now();
     while (Date.now() - startedAt <= 15000) {
       try {
@@ -101,12 +101,16 @@
       }
       await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
     }
-    throw new Error("RESUME_NAVIGATION_TIMEOUT");
+    throw core.operationError(
+      operationId,
+      core.OPERATION_STAGES.WAIT_NEW_DOCUMENT,
+      "RESUME_NAVIGATION_TIMEOUT"
+    );
   }
 
-  async function navigateToObservedPage(tabId, sourcePageUrl, scopeKey, page) {
+  async function navigateToObservedPage(tabId, sourcePageUrl, scopeKey, page, operationId) {
     await chrome.tabs.update(tabId, { url: sourcePageUrl });
-    return waitForContext(tabId, scopeKey, page);
+    return waitForContext(tabId, scopeKey, page, operationId);
   }
 
   async function loadCatalogMap() {
@@ -141,22 +145,99 @@
     }
   }
 
-  async function resumeStartContext(tab, checkpoint, currentScope) {
-    const plan = core.validateResumeCheckpoint(checkpoint, currentScope);
-    await navigateToObservedPage(tab.id, plan.source_page_url, currentScope.key, plan.page);
-    if (plan.mode === "EXACT_URL") return currentContext(tab.id);
-    const response = await sendToTab(tab.id, {
-      type: "MYFANS_PREPARE_RESUME",
-      expected_scope_key: currentScope.key,
-      expected_from_page: plan.page
+  async function collectPageSnapshot(tabId, message) {
+    const response = await sendToTab(tabId, {
+      type: "MYFANS_COLLECT_CURRENT_PAGE",
+      operation_id: message.operation_id,
+      operation_stage: message.operation_stage,
+      expected_scope_key: message.expected_scope_key,
+      expected_page: message.expected_page
     });
-    if (!response?.ok || !response.context) {
-      throw new Error(response?.error || "RESUME_PREPARATION_FAILED");
+    if (!response?.ok || !response.snapshot) {
+      throw new Error(response?.error || "PAGE_COLLECTION_FAILED");
     }
-    if (response.context.collection_scope.key !== currentScope.key || response.context.page === plan.page) {
-      throw new Error("RESUME_TARGET_NOT_REACHED");
+    return response.snapshot;
+  }
+
+  async function prepareNavigation(tabId, message) {
+    let response;
+    try {
+      response = await sendToTab(tabId, {
+        type: "MYFANS_NAVIGATE_NEXT_PREPARE",
+        operation_id: message.operation_id,
+        operation_stage: message.operation_stage,
+        expected_scope_key: message.expected_scope_key,
+        expected_page: core.collectionContextFromUrl(message.previous_snapshot.source_page_url)?.page,
+        expected_fingerprint: message.previous_snapshot.fingerprint
+      });
+    } catch (error) {
+      const code = core.isMessageChannelClosedError(error)
+        ? "CHANNEL_CLOSED_BEFORE_ACK"
+        : "NAVIGATION_PREPARE_FAILED";
+      throw core.operationError(message.operation_id, message.operation_stage, code, error);
     }
-    return response.context;
+    if (!response?.ok || !response.ack) {
+      throw core.operationError(
+        message.operation_id,
+        message.operation_stage,
+        response?.error || "NAVIGATION_PREPARE_FAILED"
+      );
+    }
+    return response.ack;
+  }
+
+  async function inspectNext(tabId, message) {
+    const response = await sendToTab(tabId, {
+      type: "MYFANS_INSPECT_NEXT",
+      operation_id: message.operation_id,
+      operation_stage: core.OPERATION_STAGES.VALIDATE_NEXT_PAGE,
+      expected_scope_key: message.expected_scope_key,
+      expected_page: message.expected_page,
+      expected_fingerprint: message.expected_fingerprint
+    });
+    if (!response?.ok || !response.next_control) {
+      throw new Error(response?.error || "NEXT_INSPECTION_FAILED");
+    }
+    return response.next_control;
+  }
+
+  function waitForReady(tabId, expectedScopeKey, operationId, navigation) {
+    return core.waitForNavigationReady({
+      operation_id: operationId,
+      ack: navigation.ack,
+      previous_snapshot: navigation.previous_snapshot,
+      ack_delivered: navigation.ack_delivered,
+      expected_scope_key: expectedScopeKey,
+      collect_current: () => collectPageSnapshot(tabId, {
+        operation_id: operationId,
+        operation_stage: core.OPERATION_STAGES.WAIT_NEW_DOCUMENT,
+        expected_scope_key: expectedScopeKey,
+        expected_page: null
+      }),
+      timeout_ms: 10000,
+      poll_interval_ms: 250
+    });
+  }
+
+  async function resumeState(tab, checkpoint, currentScope, operationId) {
+    const plan = core.validateResumeCheckpoint(checkpoint, currentScope);
+    await navigateToObservedPage(
+      tab.id,
+      plan.source_page_url,
+      currentScope.key,
+      plan.page,
+      operationId
+    );
+    const observedSnapshot = await collectPageSnapshot(tab.id, {
+      operation_id: operationId,
+      operation_stage: core.OPERATION_STAGES.PREPARE_RESUME,
+      expected_scope_key: currentScope.key,
+      expected_page: plan.page
+    });
+    if (plan.mode === "EXACT_URL") {
+      return { initial_snapshot: observedSnapshot, expected_start_page: plan.page };
+    }
+    return { resume_from_snapshot: observedSnapshot, resume_from_page: plan.page };
   }
 
   async function collectBounded(mode) {
@@ -168,39 +249,75 @@
       const initialContext = await currentContext(tab.id);
       const catalogMap = await loadCatalogMap();
       const existingCatalog = catalogMap[initialContext.collection_scope.key] || null;
-      let startContext = initialContext;
+      const operationId = createRunId();
+      const runStartedAt = new Date().toISOString();
+      let startState = { expected_start_page: initialContext.page };
 
       if (mode === "NEW") {
         if (initialContext.page !== 1) throw new Error("NEW_COLLECTION_REQUIRES_FIRST_PAGE");
       } else {
         if (!existingCatalog?.checkpoint_summary) throw new Error("CHECKPOINT_NOT_FOUND_FOR_SCOPE");
-        startContext = await resumeStartContext(
+        startState = await resumeState(
           tab,
           existingCatalog.checkpoint_summary,
-          initialContext.collection_scope
+          initialContext.collection_scope,
+          operationId
         );
       }
 
-      const response = await sendToTab(tab.id, {
-        type: "MYFANS_COLLECT_LIST",
-        mode,
-        run_id: createRunId(),
-        expected_scope_key: startContext.collection_scope.key,
-        expected_start_page: startContext.page
+      const committed = await core.executeNavigationSafeRun({
+        operation_id: operationId,
+        max_pages: 5,
+        expected_scope_key: initialContext.collection_scope.key,
+        ...startState,
+        collect_current: () => collectPageSnapshot(tab.id, {
+          operation_id: operationId,
+          operation_stage: core.OPERATION_STAGES.COLLECT_PAGE,
+          expected_scope_key: initialContext.collection_scope.key,
+          expected_page: null
+        }),
+        prepare_navigation: (message) => prepareNavigation(tab.id, {
+          ...message,
+          expected_scope_key: initialContext.collection_scope.key
+        }),
+        wait_for_ready: (navigation) => waitForReady(
+          tab.id,
+          initialContext.collection_scope.key,
+          operationId,
+          navigation
+        ),
+        inspect_next: (message) => inspectNext(tab.id, message),
+        commit_run: async (run) => {
+          const rawBundle = core.buildExport(run.page_snapshots, {
+            collected_at: runStartedAt,
+            stop_reason: run.stop_reason
+          });
+          const firstContext = core.collectionContextFromUrl(run.page_snapshots[0]?.source_page_url);
+          const bundle = core.attachCollectionRunMetadata(rawBundle, {
+            run_id: operationId,
+            mode,
+            expected_scope_key: initialContext.collection_scope.key,
+            expected_start_page: firstContext?.page,
+            next_control: run.next_control
+          });
+          const merged = core.mergeCumulativeCatalog(existingCatalog, bundle);
+          const updatedCatalogMap = {
+            ...catalogMap,
+            [initialContext.collection_scope.key]: merged.catalog
+          };
+          await saveCatalogMap(updatedCatalogMap);
+          return { bundle, merged };
+        }
       });
-      if (!response?.ok || !response.bundle) throw new Error(response?.error || "COLLECTION_FAILED");
-
-      const merged = core.mergeCumulativeCatalog(existingCatalog, response.bundle);
-      catalogMap[startContext.collection_scope.key] = merged.catalog;
-      await saveCatalogMap(catalogMap);
-      renderBundle(response.bundle, merged.catalog);
-      downloadJson(response.bundle, "myfans-affiliate-catalog-run");
+      const { bundle, merged } = committed;
+      renderBundle(bundle, merged.catalog);
+      downloadJson(bundle, "myfans-affiliate-catalog-run");
       downloadJson(merged.catalog, "myfans-affiliate-catalog-cumulative");
 
       const checkpoint = merged.catalog.checkpoint_summary;
       const hasSafetyStop = checkpoint.completion_state === "INTERRUPTED";
       setStatus(
-        `run/cumulative JSONを保存しました。今回${response.bundle.counts.pages_scanned}ページ、累積${merged.catalog.counts.posts}作品、状態: ${checkpoint.completion_state} (${checkpoint.stop_reason})`,
+        `run/cumulative JSONを保存しました。今回${bundle.counts.pages_scanned}ページ、累積${merged.catalog.counts.posts}作品、状態: ${checkpoint.completion_state} (${checkpoint.stop_reason})`,
         hasSafetyStop
       );
     } catch (error) {

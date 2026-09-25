@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-Collector `0.2.0` keeps the existing text-only catalog record schema and adds bounded run/cumulative metadata. The JSON root contains:
+Collector `0.2.1` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -69,7 +69,9 @@ The collector also excludes account name, email, affiliate ID, bank details, das
 
 The parser prioritizes public MyFans URL shapes, button and visible Japanese labels, roles, accessible labels, headings, and relative semantic containers such as articles and list items. Generated or Tailwind class names are not used as primary identifiers.
 
-The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. After a click the collector waits up to 10 seconds for the URL to change, the expected catalog rows to be present, and the rendered-record fingerprint to differ. A URL change alone is not page-ready. Every invocation remains capped at five successful pages.
+The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a popup-orchestrated, one-page-at-a-time state machine: the current content script collects one document, returns a synchronous ACK before scheduling the visible next click, and is never expected to answer after navigation. The popup then reconnects to the SPA-updated or newly loaded content script and waits up to 10 seconds for the expected scope/page, catalog rows, and a changed rendered-record fingerprint. A URL change alone is not page-ready. Every invocation remains capped at five successful pages.
+
+Run state stays in popup memory until the bounded run succeeds. Only then are merge, checkpoint update, cumulative update, and both exports performed. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. A saved `0.2.0` checkpoint remains resumable in `0.2.1`; no storage migration is performed merely by loading the extension.
 
 **新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
 

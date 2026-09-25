@@ -11,6 +11,7 @@ const runtimeSource = (
   await Promise.all(runtimeFiles.map((file) => readFile(path.join(extensionRoot, file), "utf8")))
 ).join("\n");
 const contentScriptSource = await readFile(path.join(extensionRoot, "src/content-script.js"), "utf8");
+const popupSource = await readFile(path.join(extensionRoot, "src/popup.js"), "utf8");
 const manifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
 const popupHtml = await readFile(path.join(extensionRoot, "src/popup.html"), "utf8");
 
@@ -34,7 +35,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest uses only activeTab, local extension storage, and the single Affiliate Center host", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.2.0");
+  assert.equal(manifest.version, "0.2.1");
   assert.deepEqual(manifest.permissions, ["activeTab", "storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.equal("background" in manifest, false);
@@ -71,6 +72,33 @@ test("missing-title segment diagnostics use rendered innerText only", () => {
 });
 
 test("production pagination uses the bounded 10-second, 250ms readiness poll", () => {
-  assert.match(contentScriptSource, /timeout_ms:\s*10000/);
-  assert.match(contentScriptSource, /poll_interval_ms:\s*250/);
+  assert.match(popupSource, /timeout_ms:\s*10000/);
+  assert.match(popupSource, /poll_interval_ms:\s*250/);
+});
+
+test("navigation ACK is sent synchronously before the visible next control is clicked", () => {
+  const listenerStart = contentScriptSource.indexOf('message.type === "MYFANS_NAVIGATE_NEXT_PREPARE"');
+  const ackIndex = contentScriptSource.indexOf("sendResponse({ ok: true, ack: prepared.ack })", listenerStart);
+  const clickIndex = contentScriptSource.indexOf("prepared.control.click()", listenerStart);
+  const returnIndex = contentScriptSource.indexOf("return false", listenerStart);
+  assert.ok(listenerStart >= 0);
+  assert.ok(ackIndex > listenerStart);
+  assert.ok(clickIndex > ackIndex);
+  assert.ok(returnIndex > clickIndex);
+});
+
+test("list collection is popup-orchestrated one page at a time", () => {
+  assert.match(popupSource, /MYFANS_COLLECT_CURRENT_PAGE/);
+  assert.match(popupSource, /MYFANS_NAVIGATE_NEXT_PREPARE/);
+  assert.match(popupSource, /executeNavigationSafeRun/);
+  assert.equal(runtimeSource.includes("MYFANS_COLLECT_LIST"), false);
+  assert.equal(runtimeSource.includes("MYFANS_PREPARE_RESUME"), false);
+});
+
+test("the only cumulative storage write occurs inside the completed run commit callback", () => {
+  assert.equal((popupSource.match(/saveCatalogMap\(/g) || []).length, 2);
+  const commitStart = popupSource.indexOf("commit_run: async (run)");
+  const storageWrite = popupSource.indexOf("await saveCatalogMap(updatedCatalogMap)", commitStart);
+  assert.ok(commitStart >= 0);
+  assert.ok(storageWrite > commitStart);
 });

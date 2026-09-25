@@ -644,23 +644,6 @@
     return { present: false, enabled: false, href: null, control: null };
   }
 
-  function findNextControl() {
-    return nextControlState().control;
-  }
-
-  function waitForPageChange(previousFingerprint, previousUrl, previousSnapshot) {
-    return core.waitForDistinctPage({
-      previous_fingerprint: previousFingerprint,
-      previous_url: previousUrl,
-      previous_snapshot: previousSnapshot,
-      collect_current: async () => collectCurrentPage(),
-      timeout_ms: 10000,
-      poll_interval_ms: 250,
-      now: () => Date.now(),
-      sleep: (milliseconds) => new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds))
-    });
-  }
-
   function probeElements() {
     return allVisible(document, "a[href], button, [role], [aria-label], h1, h2, h3").slice(0, 200).map((element) => {
       const hierarchy = [];
@@ -729,53 +712,60 @@
     return context;
   }
 
-  async function collectListBundle(message) {
-    validateExpectedCollectionContext(message);
-    const bundle = await core.runPagination({
-      max_pages: 5,
-      collect_current: async () => collectCurrentPage(),
-      get_next_control: async () => findNextControl(),
-      activate_next: async (control) => control.click(),
-      wait_for_page_change: async (fingerprint, url, snapshot) => waitForPageChange(fingerprint, url, snapshot),
-      collected_at: new Date().toISOString()
-    });
-    const nextState = nextControlState();
-    return core.attachCollectionRunMetadata(bundle, {
-      run_id: message.run_id,
-      mode: message.mode,
-      expected_scope_key: message.expected_scope_key,
-      expected_start_page: message.expected_start_page,
-      next_control: {
-        present: nextState.present,
-        enabled: nextState.enabled,
-        href: nextState.href
-      }
-    });
-  }
-
-  async function advanceFromCheckpoint(message) {
+  function collectValidatedSnapshot(message) {
     const context = validateExpectedCollectionContext({
       expected_scope_key: message.expected_scope_key,
-      expected_start_page: message.expected_from_page
+      expected_start_page: message.expected_page
     });
-    const previousSnapshot = collectCurrentPage();
-    if (previousSnapshot.stop_reason) throw new Error(previousSnapshot.stop_reason);
-    const control = findNextControl();
-    if (!control) throw new Error("RESUME_NEXT_CONTROL_NOT_AVAILABLE");
-    control.click();
-    const transition = await waitForPageChange(
-      previousSnapshot.fingerprint,
-      previousSnapshot.source_page_url,
-      previousSnapshot
-    );
-    if (transition.status !== "READY" || !transition.snapshot) {
-      throw new Error(transition.reason || "PAGE_TRANSITION_TIMEOUT");
+    const snapshot = collectCurrentPage();
+    if (message.expected_fingerprint && message.expected_fingerprint !== snapshot.fingerprint) {
+      throw new Error("CURRENT_PAGE_FINGERPRINT_MISMATCH");
     }
-    const nextContext = core.collectionContextFromUrl(transition.snapshot.source_page_url);
-    if (!nextContext || nextContext.collection_scope.key !== context.collection_scope.key) {
-      throw new Error("COLLECTION_SCOPE_CHANGED_DURING_RESUME");
+    return { context, snapshot };
+  }
+
+  function inspectNextForMessage(message) {
+    const { snapshot } = collectValidatedSnapshot(message);
+    if (snapshot.stop_reason) throw new Error(snapshot.stop_reason);
+    const state = nextControlState();
+    return {
+      present: state.present,
+      enabled: state.enabled,
+      href: state.href
+    };
+  }
+
+  function prepareNavigation(message) {
+    if (!message.operation_id) throw new Error("OPERATION_ID_REQUIRED");
+    if (![core.OPERATION_STAGES.PREPARE_RESUME, core.OPERATION_STAGES.PREPARE_NEXT].includes(message.operation_stage)) {
+      throw new Error("OPERATION_STAGE_INVALID");
     }
-    return nextContext;
+    const { context, snapshot } = collectValidatedSnapshot({
+      expected_scope_key: message.expected_scope_key,
+      expected_page: message.expected_page,
+      expected_fingerprint: message.expected_fingerprint
+    });
+    if (snapshot.stop_reason) throw new Error(snapshot.stop_reason);
+    const state = nextControlState();
+    let expectedNextPage = null;
+    if (state.present && state.enabled) {
+      const hrefContext = state.href ? core.collectionContextFromUrl(state.href) : null;
+      expectedNextPage = hrefContext?.collection_scope?.key === context.collection_scope.key && hrefContext.page > context.page
+        ? hrefContext.page
+        : context.page + 1;
+    }
+    return {
+      ack: {
+        ok: true,
+        operation_id: message.operation_id,
+        operation_stage: message.operation_stage,
+        navigation_expected: Boolean(state.present && state.enabled),
+        from_page: context.page,
+        expected_next_page: expectedNextPage,
+        previous_fingerprint: snapshot.fingerprint
+      },
+      control: state.control
+    };
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -804,21 +794,39 @@
       }
       return false;
     }
-    if (message.type === "MYFANS_PREPARE_RESUME") {
-      advanceFromCheckpoint(message)
-        .then((context) => sendResponse({ ok: true, context }))
-        .catch((error) =>
-          sendResponse({ ok: false, error: error instanceof Error ? error.message : "RESUME_PREPARATION_FAILED" })
-        );
-      return true;
+    if (message.type === "MYFANS_COLLECT_CURRENT_PAGE") {
+      try {
+        const collected = collectValidatedSnapshot(message);
+        sendResponse({ ok: true, snapshot: collected.snapshot, context: collected.context });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "PAGE_COLLECTION_FAILED" });
+      }
+      return false;
     }
-    if (message.type === "MYFANS_COLLECT_LIST") {
-      collectListBundle(message)
-        .then((bundle) => sendResponse({ ok: true, bundle }))
-        .catch((error) =>
-          sendResponse({ ok: false, error: error instanceof Error ? error.message : "PAGINATION_FAILED" })
-        );
-      return true;
+    if (message.type === "MYFANS_INSPECT_NEXT") {
+      try {
+        sendResponse({ ok: true, next_control: inspectNextForMessage(message) });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "NEXT_INSPECTION_FAILED" });
+      }
+      return false;
+    }
+    if (message.type === "MYFANS_NAVIGATE_NEXT_PREPARE") {
+      try {
+        const prepared = prepareNavigation(message);
+        sendResponse({ ok: true, ack: prepared.ack });
+        if (prepared.control) {
+          globalThis.setTimeout(() => prepared.control.click(), 0);
+        }
+      } catch (error) {
+        sendResponse({
+          ok: false,
+          operation_id: message.operation_id || null,
+          operation_stage: message.operation_stage || null,
+          error: error instanceof Error ? error.message : "NAVIGATION_PREPARE_FAILED"
+        });
+      }
+      return false;
     }
     return false;
   });

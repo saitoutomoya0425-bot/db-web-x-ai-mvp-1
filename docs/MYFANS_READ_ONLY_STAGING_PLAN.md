@@ -2,7 +2,7 @@
 
 Status: `SELECT_ONLY / APPLY_FALSE / FAIL_CLOSED`
 
-This phase resolves a validated MyFans Affiliate Collector `0.1.8` snapshot or `0.2.0` run/cumulative preview against migration 029 without changing the database. Missing UUIDs in a later cumulative observation are never treated as delete/unpublish candidates. The resolver performs at most three bounded `SELECT` statements and has no mutation path:
+This phase resolves a validated MyFans Affiliate Collector `0.1.8` snapshot or `0.2.x` run/cumulative preview against migration 029 without changing the database. Missing UUIDs in a later cumulative observation are never treated as delete/unpublish candidates. The resolver performs at most three bounded `SELECT` statements and has no mutation path:
 
 1. locate the single MyFans row in `data_sources`;
 2. resolve only the 30 imported creator identities by external ID, profile slug, or canonical profile URL;

@@ -1,11 +1,20 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.2.0";
+  const COLLECTOR_VERSION = "0.2.1";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const CHECKPOINT_SCHEMA_VERSION = "myfans-affiliate-checkpoint-v1";
   const CUMULATIVE_SCHEMA_VERSION = "myfans-affiliate-cumulative-v1";
   const MAX_RUN_PAGES = 5;
+  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", COLLECTOR_VERSION]);
+  const OPERATION_STAGES = Object.freeze({
+    PREPARE_RESUME: "PREPARE_RESUME",
+    COLLECT_PAGE: "COLLECT_PAGE",
+    PREPARE_NEXT: "PREPARE_NEXT",
+    WAIT_NEW_DOCUMENT: "WAIT_NEW_DOCUMENT",
+    VALIDATE_NEXT_PAGE: "VALIDATE_NEXT_PAGE",
+    COMMIT_RUN: "COMMIT_RUN"
+  });
   const AFFILIATE_HOST = "www.affiliate.myfans.jp";
   const PUBLIC_MYFANS_HOSTS = new Set(["myfans.jp", "www.myfans.jp"]);
   const PUBLIC_SOCIAL_HOSTS = new Set([
@@ -1194,7 +1203,7 @@
     if (!checkpoint || checkpoint.schema_version !== CHECKPOINT_SCHEMA_VERSION) {
       throw new Error("CHECKPOINT_SCHEMA_MISMATCH");
     }
-    if (checkpoint.collector_version !== COLLECTOR_VERSION) {
+    if (!RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS.has(checkpoint.collector_version)) {
       throw new Error("CHECKPOINT_COLLECTOR_VERSION_MISMATCH");
     }
     if (!sameCollectionScope(checkpoint.collection_scope, currentScope)) {
@@ -1763,6 +1772,288 @@
     };
   }
 
+  function isMessageChannelClosedError(error) {
+    const message = normalizeSpace(error?.message || error);
+    return /(?:message channel closed|port closed|receiving end does not exist|could not establish connection)/i.test(message);
+  }
+
+  function operationError(operationId, stage, code, cause) {
+    const normalizedOperationId = normalizeSpace(operationId) || "operation-unknown";
+    const normalizedStage = OPERATION_STAGES[stage] || stage || "UNKNOWN_STAGE";
+    const normalizedCode = normalizeSpace(code) || "OPERATION_FAILED";
+    const error = new Error(`[${normalizedOperationId}][${normalizedStage}] ${normalizedCode}`);
+    error.operation_id = normalizedOperationId;
+    error.operation_stage = normalizedStage;
+    error.code = normalizedCode;
+    if (cause) error.cause = cause;
+    return error;
+  }
+
+  async function stageCall(operationId, stage, task, fallbackCode) {
+    try {
+      return await task();
+    } catch (error) {
+      if (error?.operation_id && error?.operation_stage && error?.code) throw error;
+      const code = isMessageChannelClosedError(error)
+        ? "CHANNEL_CLOSED_BEFORE_ACK"
+        : fallbackCode || normalizeSpace(error?.message) || "OPERATION_FAILED";
+      throw operationError(operationId, stage, code, error);
+    }
+  }
+
+  function validateNavigationAck(ack, operationId, stage, previousSnapshot) {
+    if (!ack || ack.ok !== true || ack.operation_id !== operationId || ack.operation_stage !== stage) {
+      throw operationError(operationId, stage, "INVALID_NAVIGATION_ACK");
+    }
+    const previousContext = collectionContextFromUrl(previousSnapshot?.source_page_url);
+    if (!previousContext || ack.from_page !== previousContext.page) {
+      throw operationError(operationId, stage, "NAVIGATION_ACK_FROM_PAGE_MISMATCH");
+    }
+    if (ack.previous_fingerprint !== previousSnapshot.fingerprint) {
+      throw operationError(operationId, stage, "NAVIGATION_ACK_FINGERPRINT_MISMATCH");
+    }
+    if (ack.navigation_expected) {
+      if (!Number.isSafeInteger(ack.expected_next_page) || ack.expected_next_page <= ack.from_page) {
+        throw operationError(operationId, stage, "NAVIGATION_ACK_NEXT_PAGE_INVALID");
+      }
+    } else if (ack.expected_next_page !== null) {
+      throw operationError(operationId, stage, "NAVIGATION_ACK_COMPLETION_INVALID");
+    }
+    return ack;
+  }
+
+  async function waitForNavigationReady(options) {
+    const operationId = options.operation_id;
+    const ack = options.ack;
+    if (!options.ack_delivered || !ack?.navigation_expected) {
+      throw operationError(operationId, OPERATION_STAGES.WAIT_NEW_DOCUMENT, "NAVIGATION_ACK_REQUIRED");
+    }
+    const previousSnapshot = options.previous_snapshot;
+    const previousFingerprint = previousSnapshot.fingerprint || fingerprintPage(previousSnapshot);
+    const previousContext = collectionContextFromUrl(previousSnapshot.source_page_url);
+    if (!previousContext) {
+      throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, "PREVIOUS_PAGE_CONTEXT_INVALID");
+    }
+    const timeoutMs = Math.max(0, Number(options.timeout_ms) || 10000);
+    const pollIntervalMs = Math.max(1, Number(options.poll_interval_ms) || 250);
+    const now = options.now || (() => Date.now());
+    const sleep = options.sleep || ((milliseconds) => new Promise((resolve) => global.setTimeout(resolve, milliseconds)));
+    const startedAt = now();
+    let sawExpectedPage = false;
+    let sawExpectedPageWithRows = false;
+    let sawExpectedPageWithOldFingerprint = false;
+
+    while (true) {
+      let snapshot = null;
+      try {
+        snapshot = await options.collect_current();
+      } catch (error) {
+        if (!isMessageChannelClosedError(error)) {
+          throw operationError(
+            operationId,
+            OPERATION_STAGES.WAIT_NEW_DOCUMENT,
+            normalizeSpace(error?.message) || "NEW_DOCUMENT_NOT_REACHABLE",
+            error
+          );
+        }
+      }
+
+      if (snapshot) {
+        snapshot.fingerprint = snapshot.fingerprint || fingerprintPage(snapshot);
+        if (snapshot.stop_reason) {
+          throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, snapshot.stop_reason);
+        }
+        const context = collectionContextFromUrl(snapshot.source_page_url);
+        if (!context) {
+          throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, "NEXT_PAGE_CONTEXT_INVALID");
+        }
+        if (context.collection_scope.key !== options.expected_scope_key) {
+          throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, "COLLECTION_SCOPE_MISMATCH");
+        }
+        if (context.page !== ack.expected_next_page) {
+          if (context.page !== ack.from_page) {
+            throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, "EXPECTED_PAGE_MISMATCH");
+          }
+        } else {
+          sawExpectedPage = true;
+          const hasRows = hasExpectedCatalogRecords(snapshot, previousSnapshot);
+          if (hasRows) {
+            sawExpectedPageWithRows = true;
+            if (snapshot.fingerprint !== previousFingerprint) return snapshot;
+            sawExpectedPageWithOldFingerprint = true;
+          }
+        }
+      }
+
+      const elapsed = now() - startedAt;
+      if (elapsed >= timeoutMs) break;
+      await sleep(Math.min(pollIntervalMs, timeoutMs - elapsed));
+    }
+
+    if (sawExpectedPageWithOldFingerprint) {
+      throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, "PAGE_FINGERPRINT_UNCHANGED");
+    }
+    if (sawExpectedPage && !sawExpectedPageWithRows) {
+      throw operationError(operationId, OPERATION_STAGES.VALIDATE_NEXT_PAGE, "CATALOG_ROWS_NOT_READY");
+    }
+    throw operationError(operationId, OPERATION_STAGES.WAIT_NEW_DOCUMENT, "NEW_DOCUMENT_TIMEOUT");
+  }
+
+  function validateCollectedPage(snapshot, options) {
+    if (!snapshot || typeof snapshot !== "object") {
+      throw operationError(options.operation_id, OPERATION_STAGES.COLLECT_PAGE, "PAGE_SNAPSHOT_MISSING");
+    }
+    snapshot.fingerprint = snapshot.fingerprint || fingerprintPage(snapshot);
+    if (snapshot.stop_reason) {
+      throw operationError(options.operation_id, OPERATION_STAGES.COLLECT_PAGE, snapshot.stop_reason);
+    }
+    const context = collectionContextFromUrl(snapshot.source_page_url);
+    if (!context) {
+      throw operationError(options.operation_id, OPERATION_STAGES.COLLECT_PAGE, "PAGE_CONTEXT_INVALID");
+    }
+    if (context.collection_scope.key !== options.expected_scope_key) {
+      throw operationError(options.operation_id, OPERATION_STAGES.COLLECT_PAGE, "COLLECTION_SCOPE_MISMATCH");
+    }
+    if (options.expected_page != null && context.page !== options.expected_page) {
+      throw operationError(options.operation_id, OPERATION_STAGES.COLLECT_PAGE, "COLLECTION_START_PAGE_MISMATCH");
+    }
+    if ((snapshot.posts || []).length === 0 && (snapshot.creators || []).length === 0) {
+      throw operationError(options.operation_id, OPERATION_STAGES.COLLECT_PAGE, "NO_CATALOG_RECORDS_DETECTED");
+    }
+    return { snapshot, context };
+  }
+
+  async function runNavigationStateMachine(options) {
+    const operationId = normalizeSpace(options.operation_id);
+    if (!operationId) throw operationError("operation-unknown", OPERATION_STAGES.COLLECT_PAGE, "OPERATION_ID_REQUIRED");
+    const maxPages = Math.max(1, Math.min(MAX_RUN_PAGES, Number(options.max_pages) || MAX_RUN_PAGES));
+    const pages = [];
+    const fingerprints = new Set();
+    let pendingSnapshot = options.initial_snapshot || null;
+    let expectedPage = options.expected_start_page ?? null;
+
+    if (options.resume_from_snapshot) {
+      const previous = validateCollectedPage(options.resume_from_snapshot, {
+        operation_id: operationId,
+        expected_scope_key: options.expected_scope_key,
+        expected_page: options.resume_from_page
+      }).snapshot;
+      const ack = validateNavigationAck(
+        await stageCall(
+          operationId,
+          OPERATION_STAGES.PREPARE_RESUME,
+          () => options.prepare_navigation({
+            operation_id: operationId,
+            operation_stage: OPERATION_STAGES.PREPARE_RESUME,
+            previous_snapshot: previous
+          }),
+          "PREPARE_RESUME_FAILED"
+        ),
+        operationId,
+        OPERATION_STAGES.PREPARE_RESUME,
+        previous
+      );
+      if (!ack.navigation_expected) {
+        throw operationError(operationId, OPERATION_STAGES.PREPARE_RESUME, "RESUME_NEXT_CONTROL_NOT_AVAILABLE");
+      }
+      pendingSnapshot = await stageCall(
+        operationId,
+        OPERATION_STAGES.WAIT_NEW_DOCUMENT,
+        () => options.wait_for_ready({ ack, previous_snapshot: previous, ack_delivered: true }),
+        "WAIT_NEW_DOCUMENT_FAILED"
+      );
+      expectedPage = ack.expected_next_page;
+    }
+
+    let stopReason = "NEXT_CONTROL_ABSENT_OR_DISABLED";
+    let finalNextControl = { present: false, enabled: false, href: null };
+    while (pages.length < maxPages) {
+      const candidate = pendingSnapshot || await stageCall(
+        operationId,
+        OPERATION_STAGES.COLLECT_PAGE,
+        () => options.collect_current(),
+        "COLLECT_PAGE_FAILED"
+      );
+      pendingSnapshot = null;
+      const validated = validateCollectedPage(candidate, {
+        operation_id: operationId,
+        expected_scope_key: options.expected_scope_key,
+        expected_page: expectedPage
+      });
+      expectedPage = null;
+      if (fingerprints.has(validated.snapshot.fingerprint)) {
+        throw operationError(operationId, OPERATION_STAGES.COLLECT_PAGE, "DUPLICATE_PAGE_FINGERPRINT");
+      }
+      fingerprints.add(validated.snapshot.fingerprint);
+      pages.push(validated.snapshot);
+
+      if (pages.length >= maxPages) {
+        finalNextControl = await stageCall(
+          operationId,
+          OPERATION_STAGES.VALIDATE_NEXT_PAGE,
+          () => options.inspect_next({
+            operation_id: operationId,
+            expected_scope_key: options.expected_scope_key,
+            expected_page: validated.context.page,
+            expected_fingerprint: validated.snapshot.fingerprint
+          }),
+          "INSPECT_NEXT_FAILED"
+        );
+        stopReason = finalNextControl?.present && finalNextControl?.enabled
+          ? "MAX_PAGE_LIMIT_REACHED"
+          : "NEXT_CONTROL_ABSENT_OR_DISABLED";
+        break;
+      }
+
+      const ack = validateNavigationAck(
+        await stageCall(
+          operationId,
+          OPERATION_STAGES.PREPARE_NEXT,
+          () => options.prepare_navigation({
+            operation_id: operationId,
+            operation_stage: OPERATION_STAGES.PREPARE_NEXT,
+            previous_snapshot: validated.snapshot
+          }),
+          "PREPARE_NEXT_FAILED"
+        ),
+        operationId,
+        OPERATION_STAGES.PREPARE_NEXT,
+        validated.snapshot
+      );
+      if (!ack.navigation_expected) {
+        finalNextControl = { present: false, enabled: false, href: null };
+        stopReason = "NEXT_CONTROL_ABSENT_OR_DISABLED";
+        break;
+      }
+      pendingSnapshot = await stageCall(
+        operationId,
+        OPERATION_STAGES.WAIT_NEW_DOCUMENT,
+        () => options.wait_for_ready({ ack, previous_snapshot: validated.snapshot, ack_delivered: true }),
+        "WAIT_NEW_DOCUMENT_FAILED"
+      );
+      expectedPage = ack.expected_next_page;
+    }
+
+    return {
+      operation_id: operationId,
+      page_snapshots: pages,
+      stop_reason: stopReason,
+      next_control: finalNextControl,
+      pages_collected: pages.length
+    };
+  }
+
+  async function executeNavigationSafeRun(options) {
+    const operationId = options.operation_id;
+    const navigationResult = await runNavigationStateMachine(options);
+    return stageCall(
+      operationId,
+      OPERATION_STAGES.COMMIT_RUN,
+      () => options.commit_run(navigationResult),
+      "COMMIT_RUN_FAILED"
+    );
+  }
+
   async function runPagination(options) {
     const maxPages = Math.max(1, Math.min(MAX_RUN_PAGES, Number(options.max_pages) || MAX_RUN_PAGES));
     const pages = [];
@@ -1826,6 +2117,7 @@
     COLLECTOR_VERSION,
     CUMULATIVE_SCHEMA_VERSION,
     MAX_RUN_PAGES,
+    OPERATION_STAGES,
     SCHEMA_VERSION,
     assertSafeExport,
     attachCollectionRunMetadata,
@@ -1837,11 +2129,13 @@
     collectionContextFromUrl,
     creatorKey,
     detectStopCondition,
+    executeNavigationSafeRun,
     extractCreatorFromDescriptor,
     extractPlanFromDescriptor,
     extractPostFromDescriptor,
     fingerprintPage,
     hrefPattern,
+    isMessageChannelClosedError,
     isAllowedPageUrl,
     makeProbeSummary,
     normalizeSpace,
@@ -1859,6 +2153,8 @@
     parseRelativePublishedText,
     pageNumberFromUrl,
     mergeCumulativeCatalog,
+    operationError,
+    runNavigationStateMachine,
     runPagination,
     scorePostCardContainerCandidate,
     selectPostCardContainerCandidate,
@@ -1867,6 +2163,7 @@
     summarizePostTitleSegmentWindow,
     validateResumeCheckpoint,
     validateExportBundle,
+    waitForNavigationReady,
     waitForDistinctPage
   });
 })(globalThis);
