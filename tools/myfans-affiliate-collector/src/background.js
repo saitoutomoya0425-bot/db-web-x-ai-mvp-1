@@ -1,9 +1,10 @@
 "use strict";
 
-importScripts("collector-core.js", "export-artifacts.js", "orchestrator-core.js");
+importScripts("collector-core.js", "export-artifacts.js", "download-delivery.js", "orchestrator-core.js");
 
 const collector = globalThis.MyFansCollectorCore;
 const durable = globalThis.MyFansOrchestratorCore;
+const downloadDelivery = globalThis.MyFansDownloadDelivery;
 
 async function sendToTab(tabId, message) {
   return chrome.tabs.sendMessage(tabId, message);
@@ -65,6 +66,13 @@ const adapters = {
   },
   navigate_tab: async (tabId, url) => {
     await chrome.tabs.update(tabId, { url });
+  },
+  download_artifact: async (artifact) => {
+    return chrome.downloads.download(downloadDelivery.downloadOptions(artifact));
+  },
+  search_download: async (downloadId) => {
+    const items = await chrome.downloads.search({ id: downloadId });
+    return items[0] || null;
   }
 };
 
@@ -76,6 +84,31 @@ function queueRecovery(tabId) {
       // The durable journal remains the source of truth for the next READY/status event.
     });
   }, 0);
+}
+
+function queueExportRecovery() {
+  globalThis.setTimeout(() => {
+    orchestrator.recoverExportDelivery().catch(() => {
+      // The download ID and operation journal remain available for the next event/startup.
+    });
+  }, 0);
+}
+
+function safeFileTimestamp(value) {
+  return String(value || new Date().toISOString()).replace(/[:.]/gu, "-");
+}
+
+async function downloadEphemeralJson(payload, prefix) {
+  if (!["myfans-affiliate-catalog-current", "myfans-affiliate-probe"].includes(prefix)) {
+    throw new Error("EPHEMERAL_EXPORT_PREFIX_INVALID");
+  }
+  collector.assertSafeExport(payload);
+  const serializedText = `${JSON.stringify(payload, null, 2)}\n`;
+  const artifact = {
+    filename: `${prefix}-${safeFileTimestamp(payload.collected_at || payload.updated_at)}.json`,
+    serialized_text: serializedText
+  };
+  return chrome.downloads.download(downloadDelivery.downloadOptions(artifact));
 }
 
 function respond(sendResponse, task) {
@@ -122,47 +155,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return respond(sendResponse, () => orchestrator.cancel(message.operation_id));
   }
 
-  if (message.type === "MYFANS_ORCHESTRATOR_CLAIM_EXPORT") {
-    return respond(sendResponse, () => orchestrator.claimExports(message.operation_id));
-  }
-
-  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_STARTED") {
-    return respond(sendResponse, () => orchestrator.markExportsDeliveryStarted(
+  if (message.type === "MYFANS_ORCHESTRATOR_START_EXPORT_DELIVERY") {
+    return respond(sendResponse, () => orchestrator.startExportDelivery(
       message.operation_id,
-      message.claim_token,
-      message.artifact_types
+      { confirm_ambiguous: message.confirm_ambiguous === true }
     ));
   }
 
-  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED") {
-    return respond(sendResponse, () => orchestrator.markExportsDelivered(
-      message.operation_id,
-      message.claim_token,
-      message.artifact_types
-    ));
-  }
-
-  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_FAILED") {
-    return respond(sendResponse, () => orchestrator.markExportsDeliveryFailed(
-      message.operation_id,
-      message.claim_token,
-      message.artifact_types,
-      message.reason
-    ));
-  }
-
-  if (message.type === "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_AMBIGUOUS") {
-    return respond(sendResponse, () => orchestrator.markExportsDeliveryAmbiguous(
-      message.operation_id,
-      message.claim_token,
-      message.artifact_types,
-      message.reason
-    ));
+  if (message.type === "MYFANS_DOWNLOAD_EPHEMERAL_JSON") {
+    return respond(sendResponse, () => downloadEphemeralJson(message.payload, message.prefix));
   }
 
   return false;
 });
 
-chrome.runtime.onStartup.addListener(() => queueRecovery(null));
-chrome.runtime.onInstalled.addListener(() => queueRecovery(null));
+chrome.downloads.onChanged.addListener((delta) => {
+  orchestrator.handleDownloadChanged(delta).catch(() => {
+    // A persisted download ID is reconciled after the next downloads event or worker startup.
+  });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  queueRecovery(null);
+  queueExportRecovery();
+});
+chrome.runtime.onInstalled.addListener(() => {
+  queueRecovery(null);
+  queueExportRecovery();
+});
 queueRecovery(null);
+queueExportRecovery();

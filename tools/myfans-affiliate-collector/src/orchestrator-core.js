@@ -5,6 +5,8 @@
   if (!collector) throw new Error("MYFANS_COLLECTOR_CORE_REQUIRED");
   const exportArtifacts = global.MyFansExportArtifacts;
   if (!exportArtifacts) throw new Error("MYFANS_EXPORT_ARTIFACTS_REQUIRED");
+  const downloadDelivery = global.MyFansDownloadDelivery;
+  if (!downloadDelivery) throw new Error("MYFANS_DOWNLOAD_DELIVERY_REQUIRED");
 
   const ORCHESTRATOR_SCHEMA_VERSION = "myfans-background-operation-v1";
   const EXPORT_PACKAGE_SCHEMA_VERSION = "myfans-export-package-v2";
@@ -32,6 +34,8 @@
     NOT_STARTED: "NOT_STARTED",
     GENERATING: "GENERATING",
     GENERATED: "GENERATED",
+    DOWNLOADING: "DOWNLOADING",
+    INTERRUPTED: "INTERRUPTED",
     DELIVERING: "DELIVERING",
     DELIVERY_FAILED: "DELIVERY_FAILED",
     DELIVERY_AMBIGUOUS: "DELIVERY_AMBIGUOUS",
@@ -107,7 +111,18 @@
       generation_state: artifact.generation_state,
       delivery_state: artifact.delivery_state,
       delivery_attempts: artifact.delivery_attempts,
-      delivery_failure_reason: artifact.delivery_failure_reason
+      delivery_attempt_id: artifact.delivery_attempt_id || null,
+      delivery_failure_reason: artifact.delivery_failure_reason,
+      download_id: Number.isInteger(artifact.download_id) ? artifact.download_id : null,
+      requested_filename: artifact.requested_filename || null,
+      actual_resolved_filename: artifact.actual_resolved_filename || null,
+      observed_byte_length: Number.isSafeInteger(artifact.observed_byte_length)
+        ? artifact.observed_byte_length
+        : null,
+      download_exists: artifact.download_exists === true,
+      download_error: artifact.download_error || null,
+      delivered_at: artifact.delivered_at || null,
+      interrupted_at: artifact.interrupted_at || null
     }]));
   }
 
@@ -221,6 +236,7 @@
       export_state: EXPORT_STATES.NOT_STARTED,
       export_claim_token: null,
       export_delivery_attempts: 0,
+      export_delivery_attempt_id: null,
       generated_export: null,
       stop_reason: null,
       completion_state: null,
@@ -456,6 +472,7 @@
 
   function createDurableOrchestrator(adapters) {
     const inFlight = new Map();
+    const deliveryInFlight = new Map();
     let startInFlight = false;
 
     async function readState() {
@@ -938,7 +955,7 @@
       return drive(active.operation_id);
     }
 
-    async function failClosedInterruptedDelivery(operation) {
+    async function markLegacyPopupDeliveryAmbiguous(operation) {
       if (
         operation?.state !== OPERATION_STATES.COMPLETED ||
         operation.export_state !== EXPORT_STATES.DELIVERING ||
@@ -971,7 +988,6 @@
 
     async function getStatus(tabId) {
       const state = await readState();
-      state.active = await failClosedInterruptedDelivery(state.active);
       let scopeKey = state.active?.scope?.key || null;
       let currentPage = null;
       if (tabId != null) {
@@ -1022,6 +1038,380 @@
       };
       await writeOperation(recovered);
       return { operation: recovered, recovered: true };
+    }
+
+    function withDeliveryLock(operationId, task) {
+      if (deliveryInFlight.has(operationId)) return deliveryInFlight.get(operationId);
+      const promise = Promise.resolve()
+        .then(task)
+        .finally(() => deliveryInFlight.delete(operationId));
+      deliveryInFlight.set(operationId, promise);
+      return promise;
+    }
+
+    function downloadArtifactById(operation, downloadId) {
+      return artifactEntries(operation.generated_export).find(([, artifact]) => (
+        artifact.download_id === downloadId
+      )) || null;
+    }
+
+    async function markDownloadAmbiguous(operationId, artifactType, reason) {
+      return replaceOperation(operationId, (current) => {
+        const generatedExport = clone(current.generated_export);
+        const artifact = generatedExport.artifacts?.[artifactKey(artifactType)];
+        if (!artifact) throw new Error("EXPORT_ARTIFACT_NOT_FOUND");
+        if (artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED) return current;
+        artifact.delivery_state = exportArtifacts.DELIVERY_STATES.DELIVERY_AMBIGUOUS;
+        artifact.delivery_failure_reason = String(reason || "DOWNLOAD_DELIVERY_AMBIGUOUS");
+        const timestamp = isoNow(adapters);
+        return {
+          ...current,
+          export_state: EXPORT_STATES.DELIVERY_AMBIGUOUS,
+          export_claim_token: null,
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+    }
+
+    async function markDownloadInterrupted(operationId, artifactType, reason) {
+      return replaceOperation(operationId, (current) => {
+        const generatedExport = clone(current.generated_export);
+        const artifact = generatedExport.artifacts?.[artifactKey(artifactType)];
+        if (!artifact) throw new Error("EXPORT_ARTIFACT_NOT_FOUND");
+        if (artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED) return current;
+        const timestamp = isoNow(adapters);
+        artifact.delivery_state = exportArtifacts.DELIVERY_STATES.INTERRUPTED;
+        artifact.interrupted_at = timestamp;
+        artifact.download_error = String(reason || "DOWNLOAD_INTERRUPTED");
+        artifact.delivery_failure_reason = artifact.download_error;
+        return {
+          ...current,
+          export_state: EXPORT_STATES.INTERRUPTED,
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+    }
+
+    async function applyDownloadItem(operationId, downloadId, item) {
+      const { active } = await readState();
+      if (!active || active.operation_id !== operationId) throw new Error("ACTIVE_OPERATION_NOT_FOUND");
+      const entry = downloadArtifactById(active, downloadId);
+      if (!entry) return summarizeOperation(active);
+      const [artifactType, artifact] = entry;
+      if (artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED) {
+        return summarizeOperation(active);
+      }
+      if (!item) {
+        return summarizeOperation(await markDownloadAmbiguous(
+          operationId,
+          artifactType,
+          "DOWNLOAD_ID_NOT_FOUND"
+        ));
+      }
+      if (item.state === "in_progress") return summarizeOperation(active);
+      if (item.state === "interrupted") {
+        return summarizeOperation(await markDownloadInterrupted(
+          operationId,
+          artifactType,
+          item.error || "DOWNLOAD_INTERRUPTED"
+        ));
+      }
+      if (item.state !== "complete") {
+        return summarizeOperation(await markDownloadAmbiguous(
+          operationId,
+          artifactType,
+          `DOWNLOAD_STATE_UNKNOWN:${String(item.state || "UNKNOWN")}`
+        ));
+      }
+
+      let readback;
+      try {
+        readback = downloadDelivery.validateCompletedDownload(item, artifact);
+      } catch (error) {
+        return summarizeOperation(await markDownloadAmbiguous(
+          operationId,
+          artifactType,
+          String(error?.message || error)
+        ));
+      }
+
+      const delivered = await replaceOperation(operationId, (current) => {
+        const generatedExport = clone(current.generated_export);
+        const currentArtifact = generatedExport.artifacts?.[artifactKey(artifactType)];
+        if (!currentArtifact || currentArtifact.download_id !== downloadId) {
+          throw new Error("DOWNLOAD_ARTIFACT_ID_MISMATCH");
+        }
+        if (currentArtifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED) return current;
+        if (currentArtifact.delivery_state !== exportArtifacts.DELIVERY_STATES.DOWNLOADING) {
+          throw new Error("DOWNLOAD_ARTIFACT_STATE_MISMATCH");
+        }
+        const timestamp = isoNow(adapters);
+        Object.assign(currentArtifact, readback, {
+          delivery_state: exportArtifacts.DELIVERY_STATES.DELIVERED,
+          download_exists: true,
+          delivered_at: timestamp,
+          delivery_failure_reason: null,
+          download_error: null
+        });
+        const allDelivered = artifactEntries(generatedExport).every(([, candidate]) => (
+          candidate.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED
+        ));
+        return {
+          ...current,
+          export_state: allDelivered ? EXPORT_STATES.DELIVERED : EXPORT_STATES.DOWNLOADING,
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+      if (delivered.export_state === EXPORT_STATES.DELIVERED) return summarizeOperation(delivered);
+      return dispatchNextArtifact(operationId);
+    }
+
+    async function dispatchNextArtifact(operationId) {
+      const { active } = await readState();
+      if (!active || active.operation_id !== operationId) throw new Error("ACTIVE_OPERATION_NOT_FOUND");
+      if (active.export_state !== EXPORT_STATES.DOWNLOADING) return summarizeOperation(active);
+
+      const entries = artifactEntries(active.generated_export);
+      const inProgress = entries.find(([, artifact]) => (
+        artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DOWNLOADING
+      ));
+      if (inProgress) return summarizeOperation(active);
+
+      const uncertain = entries.find(([, artifact]) => (
+        artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DISPATCHING
+      ));
+      if (uncertain) {
+        return summarizeOperation(await markDownloadAmbiguous(
+          operationId,
+          uncertain[0],
+          "DOWNLOAD_DISPATCH_RESULT_UNKNOWN"
+        ));
+      }
+
+      const nextEntry = entries.find(([, artifact]) => (
+        artifact.delivery_state === exportArtifacts.DELIVERY_STATES.READY_TO_DOWNLOAD
+      ));
+      if (!nextEntry) {
+        const allDelivered = entries.length === 2 && entries.every(([, artifact]) => (
+          artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED
+        ));
+        if (!allDelivered) return summarizeOperation(active);
+        const completed = await replaceOperation(operationId, (current) => ({
+          ...current,
+          export_state: EXPORT_STATES.DELIVERED,
+          updated_at: isoNow(adapters),
+          revision: current.revision + 1
+        }));
+        return summarizeOperation(completed);
+      }
+
+      const [artifactType] = nextEntry;
+      const dispatching = await replaceOperation(operationId, (current) => {
+        if (current.export_state !== EXPORT_STATES.DOWNLOADING) {
+          throw new Error("EXPORT_DELIVERY_NOT_ACTIVE");
+        }
+        const generatedExport = clone(current.generated_export);
+        const artifact = generatedExport.artifacts?.[artifactKey(artifactType)];
+        if (artifact?.delivery_state !== exportArtifacts.DELIVERY_STATES.READY_TO_DOWNLOAD) {
+          throw new Error("EXPORT_ARTIFACT_NOT_READY_TO_DOWNLOAD");
+        }
+        artifact.delivery_state = exportArtifacts.DELIVERY_STATES.DISPATCHING;
+        artifact.delivery_started_at = isoNow(adapters);
+        return {
+          ...current,
+          generated_export: generatedExport,
+          updated_at: artifact.delivery_started_at,
+          revision: current.revision + 1
+        };
+      });
+      const artifact = clone(dispatching.generated_export.artifacts[artifactKey(artifactType)]);
+      await exportArtifacts.verifyExportArtifact(artifact);
+
+      let downloadId;
+      try {
+        downloadId = await adapters.download_artifact(artifact);
+        if (!Number.isInteger(downloadId)) throw new Error("DOWNLOAD_ID_INVALID");
+      } catch (error) {
+        return summarizeOperation(await markDownloadInterrupted(
+          operationId,
+          artifactType,
+          String(error?.message || error)
+        ));
+      }
+
+      const downloading = await replaceOperation(operationId, (current) => {
+        const generatedExport = clone(current.generated_export);
+        const currentArtifact = generatedExport.artifacts?.[artifactKey(artifactType)];
+        if (currentArtifact?.delivery_state !== exportArtifacts.DELIVERY_STATES.DISPATCHING) {
+          throw new Error("EXPORT_ARTIFACT_DISPATCH_STATE_MISMATCH");
+        }
+        const timestamp = isoNow(adapters);
+        Object.assign(currentArtifact, {
+          delivery_state: exportArtifacts.DELIVERY_STATES.DOWNLOADING,
+          download_id: downloadId,
+          requested_filename: currentArtifact.filename,
+          delivery_started_at: currentArtifact.delivery_started_at || timestamp
+        });
+        return {
+          ...current,
+          generated_export: generatedExport,
+          updated_at: timestamp,
+          revision: current.revision + 1
+        };
+      });
+
+      let item = null;
+      try {
+        item = await adapters.search_download(downloadId);
+      } catch {
+        // The persisted download ID remains authoritative for an event or restart reconciliation.
+      }
+      if (item?.state === "complete" || item?.state === "interrupted") {
+        return applyDownloadItem(operationId, downloadId, item);
+      }
+      return summarizeOperation(downloading);
+    }
+
+    async function startExportDeliveryInternal(operationId, options = {}) {
+      const recovered = await recoverExportArtifacts(operationId);
+      const operation = recovered.operation;
+      if (operation.state !== OPERATION_STATES.COMPLETED || operation.commit_state !== COMMIT_STATES.COMMITTED) {
+        throw new Error("COMMITTED_OPERATION_REQUIRED");
+      }
+      if (operation.export_state === EXPORT_STATES.DELIVERED) throw new Error("EXPORT_ALREADY_DELIVERED");
+      if (operation.export_state === EXPORT_STATES.DOWNLOADING) throw new Error("EXPORT_DOWNLOAD_ALREADY_ACTIVE");
+      const confirmationRequired = [
+        EXPORT_STATES.DELIVERY_AMBIGUOUS,
+        EXPORT_STATES.INTERRUPTED,
+        EXPORT_STATES.DELIVERING
+      ].includes(operation.export_state);
+      if (confirmationRequired && options.confirm_ambiguous !== true) {
+        throw new Error("AMBIGUOUS_EXPORT_RETRY_CONFIRMATION_REQUIRED");
+      }
+      if (![EXPORT_STATES.GENERATED, EXPORT_STATES.DELIVERY_FAILED, EXPORT_STATES.DELIVERY_AMBIGUOUS, EXPORT_STATES.INTERRUPTED, EXPORT_STATES.DELIVERING].includes(operation.export_state)) {
+        throw new Error("EXPORT_NOT_READY_FOR_DOWNLOAD");
+      }
+      const generatedExport = clone(operation.generated_export);
+      const entries = artifactEntries(generatedExport);
+      if (entries.length !== 2) throw new Error("EXPORT_ARTIFACT_PACKAGE_INCOMPLETE");
+      for (const [, artifact] of entries) await exportArtifacts.verifyExportArtifact(artifact);
+
+      const attemptId = adapters.uuid();
+      const timestamp = isoNow(adapters);
+      for (const [type, artifact] of entries) {
+        if (artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DELIVERED) continue;
+        Object.assign(artifact, {
+          operation_id: operation.operation_id,
+          artifact_id: `${operation.operation_id}:${type}`,
+          delivery_state: exportArtifacts.DELIVERY_STATES.READY_TO_DOWNLOAD,
+          delivery_attempt_id: attemptId,
+          delivery_attempts: (artifact.delivery_attempts || 0) + 1,
+          claim_token: null,
+          claimed_at: timestamp,
+          delivery_started_at: null,
+          delivered_at: null,
+          delivery_failure_reason: null,
+          download_id: null,
+          requested_filename: artifact.filename,
+          actual_resolved_filename: null,
+          observed_byte_length: null,
+          download_exists: null,
+          interrupted_at: null,
+          download_error: null
+        });
+      }
+      const prepared = {
+        ...operation,
+        export_state: EXPORT_STATES.DOWNLOADING,
+        export_claim_token: null,
+        export_delivery_attempt_id: attemptId,
+        export_delivery_attempts: (operation.export_delivery_attempts || 0) + 1,
+        generated_export: generatedExport,
+        updated_at: timestamp,
+        revision: operation.revision + 1
+      };
+      await writeOperation(prepared);
+      return dispatchNextArtifact(operationId);
+    }
+
+    function startExportDelivery(operationId, options = {}) {
+      return withDeliveryLock(operationId, () => startExportDeliveryInternal(operationId, options));
+    }
+
+    async function recoverExportDeliveryInternal() {
+      const { active } = await readState();
+      if (!active || active.state !== OPERATION_STATES.COMPLETED) return active ? summarizeOperation(active) : null;
+      if (active.export_state === EXPORT_STATES.DELIVERING) {
+        return summarizeOperation(await markLegacyPopupDeliveryAmbiguous(active));
+      }
+      if (active.export_state !== EXPORT_STATES.DOWNLOADING) return summarizeOperation(active);
+      const entries = artifactEntries(active.generated_export);
+      const uncertain = entries.find(([, artifact]) => (
+        artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DISPATCHING && !Number.isInteger(artifact.download_id)
+      ));
+      if (uncertain) {
+        return summarizeOperation(await markDownloadAmbiguous(
+          active.operation_id,
+          uncertain[0],
+          "DOWNLOAD_DISPATCH_RESULT_UNKNOWN"
+        ));
+      }
+      const downloading = entries.find(([, artifact]) => (
+        artifact.delivery_state === exportArtifacts.DELIVERY_STATES.DOWNLOADING
+      ));
+      if (downloading) {
+        const downloadId = downloading[1].download_id;
+        if (!Number.isInteger(downloadId)) {
+          return summarizeOperation(await markDownloadAmbiguous(
+            active.operation_id,
+            downloading[0],
+            "DOWNLOAD_ID_MISSING"
+          ));
+        }
+        let item;
+        try {
+          item = await adapters.search_download(downloadId);
+        } catch {
+          return summarizeOperation(active);
+        }
+        if (!item) {
+          return summarizeOperation(await markDownloadAmbiguous(
+            active.operation_id,
+            downloading[0],
+            "DOWNLOAD_ID_NOT_FOUND"
+          ));
+        }
+        return applyDownloadItem(active.operation_id, downloadId, item);
+      }
+      return dispatchNextArtifact(active.operation_id);
+    }
+
+    async function recoverExportDelivery() {
+      const { active } = await readState();
+      if (!active?.operation_id) return null;
+      return withDeliveryLock(active.operation_id, recoverExportDeliveryInternal);
+    }
+
+    async function handleDownloadChanged(delta) {
+      if (!Number.isInteger(delta?.id)) return null;
+      const { active } = await readState();
+      if (!active?.operation_id || !downloadArtifactById(active, delta.id)) return null;
+      return withDeliveryLock(active.operation_id, async () => {
+        let item;
+        try {
+          item = await adapters.search_download(delta.id);
+        } catch {
+          return summarizeOperation((await readState()).active);
+        }
+        if (!item) return summarizeOperation((await readState()).active);
+        return applyDownloadItem(active.operation_id, delta.id, item);
+      });
     }
 
     async function claimExports(operationId) {
@@ -1209,13 +1599,16 @@
       drive,
       driveOne,
       getStatus,
+      handleDownloadChanged,
       markExportsDeliveryAmbiguous,
       markExportsDeliveryFailed,
       markExportsDeliveryStarted,
       markExportsDelivered,
       readState,
       recoverActive,
+      recoverExportDelivery,
       recoverExportArtifacts,
+      startExportDelivery,
       start
     });
   }

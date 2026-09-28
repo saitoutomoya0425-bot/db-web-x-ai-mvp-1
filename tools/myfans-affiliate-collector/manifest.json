@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "MyFans Affiliate Catalog Local Collector",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Exports visible text catalog fields from supported MyFans Affiliate Center pages to a local JSON file.",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "downloads"
   ],
   "host_permissions": [
     "https://www.affiliate.myfans.jp/*"

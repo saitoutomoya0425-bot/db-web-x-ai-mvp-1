@@ -10,11 +10,13 @@ const testDir = path.dirname(fileURLToPath(import.meta.url));
 const extensionRoot = path.resolve(testDir, "..");
 const collectorSource = await readFile(path.join(extensionRoot, "src/collector-core.js"), "utf8");
 const exportArtifactSource = await readFile(path.join(extensionRoot, "src/export-artifacts.js"), "utf8");
+const downloadDeliverySource = await readFile(path.join(extensionRoot, "src/download-delivery.js"), "utf8");
 const orchestratorSource = await readFile(path.join(extensionRoot, "src/orchestrator-core.js"), "utf8");
-const sandbox = { URL, console, crypto: webcrypto, TextEncoder };
+const sandbox = { URL, console, crypto: webcrypto, TextEncoder, btoa };
 vm.createContext(sandbox);
 vm.runInContext(collectorSource, sandbox, { filename: "collector-core.js" });
 vm.runInContext(exportArtifactSource, sandbox, { filename: "export-artifacts.js" });
+vm.runInContext(downloadDeliverySource, sandbox, { filename: "download-delivery.js" });
 vm.runInContext(orchestratorSource, sandbox, { filename: "orchestrator-core.js" });
 const core = sandbox.MyFansCollectorCore;
 const artifactCore = sandbox.MyFansExportArtifacts;
@@ -124,6 +126,9 @@ function createHarness(options = {}) {
   let uuidCounter = 0;
   let navigationCount = 0;
   let prepareCount = 0;
+  let nextDownloadId = 1000;
+  const downloadItems = new Map();
+  const downloadRequests = [];
   const collectCounts = new Map();
   const failures = new Map(Object.entries(options.failures || {}).map(([page, reason]) => [Number(page), reason]));
   const adapters = {
@@ -195,12 +200,54 @@ function createHarness(options = {}) {
       if (!context) throw new Error("POSITION_URL_INVALID");
       currentPage = context.page;
       navigationCount += 1;
-    }
+    },
+    download_artifact: async (artifact) => {
+      if (options.download_error) throw new Error(options.download_error);
+      const id = nextDownloadId++;
+      downloadRequests.push({
+        artifact_type: artifact.artifact_type,
+        filename: artifact.filename,
+        byte_length: artifact.byte_length,
+        serialized_text: artifact.serialized_text
+      });
+      downloadItems.set(id, {
+        id,
+        state: "in_progress",
+        filename: `/Downloads/${artifact.filename}`,
+        fileSize: -1,
+        totalBytes: artifact.byte_length,
+        bytesReceived: 0,
+        exists: true
+      });
+      return id;
+    },
+    search_download: async (downloadId) => clone(downloadItems.get(downloadId) || null)
   };
+  function updateDownload(downloadId, patch) {
+    const current = downloadItems.get(downloadId);
+    if (!current) throw new Error("TEST_DOWNLOAD_NOT_FOUND");
+    downloadItems.set(downloadId, { ...current, ...clone(patch) });
+    return clone(downloadItems.get(downloadId));
+  }
   return {
     adapters,
     storage,
     scope,
+    downloadRequests,
+    downloadItems,
+    completeDownload(downloadId, patch = {}) {
+      const current = downloadItems.get(downloadId);
+      return updateDownload(downloadId, {
+        state: "complete",
+        bytesReceived: current.totalBytes,
+        fileSize: current.totalBytes,
+        exists: true,
+        ...patch
+      });
+    },
+    interruptDownload(downloadId, error = "USER_CANCELED") {
+      return updateDownload(downloadId, { state: "interrupted", error });
+    },
     get currentPage() {
       return currentPage;
     },
@@ -815,14 +862,21 @@ test("failed pre-download delivery is retryable and successful artifacts are del
   assert.equal(state.active.generated_export.artifacts.cumulative.delivery_attempts, 2);
 });
 
-test("popup loss after download start becomes ambiguous and never auto-redownloads", async () => {
+test("status reads stay pure during a legacy popup delivery and explicit recovery marks it ambiguous", async () => {
   const fixture = await completed199Harness("ambiguous-delivery");
   const claim = await fixture.orchestrator.claimExports(fixture.operationId);
   const types = Object.values(claim.artifacts).map((artifact) => artifact.artifact_type);
   await fixture.orchestrator.markExportsDeliveryStarted(fixture.operationId, claim.claim_token, types);
   const reopened = durable.createDurableOrchestrator(fixture.harness.adapters);
-  const view = await reopened.getStatus(7);
-  assert.equal(view.operation.export_state, "DELIVERY_AMBIGUOUS");
+  const beforeStatusReads = clone((await reopened.readState()).active);
+  for (let index = 0; index < 3; index += 1) {
+    const view = await reopened.getStatus(7);
+    assert.equal(view.operation.export_state, "DELIVERING");
+  }
+  const afterStatusReads = (await reopened.readState()).active;
+  assert.deepEqual(afterStatusReads, beforeStatusReads);
+  const recovered = await reopened.recoverExportDelivery();
+  assert.equal(recovered.export_state, "DELIVERY_AMBIGUOUS");
   const retry = await reopened.claimExports(fixture.operationId);
   assert.equal(retry.claimed, false);
   assert.equal(retry.export_state, "DELIVERY_AMBIGUOUS");
@@ -892,4 +946,185 @@ test("one claim recovers and returns both artifacts from a legacy 0.3.1 complete
   assert.equal(after.active.result.cumulative_posts, 199);
   assert.equal(after.active.result.run_count, 2);
   assert.equal(after.active.result.last_successfully_collected_page, 10);
+});
+
+test("background download keeps status reads pure and dispatches run before cumulative", async () => {
+  const fixture = await completed199Harness("background-sequential-delivery");
+  const started = await fixture.orchestrator.startExportDelivery(fixture.operationId);
+  assert.equal(started.export_state, "DOWNLOADING");
+  assert.equal(fixture.harness.downloadRequests.length, 1);
+  assert.equal(fixture.harness.downloadRequests[0].artifact_type, "RUN");
+
+  const beforeReads = clone((await fixture.orchestrator.readState()).active);
+  for (let index = 0; index < 5; index += 1) {
+    const view = await fixture.orchestrator.getStatus(7);
+    assert.equal(view.operation.export_state, "DOWNLOADING");
+  }
+  assert.deepEqual((await fixture.orchestrator.readState()).active, beforeReads);
+
+  const runDownloadId = beforeReads.generated_export.artifacts.run.download_id;
+  fixture.harness.completeDownload(runDownloadId);
+  await fixture.orchestrator.handleDownloadChanged({ id: runDownloadId, state: { current: "complete" } });
+  let state = (await fixture.orchestrator.readState()).active;
+  assert.equal(state.generated_export.artifacts.run.delivery_state, "DELIVERED");
+  assert.equal(state.generated_export.artifacts.cumulative.delivery_state, "DOWNLOADING");
+  assert.equal(fixture.harness.downloadRequests.length, 2);
+  assert.equal(fixture.harness.downloadRequests[1].artifact_type, "CUMULATIVE");
+
+  const cumulativeDownloadId = state.generated_export.artifacts.cumulative.download_id;
+  const uniquified = state.generated_export.artifacts.cumulative.filename.replace(/\.json$/u, " (1).json");
+  fixture.harness.completeDownload(cumulativeDownloadId, { filename: `/Downloads/${uniquified}` });
+  await fixture.orchestrator.handleDownloadChanged({ id: cumulativeDownloadId, state: { current: "complete" } });
+  state = (await fixture.orchestrator.readState()).active;
+  assert.equal(state.export_state, "DELIVERED");
+  assert.equal(state.generated_export.artifacts.cumulative.actual_resolved_filename, `/Downloads/${uniquified}`);
+});
+
+test("duplicate download events are idempotent and delivered artifacts cannot be downloaded again", async () => {
+  const fixture = await completed199Harness("download-event-idempotency");
+  await fixture.orchestrator.startExportDelivery(fixture.operationId);
+  let state = (await fixture.orchestrator.readState()).active;
+  const runId = state.generated_export.artifacts.run.download_id;
+  fixture.harness.completeDownload(runId);
+  await fixture.orchestrator.handleDownloadChanged({ id: runId });
+  await fixture.orchestrator.handleDownloadChanged({ id: runId });
+  state = (await fixture.orchestrator.readState()).active;
+  const cumulativeId = state.generated_export.artifacts.cumulative.download_id;
+  fixture.harness.completeDownload(cumulativeId);
+  await fixture.orchestrator.handleDownloadChanged({ id: cumulativeId });
+  await fixture.orchestrator.handleDownloadChanged({ id: cumulativeId });
+  assert.equal((await fixture.orchestrator.readState()).active.export_state, "DELIVERED");
+  assert.equal(fixture.harness.downloadRequests.length, 2);
+  await assert.rejects(
+    fixture.orchestrator.startExportDelivery(fixture.operationId),
+    /EXPORT_ALREADY_DELIVERED/
+  );
+});
+
+test("worker restart reconciles an in-progress run and continues with cumulative only after completion", async () => {
+  const fixture = await completed199Harness("download-restart");
+  await fixture.orchestrator.startExportDelivery(fixture.operationId);
+  let state = (await fixture.orchestrator.readState()).active;
+  const runId = state.generated_export.artifacts.run.download_id;
+
+  const restarted = durable.createDurableOrchestrator(fixture.harness.adapters);
+  await restarted.recoverExportDelivery();
+  assert.equal(fixture.harness.downloadRequests.length, 1);
+  fixture.harness.completeDownload(runId);
+  await durable.createDurableOrchestrator(fixture.harness.adapters).recoverExportDelivery();
+  state = (await restarted.readState()).active;
+  assert.equal(state.generated_export.artifacts.run.delivery_state, "DELIVERED");
+  assert.equal(state.generated_export.artifacts.cumulative.delivery_state, "DOWNLOADING");
+  assert.equal(fixture.harness.downloadRequests.length, 2);
+
+  const cumulativeId = state.generated_export.artifacts.cumulative.download_id;
+  const restartedDuringCumulative = durable.createDurableOrchestrator(fixture.harness.adapters);
+  await restartedDuringCumulative.recoverExportDelivery();
+  assert.equal(fixture.harness.downloadRequests.length, 2);
+  fixture.harness.completeDownload(cumulativeId);
+  await durable.createDurableOrchestrator(fixture.harness.adapters).recoverExportDelivery();
+  assert.equal((await restartedDuringCumulative.readState()).active.export_state, "DELIVERED");
+});
+
+test("download dispatch failure is preserved as interrupted and never dispatches cumulative", async () => {
+  const fixture = await completed199Harness("download-dispatch-failure");
+  fixture.harness.adapters.download_artifact = async () => {
+    throw new Error("DOWNLOAD_DISPATCH_REJECTED");
+  };
+  const result = await fixture.orchestrator.startExportDelivery(fixture.operationId);
+  const state = (await fixture.orchestrator.readState()).active;
+  assert.equal(result.export_state, "INTERRUPTED");
+  assert.equal(state.generated_export.artifacts.run.delivery_state, "INTERRUPTED");
+  assert.equal(state.generated_export.artifacts.run.download_error, "DOWNLOAD_DISPATCH_REJECTED");
+  assert.equal(state.generated_export.artifacts.run.download_id, null);
+  assert.equal(state.generated_export.artifacts.cumulative.delivery_state, "READY_TO_DOWNLOAD");
+  assert.equal(fixture.harness.downloadRequests.length, 0);
+});
+
+test("interrupted download preserves its error and requires explicit retry", async () => {
+  const fixture = await completed199Harness("download-interrupted");
+  await fixture.orchestrator.startExportDelivery(fixture.operationId);
+  let state = (await fixture.orchestrator.readState()).active;
+  const runId = state.generated_export.artifacts.run.download_id;
+  fixture.harness.interruptDownload(runId, "FILE_FAILED");
+  await fixture.orchestrator.handleDownloadChanged({ id: runId, state: { current: "interrupted" } });
+  state = (await fixture.orchestrator.readState()).active;
+  assert.equal(state.export_state, "INTERRUPTED");
+  assert.equal(state.generated_export.artifacts.run.download_error, "FILE_FAILED");
+  await assert.rejects(
+    fixture.orchestrator.startExportDelivery(fixture.operationId),
+    /AMBIGUOUS_EXPORT_RETRY_CONFIRMATION_REQUIRED/
+  );
+  await fixture.orchestrator.startExportDelivery(fixture.operationId, { confirm_ambiguous: true });
+  assert.equal(fixture.harness.downloadRequests.length, 2);
+});
+
+test("missing download history on restart becomes ambiguous without auto-redownload", async () => {
+  const fixture = await completed199Harness("missing-download-id");
+  await fixture.orchestrator.startExportDelivery(fixture.operationId);
+  const state = (await fixture.orchestrator.readState()).active;
+  const runId = state.generated_export.artifacts.run.download_id;
+  fixture.harness.downloadItems.delete(runId);
+  await durable.createDurableOrchestrator(fixture.harness.adapters).recoverExportDelivery();
+  const recovered = (await fixture.orchestrator.readState()).active;
+  assert.equal(recovered.export_state, "DELIVERY_AMBIGUOUS");
+  assert.equal(recovered.generated_export.artifacts.run.delivery_failure_reason, "DOWNLOAD_ID_NOT_FOUND");
+  assert.equal(fixture.harness.downloadRequests.length, 1);
+});
+
+test("existing 199-post ambiguous operation requires confirmation and retries delivery only", async () => {
+  const fixture = await completed199Harness("existing-199-ambiguous");
+  await convertCompletedOperationToLegacy031(fixture);
+  const claimed = await fixture.orchestrator.claimExports(fixture.operationId);
+  await fixture.orchestrator.markExportsDeliveryStarted(
+    fixture.operationId,
+    claimed.claim_token,
+    Object.values(claimed.artifacts).map((artifact) => artifact.artifact_type)
+  );
+  await fixture.orchestrator.recoverExportDelivery();
+  const before = await fixture.orchestrator.readState();
+  const catalogBefore = clone(before.catalogs[fixture.harness.scope.key]);
+  const operationId = before.active.operation_id;
+  const previousAttemptId = before.active.export_delivery_attempt_id;
+  const navigationBefore = fixture.harness.navigationCount;
+  const collectionBefore = Array.from({ length: 10 }, (_, index) => fixture.harness.collectCount(index + 1))
+    .reduce((total, value) => total + value, 0);
+
+  await assert.rejects(
+    fixture.orchestrator.startExportDelivery(fixture.operationId),
+    /AMBIGUOUS_EXPORT_RETRY_CONFIRMATION_REQUIRED/
+  );
+  const started = await fixture.orchestrator.startExportDelivery(
+    fixture.operationId,
+    { confirm_ambiguous: true }
+  );
+  const after = await fixture.orchestrator.readState();
+  assert.equal(started.export_state, "DOWNLOADING");
+  assert.equal(after.active.operation_id, operationId);
+  assert.ok(after.active.export_delivery_attempt_id);
+  assert.notEqual(after.active.export_delivery_attempt_id, previousAttemptId);
+  assert.deepEqual(after.catalogs[fixture.harness.scope.key], catalogBefore);
+  assert.equal(after.catalogs[fixture.harness.scope.key].counts.posts, 199);
+  assert.equal(after.catalogs[fixture.harness.scope.key].checkpoint_summary.last_successfully_collected_page, 10);
+  assert.equal(after.catalogs[fixture.harness.scope.key].run_count, 2);
+  assert.equal(fixture.harness.navigationCount, navigationBefore);
+  const collectionAfter = Array.from({ length: 10 }, (_, index) => fixture.harness.collectCount(index + 1))
+    .reduce((total, value) => total + value, 0);
+  assert.equal(collectionAfter, collectionBefore);
+  assert.equal(fixture.harness.downloadRequests.length, 1);
+
+  const runId = after.active.generated_export.artifacts.run.download_id;
+  fixture.harness.completeDownload(runId);
+  await fixture.orchestrator.handleDownloadChanged({ id: runId });
+  let delivering = (await fixture.orchestrator.readState()).active;
+  const cumulativeId = delivering.generated_export.artifacts.cumulative.download_id;
+  fixture.harness.completeDownload(cumulativeId);
+  await fixture.orchestrator.handleDownloadChanged({ id: cumulativeId });
+  const delivered = await fixture.orchestrator.readState();
+  assert.equal(delivered.active.export_state, "DELIVERED");
+  assert.equal(fixture.harness.downloadRequests.length, 2);
+  assert.equal(delivered.active.operation_id, operationId);
+  assert.deepEqual(delivered.catalogs[fixture.harness.scope.key], catalogBefore);
+  assert.equal(delivered.catalogs[fixture.harness.scope.key].checkpoint_summary.last_successfully_collected_page, 10);
+  assert.equal(delivered.catalogs[fixture.harness.scope.key].run_count, 2);
 });

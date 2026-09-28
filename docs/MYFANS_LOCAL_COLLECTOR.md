@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-Collector `0.3.2` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
+Collector `0.4.0` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -73,9 +73,9 @@ The multi-page actions use only a visible, enabled `次へ` or `次のページ`
 
 The popup is a controller/view only. Closing it destroys no operation state; reopening it reads the durable journal and shows the current stage and progress. The journal and temporary staged pages live in extension-owned `chrome.storage.local`. Hydration start/deadline, last observed page/record count/fingerprint, and the settle candidate are journaled. Worker startup, content readiness, or a popup status refresh resumes the remaining original deadline after service-worker suspension or browser restart; it never starts a fresh ten-second allowance.
 
-Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0`, `0.2.1`, `0.3.0`, and `0.3.1` checkpoints remain resumable; loading version `0.3.2` alone does not rewrite them. A terminal `FAILED` journal is preserved as prior evidence but does not block a new resume operation from the formal checkpoint.
+Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0`, `0.2.1`, `0.3.0`, `0.3.1`, and `0.3.2` checkpoints remain resumable; loading version `0.4.0` alone does not rewrite them. A terminal `FAILED` journal is preserved as prior evidence but does not block a new resume operation from the formal checkpoint.
 
-Completed run and cumulative exports are canonical artifacts: object keys are recursively sorted, array order is retained, JSON is pretty-printed with one trailing newline, and SHA-256 covers the exact UTF-8 text delivered to the file. Each artifact has an independent delivery state. A validation failure before download remains retryable; an interrupted delivery becomes fail-closed `DELIVERY_AMBIGUOUS` and is not automatically repeated. Legacy `0.3.1` completed operations can rebuild only these export artifacts from their committed run/catalog data without changing UUIDs, run count, checkpoint, or collection result.
+Completed run and cumulative exports are canonical artifacts: object keys are recursively sorted, array order is retained, JSON is pretty-printed with one trailing newline, and SHA-256 covers the exact UTF-8 text delivered to the file. Each artifact has an independent delivery state. Version `0.4.0` hands those exact bytes to `chrome.downloads` from the background service worker, journals each download ID, and delivers run then cumulative sequentially. Completion requires Downloads API readback with `state=complete`, the expected exact-or-uniquified filename, exact byte length, and `exists=true`. An interrupted or ambiguous delivery is not automatically repeated; the popup requires explicit confirmation that the files are absent. Legacy `0.3.1` completed operations can rebuild only these export artifacts from their committed run/catalog data without changing UUIDs, run count, checkpoint, operation ID, or collection result.
 
 **新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
 
@@ -108,7 +108,7 @@ It does not save creator names, post titles, price/rate values, raw DOM, HTML, c
 5. Open the extension and choose **現在ページを取得**, **新規収集（最大5ページ）**, or **続きから収集（最大5ページ）**.
 6. The popup may be closed while the background run proceeds. Reopen it to view progress; after completion, choose **完了したJSONを保存**.
 
-Chrome downloads the JSON locally only after the user selects the save action. Generated artifacts remain in extension storage until delivery succeeds. No broad `downloads` permission, upload, or database operation is used. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
+Chrome downloads the JSON locally only after the user selects the save action. Generated artifacts remain in extension storage until delivery succeeds. The extension uses the narrow `downloads` permission only to save these local JSON artifacts and reconcile a persisted download ID with `downloads.search({ id })`; it does not enumerate download history, call `downloads.open`, or broaden host access. Existing files are never overwritten because Chrome receives `conflictAction: "uniquify"`. No upload or database operation is used. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
 
 ## Import handoff design
 

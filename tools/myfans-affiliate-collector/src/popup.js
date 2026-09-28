@@ -1,8 +1,6 @@
 (function installPopupController() {
   "use strict";
 
-  const exportArtifacts = globalThis.MyFansExportArtifacts;
-  if (!exportArtifacts) throw new Error("MYFANS_EXPORT_ARTIFACTS_REQUIRED");
   const buttons = [...document.querySelectorAll("button")];
   const status = document.getElementById("status");
   const results = document.getElementById("results");
@@ -26,35 +24,6 @@
 
   function setText(id, value) {
     document.getElementById(id).textContent = value == null ? "—" : String(value);
-  }
-
-  function safeFileTimestamp(value) {
-    return String(value || new Date().toISOString()).replace(/[:.]/g, "-");
-  }
-
-  function downloadJson(value, prefix) {
-    const serialized = `${JSON.stringify(value, null, 2)}\n`;
-    const blob = new Blob([serialized], { type: "application/json" });
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = `${prefix}-${safeFileTimestamp(value.collected_at || value.updated_at)}.json`;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
-  }
-
-  function downloadArtifact(artifact) {
-    const blob = new Blob([artifact.serialized_text], { type: "application/json" });
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = artifact.filename;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
   }
 
   function sampleLabel(record, type) {
@@ -130,11 +99,17 @@
     document.getElementById("collect-resume").disabled = active || pendingExport;
     cancelButton.hidden = !cancellable;
     cancelButton.disabled = !cancellable;
-    exportButton.hidden = !(
-      currentOperation?.state === "COMPLETED" &&
-      ["GENERATED", "DELIVERY_FAILED"].includes(currentOperation.export_state)
-    );
+    const downloadableState = currentOperation?.state === "COMPLETED" && [
+      "GENERATED",
+      "DELIVERY_FAILED",
+      "INTERRUPTED",
+      "DELIVERY_AMBIGUOUS"
+    ].includes(currentOperation.export_state);
+    exportButton.hidden = !downloadableState;
     exportButton.disabled = exportButton.hidden;
+    exportButton.textContent = ["INTERRUPTED", "DELIVERY_AMBIGUOUS"].includes(currentOperation?.export_state)
+      ? "ファイルが存在しないことを確認して再保存"
+      : "完了したJSONを保存";
     refreshButton.disabled = false;
     document.getElementById("collect-current").disabled = false;
     document.getElementById("collect-probe").disabled = false;
@@ -157,9 +132,14 @@
       setStatus(`background収集中: ${currentOperation.stage}（${currentOperation.pages_staged}/${currentOperation.max_pages}ページ）`);
     } else if (
       currentOperation?.state === "COMPLETED" &&
-      ["DELIVERING", "DELIVERY_AMBIGUOUS"].includes(currentOperation.export_state)
+      currentOperation.export_state === "DOWNLOADING"
     ) {
-      setStatus("JSON保存の完了状態を確定できません。重複防止のため自動再保存しません。", true);
+      setStatus("backgroundでJSONを保存中です。popupを閉じても処理は継続します。");
+    } else if (
+      currentOperation?.state === "COMPLETED" &&
+      ["DELIVERING", "DELIVERY_AMBIGUOUS", "INTERRUPTED"].includes(currentOperation.export_state)
+    ) {
+      setStatus("前回の保存を確認できませんでした。ダウンロードフォルダに対象ファイルが存在しないことを確認した場合のみ再保存してください。", true);
     } else if (currentOperation?.state === "COMPLETED") {
       setStatus(
         `収集完了: ${currentOperation.result?.pages_collected || 0}ページ、累積${currentOperation.result?.cumulative_posts || 0}作品。JSONを保存できます。`
@@ -197,8 +177,12 @@
       const response = await sendToTab(tab.id, { type: "MYFANS_COLLECT_CURRENT" });
       if (!response?.ok || !response.bundle) throw new Error(response?.error || "COLLECTION_FAILED");
       renderBundle(response.bundle, null);
-      downloadJson(response.bundle, "myfans-affiliate-catalog-current");
-      setStatus(`現在ページのJSONを保存しました。停止理由: ${response.bundle.stop_reason || "NONE"}`);
+      await sendToBackground({
+        type: "MYFANS_DOWNLOAD_EPHEMERAL_JSON",
+        payload: response.bundle,
+        prefix: "myfans-affiliate-catalog-current"
+      });
+      setStatus(`現在ページのJSON保存をbackgroundへ開始しました。停止理由: ${response.bundle.stop_reason || "NONE"}`);
     } catch (error) {
       setStatus(`取得できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
     } finally {
@@ -247,66 +231,17 @@
   async function exportCompleted() {
     if (!currentOperation?.operation_id) return;
     setBusy(true);
-    let claimed = null;
-    let deliveryStarted = false;
-    const deliveredTypes = new Set();
     try {
-      claimed = await sendToBackground({
-        type: "MYFANS_ORCHESTRATOR_CLAIM_EXPORT",
-        operation_id: currentOperation.operation_id
-      });
-      if (!claimed?.claimed || !claimed.artifacts) throw new Error(`EXPORT_NOT_AVAILABLE:${claimed?.export_state || "UNKNOWN"}`);
-      const artifacts = [claimed.artifacts.run, claimed.artifacts.cumulative].filter(Boolean);
-      if (artifacts.length === 0) throw new Error("EXPORT_ARTIFACT_PACKAGE_EMPTY");
-      for (const artifact of artifacts) await exportArtifacts.verifyExportArtifact(artifact);
-      const logical = Object.fromEntries(artifacts.map((artifact) => [
-        artifact.artifact_type,
-        JSON.parse(artifact.serialized_text)
-      ]));
-      if (logical.RUN && logical.CUMULATIVE) renderBundle(logical.RUN, logical.CUMULATIVE);
-      const artifactTypes = artifacts.map((artifact) => artifact.artifact_type);
+      const confirmAmbiguous = ["DELIVERY_AMBIGUOUS", "INTERRUPTED"].includes(currentOperation.export_state);
       await sendToBackground({
-        type: "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_STARTED",
+        type: "MYFANS_ORCHESTRATOR_START_EXPORT_DELIVERY",
         operation_id: currentOperation.operation_id,
-        claim_token: claimed.claim_token,
-        artifact_types: artifactTypes
+        confirm_ambiguous: confirmAmbiguous
       });
-      deliveryStarted = true;
-      for (const artifact of artifacts) {
-        downloadArtifact(artifact);
-        await sendToBackground({
-          type: "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED",
-          operation_id: currentOperation.operation_id,
-          claim_token: claimed.claim_token,
-          artifact_types: [artifact.artifact_type]
-        });
-        deliveredTypes.add(artifact.artifact_type);
-      }
-      setStatus("run/cumulative JSONを保存しました。");
+      setStatus("backgroundでrun JSONの保存を開始しました。完了後にcumulative JSONを保存します。");
       await refreshStatus({ quiet: true });
     } catch (error) {
-      if (claimed?.claimed && claimed.claim_token) {
-        const pendingTypes = Object.values(claimed.artifacts || {})
-          .map((artifact) => artifact.artifact_type)
-          .filter((type) => !deliveredTypes.has(type));
-        if (pendingTypes.length > 0) {
-          const messageType = deliveryStarted
-            ? "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_AMBIGUOUS"
-            : "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_FAILED";
-          try {
-            await sendToBackground({
-              type: messageType,
-              operation_id: currentOperation.operation_id,
-              claim_token: claimed.claim_token,
-              artifact_types: pendingTypes,
-              reason: error instanceof Error ? error.message : "EXPORT_DELIVERY_FAILED"
-            });
-          } catch {
-            // An unacknowledged claim stays fail-closed and cannot auto-redownload.
-          }
-        }
-      }
-      setStatus(`JSONを保存できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+      setStatus(`JSON保存を開始できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
       await refreshStatus({ quiet: true });
     } finally {
       setBusy(false);
@@ -321,9 +256,13 @@
       assertSupportedTab(tab);
       const response = await sendToTab(tab.id, { type: "MYFANS_PROBE" });
       if (!response?.ok || !response.probe) throw new Error(response?.error || "PROBE_FAILED");
-      downloadJson(response.probe, "myfans-affiliate-probe");
+      await sendToBackground({
+        type: "MYFANS_DOWNLOAD_EPHEMERAL_JSON",
+        payload: response.probe,
+        prefix: "myfans-affiliate-probe"
+      });
       results.hidden = true;
-      setStatus("Diagnostic JSONを保存しました。catalog値はREDACTEDです。");
+      setStatus("Diagnostic JSON保存をbackgroundへ開始しました。catalog値はREDACTEDです。");
     } catch (error) {
       setStatus(`Probeに失敗しました: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
     } finally {

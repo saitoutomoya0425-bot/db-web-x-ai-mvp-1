@@ -9,6 +9,7 @@ const extensionRoot = path.resolve(testDir, "..");
 const runtimeFiles = [
   "src/collector-core.js",
   "src/export-artifacts.js",
+  "src/download-delivery.js",
   "src/orchestrator-core.js",
   "src/background.js",
   "src/content-script.js",
@@ -21,6 +22,7 @@ const sources = Object.fromEntries(await Promise.all(runtimeFiles.map(async (fil
 const runtimeSource = Object.values(sources).join("\n");
 const contentScriptSource = sources["src/content-script.js"];
 const exportArtifactSource = sources["src/export-artifacts.js"];
+const downloadDeliverySource = sources["src/download-delivery.js"];
 const orchestratorSource = sources["src/orchestrator-core.js"];
 const backgroundSource = sources["src/background.js"];
 const popupSource = sources["src/popup.js"];
@@ -45,10 +47,10 @@ test("runtime has no network, credential-store, browser-debug, or interception A
   }
 });
 
-test("manifest adds only an MV3 service worker and keeps the prior least privileges", () => {
+test("manifest adds only downloads to the prior least privileges", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.3.2");
-  assert.deepEqual(manifest.permissions, ["activeTab", "storage"]);
+  assert.equal(manifest.version, "0.4.0");
+  assert.deepEqual(manifest.permissions, ["activeTab", "storage", "downloads"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
   assert.equal("web_accessible_resources" in manifest, false);
@@ -56,6 +58,8 @@ test("manifest adds only an MV3 service worker and keeps the prior least privile
     "https://www.affiliate.myfans.jp/affiliates/search*",
     "https://www.affiliate.myfans.jp/affiliates/generated*"
   ]);
+  assert.equal(runtimeSource.includes("chrome.downloads.open"), false);
+  assert.match(backgroundSource, /chrome\.downloads\.search\(\{ id: downloadId \}\)/);
 });
 
 test("popup has no image, video, canvas, iframe, or remote script elements", () => {
@@ -63,7 +67,7 @@ test("popup has no image, video, canvas, iframe, or remote script elements", () 
     assert.equal(new RegExp(`<${tag}\\b`, "i").test(popupHtml), false);
   }
   const scriptSources = [...popupHtml.matchAll(/<script\s+src="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(scriptSources, ["export-artifacts.js", "popup.js"]);
+  assert.deepEqual(scriptSources, ["popup.js"]);
 });
 
 test("journal and cumulative persistence use extension storage only", () => {
@@ -146,8 +150,19 @@ test("formal cumulative catalog is committed only by the durable commit operatio
 test("completed exports hash and download the same canonical serialized text", () => {
   assert.match(exportArtifactSource, /JSON\.stringify\(canonicalize\(value\), null, 2\)/);
   assert.match(exportArtifactSource, /sha256Utf8\(artifact\.serialized_text\)/);
-  assert.match(popupSource, /new Blob\(\[artifact\.serialized_text\]/);
+  assert.match(downloadDeliverySource, /artifact\.serialized_text/);
+  assert.match(backgroundSource, /chrome\.downloads\.download/);
+  for (const forbidden of ["new Blob", "createObjectURL", "revokeObjectURL", "anchor.click()", ".click()"]) {
+    assert.equal(popupSource.includes(forbidden), false, forbidden);
+  }
   assert.equal(orchestratorSource.includes("catalogHash(catalog) !== operation.generated_export.cumulative_hash"), false);
+  for (const retiredPopupMessage of [
+    "MYFANS_ORCHESTRATOR_CLAIM_EXPORT",
+    "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_STARTED",
+    "MYFANS_ORCHESTRATOR_EXPORT_DELIVERED",
+    "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_FAILED",
+    "MYFANS_ORCHESTRATOR_EXPORT_DELIVERY_AMBIGUOUS"
+  ]) assert.equal(backgroundSource.includes(retiredPopupMessage), false, retiredPopupMessage);
 });
 
 test("popup receives status from the journal and cannot broaden collection limits", () => {

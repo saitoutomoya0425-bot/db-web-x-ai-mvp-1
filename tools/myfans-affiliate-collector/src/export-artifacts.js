@@ -8,9 +8,13 @@
   });
   const DELIVERY_STATES = Object.freeze({
     GENERATED: "GENERATED",
+    READY_TO_DOWNLOAD: "READY_TO_DOWNLOAD",
+    DISPATCHING: "DISPATCHING",
+    DOWNLOADING: "DOWNLOADING",
     CLAIMED: "CLAIMED",
     DELIVERING: "DELIVERING",
     DELIVERED: "DELIVERED",
+    INTERRUPTED: "INTERRUPTED",
     DELIVERY_FAILED: "DELIVERY_FAILED",
     DELIVERY_AMBIGUOUS: "DELIVERY_AMBIGUOUS"
   });
@@ -72,12 +76,20 @@
       generated_at: String(options.generated_at || logicalValue?.collected_at || ""),
       generation_state: "GENERATED",
       delivery_state: DELIVERY_STATES.GENERATED,
+      delivery_attempt_id: null,
       claim_token: null,
       delivery_attempts: 0,
       claimed_at: null,
       delivery_started_at: null,
       delivered_at: null,
-      delivery_failure_reason: null
+      delivery_failure_reason: null,
+      download_id: null,
+      requested_filename: null,
+      actual_resolved_filename: null,
+      observed_byte_length: null,
+      download_exists: null,
+      interrupted_at: null,
+      download_error: null
     };
   }
 
