@@ -12,6 +12,8 @@ export type FanzaPublicWork = {
 
 export type SourceAwarePublicWork = FanzaPublicWork | MyFansPublicWork;
 
+export type SourceAwareInterleaveIndex = 0 | 1 | 2 | 3;
+
 export function toFanzaPublicWork(work: WorkDetail): FanzaPublicWork {
   return {
     source: "fanza",
@@ -29,22 +31,59 @@ export function composeSourceAwarePublicWorks(options: {
   myFansEnabled: boolean;
   limit?: number;
 }) {
+  const maximum = Math.max(options.limit ?? options.fanzaWorks.length + options.myFansWorks.length, 0);
+  return composeSourceAwarePublicPage({
+    ...options,
+    limit: maximum,
+    interleaveIndex: 0,
+  }).works;
+}
+
+export function composeSourceAwarePublicPage(options: {
+  fanzaWorks: readonly WorkDetail[];
+  myFansWorks: readonly MyFansPublicWork[];
+  myFansEnabled: boolean;
+  limit: number;
+  interleaveIndex?: SourceAwareInterleaveIndex;
+}) {
   const fanza = options.fanzaWorks.map(toFanzaPublicWork);
-  const maximum = Math.max(options.limit ?? fanza.length + options.myFansWorks.length, 0);
-  if (!options.myFansEnabled || !options.myFansWorks.length) return fanza.slice(0, maximum);
+  const maximum = Math.max(options.limit, 0);
+  if (!options.myFansEnabled) {
+    const works = fanza.slice(0, maximum);
+    return {
+      works,
+      consumedFanza: works.length,
+      consumedMyFans: 0,
+      nextInterleaveIndex: (options.interleaveIndex ?? 0) as SourceAwareInterleaveIndex,
+    };
+  }
 
   const combined: SourceAwarePublicWork[] = [];
   let fanzaIndex = 0;
   let myFansIndex = 0;
+  let interleaveIndex = options.interleaveIndex ?? 0;
   while (combined.length < maximum && (fanzaIndex < fanza.length || myFansIndex < options.myFansWorks.length)) {
-    for (let index = 0; index < 3 && fanzaIndex < fanza.length && combined.length < maximum; index += 1) {
+    const wantsMyFans = interleaveIndex === 3;
+    if (!wantsMyFans && fanzaIndex < fanza.length) {
       combined.push(fanza[fanzaIndex]);
       fanzaIndex += 1;
-    }
-    if (myFansIndex < options.myFansWorks.length && combined.length < maximum) {
+      interleaveIndex = ((interleaveIndex + 1) % 4) as SourceAwareInterleaveIndex;
+    } else if (wantsMyFans && myFansIndex < options.myFansWorks.length) {
+      combined.push(options.myFansWorks[myFansIndex]);
+      myFansIndex += 1;
+      interleaveIndex = 0;
+    } else if (fanzaIndex < fanza.length) {
+      combined.push(fanza[fanzaIndex]);
+      fanzaIndex += 1;
+    } else if (myFansIndex < options.myFansWorks.length) {
       combined.push(options.myFansWorks[myFansIndex]);
       myFansIndex += 1;
     }
   }
-  return combined;
+  return {
+    works: combined,
+    consumedFanza: fanzaIndex,
+    consumedMyFans: myFansIndex,
+    nextInterleaveIndex: interleaveIndex,
+  };
 }

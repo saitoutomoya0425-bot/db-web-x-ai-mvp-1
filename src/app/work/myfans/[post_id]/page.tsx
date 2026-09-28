@@ -22,6 +22,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: work.detailHref },
     openGraph: { title: `${work.title}｜MyFans`, description, url: work.detailHref },
+    robots: { index: true, follow: true },
   };
 }
 

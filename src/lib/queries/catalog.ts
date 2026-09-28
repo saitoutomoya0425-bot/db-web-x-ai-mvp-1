@@ -10,6 +10,7 @@ export async function getCatalogWorks(options:{limit?:number;offset?:number;sort
   else if(options.sort==="release")query=query.order("release_date",{ascending:false,nullsFirst:false});
   else if(options.sort==="recommended")query=query.order("favorite_count",{ascending:false}).order("popularity",{ascending:false}).order("created_at",{ascending:false});
   else query=query.order("popularity",{ascending:false}).order("created_at",{ascending:false});
+  query=query.order("id",{ascending:true});
   const {data}=await query.range(offset,offset+limit-1);return toWorkDetails(data);
 }
 export async function getMakerFacets(limit=100,offset=0){

@@ -116,6 +116,7 @@ export async function searchVideos(query: string, limit = 24, offset = 0, sort: 
       if (sort === "new") filtered = filtered.order("created_at", { ascending: false });
       else if (sort === "release") filtered = filtered.order("release_date", { ascending: false, nullsFirst: false });
       else filtered = filtered.order("popularity", { ascending: false }).order("created_at", { ascending: false });
+      filtered = filtered.order("id", { ascending: true });
       const { data, error } = await filtered.range(offset, offset + Math.min(Math.max(limit, 1), 100) - 1);
       return error ? [] : toWorkDetails(data);
     }
@@ -136,6 +137,7 @@ export async function searchVideos(query: string, limit = 24, offset = 0, sort: 
       if (sort === "new") fallbackQuery = fallbackQuery.order("created_at", { ascending: false });
       else if (sort === "release") fallbackQuery = fallbackQuery.order("release_date", { ascending: false, nullsFirst: false });
       else fallbackQuery = fallbackQuery.order("popularity", { ascending: false }).order("created_at", { ascending: false });
+      fallbackQuery = fallbackQuery.order("id", { ascending: true });
       const fallback = await fallbackQuery.range(
         Math.max(offset, 0),
         Math.max(offset, 0) + Math.min(Math.max(limit, 1), 100) - 1,

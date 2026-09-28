@@ -169,12 +169,12 @@ test("public query adapter is server-only and the environment default is disable
   assert.doesNotMatch(environment, /NEXT_PUBLIC_MYFANS_PUBLIC_ENABLED/);
 });
 
-test("sitemap and private preview remain aggregate-only and disabled-safe", async () => {
+test("sitemap and private preview remain service-side and disabled-safe", async () => {
   const [sitemap, preview] = await Promise.all([
-    readFile(new URL("../src/app/sitemaps/[page]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/sitemaps/myfans/[page]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../scripts/myfans-public-ui-preview.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(sitemap, /getMyFansPublicSitemapWorks/);
+  assert.match(sitemap, /getMyFansPublicSitemapPage/);
   assert.match(preview, /set transaction read only/i);
   assert.doesNotMatch(preview, /\b(insert|update|delete)\b/i);
   assert.doesNotMatch(preview, /profile_image_url|thumbnail_url|raw_public_metadata/i);
