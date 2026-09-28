@@ -1,12 +1,12 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.4.0";
+  const COLLECTOR_VERSION = "0.5.0";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const CHECKPOINT_SCHEMA_VERSION = "myfans-affiliate-checkpoint-v1";
   const CUMULATIVE_SCHEMA_VERSION = "myfans-affiliate-cumulative-v1";
   const MAX_RUN_PAGES = 5;
-  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", COLLECTOR_VERSION]);
+  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", COLLECTOR_VERSION]);
   const OPERATION_STAGES = Object.freeze({
     PREPARE_RESUME: "PREPARE_RESUME",
     COLLECT_PAGE: "COLLECT_PAGE",
@@ -1540,6 +1540,112 @@
     return result;
   }
 
+  function buildIncrementalBaseline(catalog) {
+    if (!catalog?.collection_scope?.key) throw new Error("INCREMENTAL_BASELINE_SCOPE_MISSING");
+    const posts = (catalog.posts || []).map((post) => ({
+      post_uuid: post.post_uuid,
+      post_public_url: post.post_public_url,
+      creator_identity: postCreatorIdentity(post),
+      content_hash: stableHash(stableJson(comparableRecord(post)))
+    })).sort((left, right) => left.post_uuid.localeCompare(right.post_uuid));
+    const creators = (catalog.creators || []).map((creator) => ({
+      creator_key: creatorKey(creator),
+      content_hash: stableHash(stableJson(comparableRecord(creator)))
+    })).filter((creator) => creator.creator_key)
+      .sort((left, right) => left.creator_key.localeCompare(right.creator_key));
+    const baseline = {
+      schema_version: "myfans-incremental-baseline-v1",
+      collection_scope_key: catalog.collection_scope.key,
+      captured_at: catalog.collected_at,
+      posts,
+      creators,
+      counts: { posts: posts.length, creators: creators.length }
+    };
+    baseline.identity_hash = stableHash(stableJson({ posts, creators }));
+    assertSafeExport(baseline);
+    return baseline;
+  }
+
+  function classifyIncrementalSelection(catalog, baseline, selection = {}) {
+    if (!catalog?.collection_scope?.key || catalog.collection_scope.key !== baseline?.collection_scope_key) {
+      throw new Error("INCREMENTAL_SCOPE_MISMATCH");
+    }
+    const selectedPosts = new Set(selection.post_uuids || []);
+    const selectedCreators = new Set(selection.creator_keys || []);
+    const baselinePosts = new Map((baseline.posts || []).map((post) => [post.post_uuid, post]));
+    const baselineCreators = new Map((baseline.creators || []).map((creator) => [creator.creator_key, creator]));
+    const catalogPostIds = new Set((catalog.posts || []).map((post) => post.post_uuid));
+    const catalogCreatorKeys = new Set((catalog.creators || []).map(creatorKey).filter(Boolean));
+    const classifications = {
+      posts: { NEW: [], EXISTING_IDENTICAL: [], UPDATE_NEEDED: [], CONFLICT: [] },
+      creators: { NEW: [], EXISTING_IDENTICAL: [], UPDATE_NEEDED: [], CONFLICT: [] }
+    };
+
+    for (const post of catalog.posts || []) {
+      if (!selectedPosts.has(post.post_uuid)) continue;
+      const existing = baselinePosts.get(post.post_uuid);
+      if (!existing) {
+        classifications.posts.NEW.push(post.post_uuid);
+        continue;
+      }
+      const parsed = parsePostUrl(post.post_public_url);
+      const identityMatches = Boolean(
+        parsed &&
+        parsed.post_uuid === post.post_uuid &&
+        existing.post_public_url === post.post_public_url &&
+        (!existing.creator_identity || !postCreatorIdentity(post) || existing.creator_identity === postCreatorIdentity(post))
+      );
+      if (!identityMatches) classifications.posts.CONFLICT.push(post.post_uuid);
+      else if (existing.content_hash === stableHash(stableJson(comparableRecord(post)))) {
+        classifications.posts.EXISTING_IDENTICAL.push(post.post_uuid);
+      } else classifications.posts.UPDATE_NEEDED.push(post.post_uuid);
+    }
+    for (const postUuid of selectedPosts) {
+      if (!catalogPostIds.has(postUuid)) {
+        classifications.posts.CONFLICT.push(postUuid);
+      }
+    }
+
+    for (const creator of catalog.creators || []) {
+      const key = creatorKey(creator);
+      if (!key || !selectedCreators.has(key)) continue;
+      const existing = baselineCreators.get(key);
+      if (!existing) classifications.creators.NEW.push(key);
+      else if (existing.content_hash === stableHash(stableJson(comparableRecord(creator)))) {
+        classifications.creators.EXISTING_IDENTICAL.push(key);
+      } else classifications.creators.UPDATE_NEEDED.push(key);
+    }
+    for (const creatorKeyValue of selectedCreators) {
+      if (!catalogCreatorKeys.has(creatorKeyValue)) {
+        classifications.creators.CONFLICT.push(creatorKeyValue);
+      }
+    }
+
+    for (const group of Object.values(classifications)) {
+      for (const [key, values] of Object.entries(group)) group[key] = [...new Set(values)].sort();
+    }
+    const counts = Object.fromEntries(Object.entries(classifications).map(([kind, group]) => [
+      kind,
+      Object.fromEntries(Object.entries(group).map(([status, values]) => [status, values.length]))
+    ]));
+    const conflictCount = counts.posts.CONFLICT + counts.creators.CONFLICT;
+    const result = {
+      schema_version: "myfans-incremental-dry-run-v1",
+      baseline_identity_hash: baseline.identity_hash,
+      collection_scope_key: baseline.collection_scope_key,
+      classifications,
+      counts,
+      rejected: 0,
+      deletes: 0,
+      unpublishes: 0,
+      snapshot_absence_causes_deletion: false,
+      requires_database_resolution: true,
+      status: conflictCount === 0 ? "DB_SYNC_READY" : "CONFLICT"
+    };
+    assertSafeExport(result);
+    return result;
+  }
+
   function creatorKey(creator) {
     if (creator.username) return `username:${String(creator.username).toLowerCase()}`;
     if (creator.profile_url) return `profile:${creator.profile_url}`;
@@ -2122,9 +2228,11 @@
     assertSafeExport,
     attachCollectionRunMetadata,
     buildExport,
+    buildIncrementalBaseline,
     buildPrivateStagingPlan,
     canonicalCollectionScope,
     classifyIncrementalCatalog,
+    classifyIncrementalSelection,
     cleanCreatorName,
     collectionContextFromUrl,
     creatorKey,

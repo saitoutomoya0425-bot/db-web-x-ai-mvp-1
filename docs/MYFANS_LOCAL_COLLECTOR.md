@@ -23,7 +23,7 @@ The manifest also permits `/affiliates/generated` child routes so a URL already 
 
 ## Export schema
 
-Collector `0.4.0` keeps the existing text-only catalog record schema and bounded run/cumulative metadata. The JSON root contains:
+Collector `0.5.0` keeps the existing text-only catalog record schema and adds a durable automatic-session summary plus incremental dry-run metadata. The JSON root contains:
 
 - `schema_version` and `collector_version`
 - `source` with `mode: RENDERED_UI_TEXT`
@@ -32,7 +32,7 @@ Collector `0.4.0` keeps the existing text-only catalog record schema and bounded
 - deduplicated `creators` and `posts`
 - aggregate `counts` and warnings
 
-List collection produces two files: a five-page-or-less run export and a cumulative export for the same canonical scope. The cumulative export adds checkpoint, run summaries, first/last collection time, and per-identity observation sidecars. It remains compatible with the dry-run importer's allowed post/creator record shapes.
+Normal automatic collection produces two files only at session completion: a lightweight session summary and a cumulative export for the same canonical scope. The cumulative export adds checkpoint, run summaries, first/last collection time, per-identity observation sidecars, and an additive incremental classification. It remains compatible with the dry-run importer's allowed post/creator record shapes.
 
 Every catalog record includes `source_surface`, `source_page_url`, `collected_at`, and `parser_confidence`. Posts are deduplicated by strict UUID parsed from `https://myfans.jp/posts/<UUID>`. Creators are deduplicated by username, falling back to a visible public profile URL.
 
@@ -69,15 +69,15 @@ The collector also excludes account name, email, affiliate ID, bank details, das
 
 The parser prioritizes public MyFans URL shapes, button and visible Japanese labels, roles, accessible labels, headings, and relative semantic containers such as articles and list items. Generated or Tailwind class names are not used as primary identifiers.
 
-The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a background-service-worker-orchestrated, one-page-at-a-time state machine. The current content script parses only its document, returns a preparation ACK without navigating, then accepts a separate navigation command and returns that ACK before scheduling the visible click. The SPA-updated or newly loaded content script signals only that it is reachable; each signal triggers a bounded re-evaluation. The service worker waits up to ten seconds for the expected scope/page, catalog UUID records, a changed rendered-record fingerprint, and the same fingerprint after a 250ms settle window. A URL change, content-script signal, catalog shell, or changed empty fingerprint alone is not page-ready. Every operation remains capped at five successful pages.
+The multi-page actions use only a visible, enabled `次へ` or `次のページ` control. Collection is a background-service-worker-orchestrated, one-page-at-a-time state machine. Every internal operation remains capped at five successful pages; `0.5.0` automatically chains up to ten such atomic operations for the default 50-page user session. The current content script parses only its document, returns a preparation ACK without navigating, then accepts a separate navigation command and returns that ACK before scheduling the visible click. The SPA-updated or newly loaded content script signals only that it is reachable; each signal triggers a bounded re-evaluation. The service worker waits up to ten seconds for the expected scope/page, catalog UUID records, a changed rendered-record fingerprint, and the same fingerprint after a 250ms settle window. A URL change, content-script signal, catalog shell, or changed empty fingerprint alone is not page-ready.
 
 The popup is a controller/view only. Closing it destroys no operation state; reopening it reads the durable journal and shows the current stage and progress. The journal and temporary staged pages live in extension-owned `chrome.storage.local`. Hydration start/deadline, last observed page/record count/fingerprint, and the settle candidate are journaled. Worker startup, content readiness, or a popup status refresh resumes the remaining original deadline after service-worker suspension or browser restart; it never starts a fresh ten-second allowance.
 
-Only a complete bounded run performs the single formal merge/checkpoint/cumulative commit and generates both export artifacts. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched. Operation/run IDs prevent duplicate merge, checkpoint advance, run-count increment, and export generation. Saved `0.2.0`, `0.2.1`, `0.3.0`, `0.3.1`, and `0.3.2` checkpoints remain resumable; loading version `0.4.0` alone does not rewrite them. A terminal `FAILED` journal is preserved as prior evidence but does not block a new resume operation from the formal checkpoint.
+Only a complete five-page-or-less chunk performs a formal merge/checkpoint/cumulative commit. Internal chunks produce no physical download. Any transition or safety failure leaves the last successful extension-local checkpoint and cumulative catalog untouched; partial pages remain staging only. Operation, run, and session IDs prevent duplicate merge, checkpoint advance, run-count increment, or final export. Saved `0.2.0` through `0.4.0` checkpoints remain resumable; loading version `0.5.0` alone does not rewrite them.
 
 Completed run and cumulative exports are canonical artifacts: object keys are recursively sorted, array order is retained, JSON is pretty-printed with one trailing newline, and SHA-256 covers the exact UTF-8 text delivered to the file. Each artifact has an independent delivery state. Version `0.4.0` hands those exact bytes to `chrome.downloads` from the background service worker, journals each download ID, and delivers run then cumulative sequentially. Completion requires Downloads API readback with `state=complete`, the expected exact-or-uniquified filename, exact byte length, and `exists=true`. An interrupted or ambiguous delivery is not automatically repeated; the popup requires explicit confirmation that the files are absent. Legacy `0.3.1` completed operations can rebuild only these export artifacts from their committed run/catalog data without changing UUIDs, run count, checkpoint, operation ID, or collection result.
 
-**新規収集** starts only from page 1. **続きから収集** reads the checkpoint for the exact current route/filter/sort scope. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. It stops on:
+**続きから自動収集** reads the checkpoint for the exact current route/filter/sort scope and requires only one user action. It resumes through an exact visible next-link URL when available; for button-only pagination it returns to the observed last page and clicks its visible next control. It never increments or fabricates a page URL. Each chunk stops at five pages, commits, and chains automatically. The user session stops at 50 pages by default or catalog end. A failed later chunk keeps all prior successful chunks and can be resumed from their last checkpoint. It also stops on:
 
 - five scanned pages
 - missing or disabled next control
@@ -105,14 +105,14 @@ It does not save creator names, post titles, price/rate values, raw DOM, HTML, c
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select `tools/myfans-affiliate-collector/`.
 4. Open a supported signed-in Affiliate Center page and reload it once after installation.
-5. Open the extension and choose **現在ページを取得**, **新規収集（最大5ページ）**, or **続きから収集（最大5ページ）**.
-6. The popup may be closed while the background run proceeds. Reopen it to view progress; after completion, choose **完了したJSONを保存**.
+5. Open the extension and choose **続きから自動収集** once.
+6. The popup may be closed while collection continues. Reopen it only if you want to view progress; session and cumulative JSON are saved automatically at completion.
 
-Chrome downloads the JSON locally only after the user selects the save action. Generated artifacts remain in extension storage until delivery succeeds. The extension uses the narrow `downloads` permission only to save these local JSON artifacts and reconcile a persisted download ID with `downloads.search({ id })`; it does not enumerate download history, call `downloads.open`, or broaden host access. Existing files are never overwritten because Chrome receives `conflictAction: "uniquify"`. No upload or database operation is used. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
+Chrome downloads the two final JSON artifacts through the background worker. For automatic sessions, the journal stores the small session summary plus canonical hash/byte-length metadata instead of a second persistent copy of the growing cumulative JSON. The worker regenerates deterministic canonical bytes from the formal cumulative catalog immediately before download and fails closed if hash or byte length differs. The extension uses the narrow `downloads` permission only to save these local JSON artifacts and reconcile a persisted download ID with `downloads.search({ id })`; it does not enumerate download history, call `downloads.open`, or broaden host access. Existing files are never overwritten because Chrome receives `conflictAction: "uniquify"`. No upload or database operation is used. If counts are unexpectedly zero, run **Diagnostic / Probe** instead; no HTML or DevTools copy is required.
 
 ## Import handoff design
 
-The core contains a validator and a design-only target-scoped staging mapper for `myfans_creators` and `myfans_posts`. It always returns `apply: false`; `myfans_plans` and `myfans_post_plans` remain empty until stable plan identity and post-plan relationships are available. It makes no Supabase or production connection.
+The final cumulative export carries an `incremental_sync` sidecar classifying observed identities as `NEW`, `EXISTING_IDENTICAL`, `UPDATE_NEEDED`, or `CONFLICT` against the session-start cumulative baseline. Snapshot absence always proposes zero deletes/unpublishes. `DB_SYNC_READY` means the local artifact is safe to hand to the existing read-only DB resolver; it is not a database comparison or write authorization. The importer always returns `apply: false` and makes no Supabase or production connection.
 
 A production importer, affiliate URL handling, image handling, and publication remain out of scope until a user pilot confirms the DOM parser and a later phase explicitly authorizes those changes.
 

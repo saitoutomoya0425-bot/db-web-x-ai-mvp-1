@@ -11,6 +11,7 @@ const runtimeFiles = [
   "src/export-artifacts.js",
   "src/download-delivery.js",
   "src/orchestrator-core.js",
+  "src/session-core.js",
   "src/background.js",
   "src/content-script.js",
   "src/popup.js"
@@ -24,6 +25,7 @@ const contentScriptSource = sources["src/content-script.js"];
 const exportArtifactSource = sources["src/export-artifacts.js"];
 const downloadDeliverySource = sources["src/download-delivery.js"];
 const orchestratorSource = sources["src/orchestrator-core.js"];
+const sessionSource = sources["src/session-core.js"];
 const backgroundSource = sources["src/background.js"];
 const popupSource = sources["src/popup.js"];
 const manifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
@@ -49,7 +51,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest adds only downloads to the prior least privileges", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.4.0");
+  assert.equal(manifest.version, "0.5.0");
   assert.deepEqual(manifest.permissions, ["activeTab", "storage", "downloads"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
@@ -74,6 +76,7 @@ test("journal and cumulative persistence use extension storage only", () => {
   assert.match(backgroundSource, /storage:\s*chrome\.storage\.local/);
   assert.match(orchestratorSource, /ACTIVE_OPERATION_KEY/);
   assert.match(orchestratorSource, /CATALOG_KEY/);
+  assert.match(sessionSource, /ACTIVE_SESSION_KEY/);
   assert.equal(/\b(?:window\.)?localStorage\b/.test(runtimeSource), false);
   assert.equal(/\b(?:window\.)?sessionStorage\b/.test(runtimeSource), false);
 });
@@ -128,6 +131,8 @@ test("NAVIGATE_NOW ACK is sent before the visible control click is scheduled", (
 test("service worker owns orchestration while popup is controller/view only", () => {
   assert.match(backgroundSource, /createDurableOrchestrator/);
   assert.match(backgroundSource, /recoverActive/);
+  assert.match(backgroundSource, /createAutoSessionOrchestrator/);
+  assert.match(backgroundSource, /sessionOrchestrator\.recover/);
   assert.match(popupSource, /MYFANS_ORCHESTRATOR_START/);
   assert.match(popupSource, /MYFANS_ORCHESTRATOR_STATUS/);
   assert.equal(popupSource.includes("executeNavigationSafeRun"), false);
@@ -169,4 +174,18 @@ test("popup receives status from the journal and cannot broaden collection limit
   assert.match(popupSource, /pages_staged/);
   assert.match(popupSource, /max_pages/);
   assert.equal(/max_pages\s*:\s*(?:[6-9]|[1-9]\d+)/.test(popupSource), false);
+  assert.match(popupSource, /MYFANS_AUTO_SESSION_START/);
+  assert.match(popupSource, /configured_page_limit:\s*50/);
+  assert.match(sessionSource, /DEFAULT_PAGE_LIMIT\s*=\s*50/);
+  assert.match(sessionSource, /chunk_size:\s*collector\.MAX_RUN_PAGES/);
+});
+
+test("automatic sessions chain only committed internal chunks and export once at session end", () => {
+  assert.match(sessionSource, /COMMIT_STATES\.COMMITTED/);
+  assert.match(sessionSource, /EXPORT_STATES\.INTERNAL_ONLY/);
+  assert.match(sessionSource, /completed_chunk_operation_ids/);
+  assert.match(sessionSource, /SESSION_PAGE_LIMIT_REACHED/);
+  assert.match(sessionSource, /prepareSessionExports/);
+  assert.match(sessionSource, /startExportDelivery/);
+  assert.equal(sessionSource.includes("chrome.downloads"), false);
 });

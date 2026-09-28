@@ -44,6 +44,24 @@ footer {
   margin: 16px 0 12px;
 }
 
+details {
+  border-top: 1px solid #dbe2df;
+  padding-top: 8px;
+}
+
+summary {
+  cursor: pointer;
+  color: #58635f;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.advanced-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 button {
   min-height: 38px;
   border: 1px solid #b9c4c0;

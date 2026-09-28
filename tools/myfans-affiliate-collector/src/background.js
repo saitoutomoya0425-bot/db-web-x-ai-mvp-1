@@ -1,9 +1,10 @@
 "use strict";
 
-importScripts("collector-core.js", "export-artifacts.js", "download-delivery.js", "orchestrator-core.js");
+importScripts("collector-core.js", "export-artifacts.js", "download-delivery.js", "orchestrator-core.js", "session-core.js");
 
 const collector = globalThis.MyFansCollectorCore;
 const durable = globalThis.MyFansOrchestratorCore;
+const autoSession = globalThis.MyFansAutoSessionCore;
 const downloadDelivery = globalThis.MyFansDownloadDelivery;
 
 async function sendToTab(tabId, message) {
@@ -77,6 +78,21 @@ const adapters = {
 };
 
 const orchestrator = durable.createDurableOrchestrator(adapters);
+const sessionOrchestrator = autoSession.createAutoSessionOrchestrator({
+  storage: chrome.storage.local,
+  now: () => Date.now(),
+  uuid: () => globalThis.crypto.randomUUID(),
+  get_context: adapters.get_context,
+  chunk_orchestrator: orchestrator
+});
+
+function queueSessionRecovery(tabId) {
+  globalThis.setTimeout(() => {
+    sessionOrchestrator.recover(tabId).catch(() => {
+      // The persistent session/chunk journals remain authoritative for the next event/startup.
+    });
+  }, 0);
+}
 
 function queueRecovery(tabId) {
   globalThis.setTimeout(() => {
@@ -84,6 +100,7 @@ function queueRecovery(tabId) {
       // The durable journal remains the source of truth for the next READY/status event.
     });
   }, 0);
+  queueSessionRecovery(tabId);
 }
 
 function queueExportRecovery() {
@@ -147,8 +164,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "MYFANS_ORCHESTRATOR_STATUS") {
     return respond(sendResponse, async () => {
       queueRecovery(message.tab_id);
-      return orchestrator.getStatus(message.tab_id);
+      const [operation, auto] = await Promise.all([
+        orchestrator.getStatus(message.tab_id),
+        sessionOrchestrator.getStatus()
+      ]);
+      return { ...operation, auto_session: auto.active, last_auto_session: auto.last };
     });
+  }
+
+  if (message.type === "MYFANS_AUTO_SESSION_START") {
+    return respond(sendResponse, async () => {
+      const result = await sessionOrchestrator.start({
+        session_id: message.session_id,
+        tab_id: message.tab_id,
+        configured_page_limit: message.configured_page_limit
+      });
+      queueSessionRecovery(message.tab_id);
+      return result;
+    });
+  }
+
+  if (message.type === "MYFANS_AUTO_SESSION_CANCEL") {
+    return respond(sendResponse, () => sessionOrchestrator.cancel(message.session_id));
   }
 
   if (message.type === "MYFANS_ORCHESTRATOR_CANCEL") {
@@ -170,9 +207,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.downloads.onChanged.addListener((delta) => {
-  orchestrator.handleDownloadChanged(delta).catch(() => {
-    // A persisted download ID is reconciled after the next downloads event or worker startup.
-  });
+  orchestrator.handleDownloadChanged(delta)
+    .then(() => queueSessionRecovery(null))
+    .catch(() => {
+      // A persisted download ID is reconciled after the next downloads event or worker startup.
+    });
 });
 
 chrome.runtime.onStartup.addListener(() => {

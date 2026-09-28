@@ -32,6 +32,7 @@
   });
   const EXPORT_STATES = Object.freeze({
     NOT_STARTED: "NOT_STARTED",
+    INTERNAL_ONLY: "INTERNAL_ONLY",
     GENERATING: "GENERATING",
     GENERATED: "GENERATED",
     DOWNLOADING: "DOWNLOADING",
@@ -150,6 +151,17 @@
     };
   }
 
+  function compactSessionExportPackage(generatedExport) {
+    const compacted = clone(generatedExport);
+    for (const [type, artifact] of artifactEntries(compacted)) {
+      delete artifact.serialized_text;
+      artifact.payload_source = type === exportArtifacts.ARTIFACT_TYPES.RUN
+        ? "AUTO_SESSION_SUMMARY"
+        : "FORMAL_CUMULATIVE_CATALOG";
+    }
+    return compacted;
+  }
+
   function validateLegacyExportRecovery(operation, catalog) {
     const legacy = operation.generated_export;
     const runBundle = legacy?.run_bundle;
@@ -207,6 +219,8 @@
       schema_version: ORCHESTRATOR_SCHEMA_VERSION,
       collector_version: collector.COLLECTOR_VERSION,
       operation_id: input.operation_id,
+      parent_session_id: input.parent_session_id || null,
+      export_policy: input.export_policy === "SESSION_INTERNAL" ? "SESSION_INTERNAL" : "STANDARD",
       mode: input.mode,
       scope: clone(input.scope),
       tab_id: input.tab_id,
@@ -253,6 +267,8 @@
       schema_version: operation.schema_version,
       collector_version: operation.collector_version,
       operation_id: operation.operation_id,
+      parent_session_id: operation.parent_session_id || null,
+      export_policy: operation.export_policy || "STANDARD",
       mode: operation.mode,
       scope_key: operation.scope?.key || null,
       tab_id: operation.tab_id,
@@ -500,14 +516,59 @@
       return next;
     }
 
+    async function materializeOperationArtifact(operation, artifactType, artifact) {
+      if (typeof artifact?.serialized_text === "string") return clone(artifact);
+      if (operation.export_policy !== "SESSION_FINAL") throw new Error("EXPORT_ARTIFACT_TEXT_MISSING");
+      let logicalValue;
+      if (
+        artifactType === exportArtifacts.ARTIFACT_TYPES.RUN &&
+        artifact.payload_source === "AUTO_SESSION_SUMMARY"
+      ) {
+        logicalValue = operation.session_export_summary;
+      } else if (
+        artifactType === exportArtifacts.ARTIFACT_TYPES.CUMULATIVE &&
+        artifact.payload_source === "FORMAL_CUMULATIVE_CATALOG"
+      ) {
+        const state = await readState();
+        const catalog = state.catalogs[operation.scope.key];
+        if (!catalog) throw new Error("SESSION_EXPORT_CUMULATIVE_MISSING");
+        logicalValue = { ...catalog, incremental_sync: clone(operation.session_incremental_sync) };
+      } else throw new Error("SESSION_EXPORT_PAYLOAD_SOURCE_INVALID");
+      const materialized = await exportArtifacts.serializeExportArtifact(logicalValue, {
+        artifact_type: artifactType,
+        generated_at: artifact.generated_at
+      });
+      if (
+        materialized.filename !== artifact.filename ||
+        materialized.byte_length !== artifact.byte_length ||
+        materialized.content_hash !== artifact.content_hash
+      ) throw new Error("SESSION_EXPORT_REGENERATION_MISMATCH");
+      return { ...clone(artifact), serialized_text: materialized.serialized_text };
+    }
+
     async function start(input) {
       if (startInFlight) throw new Error("DUPLICATE_OPERATION");
       startInFlight = true;
       try {
         const state = await readState();
         if (operationActive(state.active)) throw new Error("DUPLICATE_OPERATION");
-        if (state.active?.state === OPERATION_STATES.COMPLETED && state.active.export_state !== EXPORT_STATES.DELIVERED) {
+        const replacingCommittedSessionChunk = Boolean(
+          input.export_policy === "SESSION_INTERNAL" &&
+          input.parent_session_id &&
+          state.active?.state === OPERATION_STATES.COMPLETED &&
+          state.active.commit_state === COMMIT_STATES.COMMITTED &&
+          state.active.export_state === EXPORT_STATES.INTERNAL_ONLY &&
+          state.active.parent_session_id === input.parent_session_id
+        );
+        if (
+          state.active?.state === OPERATION_STATES.COMPLETED &&
+          state.active.export_state !== EXPORT_STATES.DELIVERED &&
+          !replacingCommittedSessionChunk
+        ) {
           throw new Error("PENDING_EXPORT_DELIVERY");
+        }
+        if (input.export_policy === "SESSION_INTERNAL" && !input.parent_session_id) {
+          throw new Error("PARENT_SESSION_ID_REQUIRED");
         }
         const context = await adapters.get_context(input.tab_id);
         if (!context?.collection_scope) throw new Error("COLLECTION_CONTEXT_FAILED");
@@ -536,7 +597,9 @@
           expected_page: expectedPage,
           last_confirmed_page: lastConfirmedPage,
           resume_plan: resumePlan,
-          base_catalog_hash: catalogHash(existingCatalog)
+          base_catalog_hash: catalogHash(existingCatalog),
+          parent_session_id: input.parent_session_id,
+          export_policy: input.export_policy
         }, adapters);
         const update = { [ACTIVE_OPERATION_KEY]: operation };
         if (state.active) update[LAST_OPERATION_KEY] = summarizeOperation(state.active);
@@ -616,21 +679,20 @@
         expected_start_page: operation.start_page,
         next_control: operation.expected_next_evidence
       });
-      const cumulative = alreadyCommitted
-        ? current
-        : collector.mergeCumulativeCatalog(current, bundle).catalog;
+      const mergeResult = alreadyCommitted
+        ? { catalog: current, merge: current?.merge_summary || null }
+        : collector.mergeCumulativeCatalog(current, bundle);
+      const cumulative = mergeResult.catalog;
+      const internalOnly = operation.export_policy === "SESSION_INTERNAL";
       const generatedAt = isoNow(adapters);
-      const generatedExport = await buildCanonicalExportPackage(
-        operation,
-        bundle,
-        cumulative,
-        generatedAt,
-        false
+      const generatedExport = internalOnly ? null : await buildCanonicalExportPackage(
+        operation, bundle, cumulative, generatedAt, false
       );
       const completed = transition(operation, OPERATION_STATES.COMPLETED, {
         commit_state: COMMIT_STATES.COMMITTED,
-        export_state: EXPORT_STATES.GENERATED,
+        export_state: internalOnly ? EXPORT_STATES.INTERNAL_ONLY : EXPORT_STATES.GENERATED,
         completion_state: bundle.collection_run.completion_state,
+        warnings: [...bundle.warnings],
         generated_export: generatedExport,
         result: {
           pages_collected: operation.pages_staged,
@@ -639,7 +701,20 @@
           start_page: bundle.collection_run.start_page,
           last_successfully_collected_page: bundle.collection_run.last_successfully_collected_page,
           completion_state: bundle.collection_run.completion_state,
-          stop_reason: bundle.collection_run.stop_reason
+          stop_reason: bundle.collection_run.stop_reason,
+          posts_observed: bundle.posts.length,
+          creators_observed: bundle.creators.length,
+          warnings: [...bundle.warnings],
+          observed_post_uuids: bundle.posts.map((post) => post.post_uuid).sort(),
+          observed_creator_keys: [...new Set([
+            ...bundle.creators.map(collector.creatorKey),
+            ...bundle.posts.map((post) => (
+              post.creator_username
+                ? `username:${String(post.creator_username).toLowerCase()}`
+                : (post.creator_profile_url ? `profile:${post.creator_profile_url}` : null)
+            ))
+          ].filter(Boolean))].sort(),
+          merge: clone(mergeResult.merge)
         }
       }, adapters);
       const catalogs = { ...state.catalogs, [operation.scope.key]: cumulative };
@@ -648,6 +723,44 @@
         [ACTIVE_OPERATION_KEY]: completed
       });
       return completed;
+    }
+
+    async function prepareSessionExports(operationId, sessionSummary, incrementalSync) {
+      const state = await readState();
+      const operation = state.active;
+      if (
+        !operation || operation.operation_id !== operationId ||
+        operation.state !== OPERATION_STATES.COMPLETED ||
+        operation.commit_state !== COMMIT_STATES.COMMITTED ||
+        operation.export_state !== EXPORT_STATES.INTERNAL_ONLY ||
+        operation.export_policy !== "SESSION_INTERNAL"
+      ) throw new Error("SESSION_EXPORT_OPERATION_INVALID");
+      const cumulative = state.catalogs[operation.scope.key];
+      if (!cumulative) throw new Error("SESSION_EXPORT_CUMULATIVE_MISSING");
+      collector.assertSafeExport(sessionSummary);
+      collector.assertSafeExport(cumulative);
+      collector.assertSafeExport(incrementalSync);
+      const cumulativeArtifactValue = {
+        ...cumulative,
+        incremental_sync: clone(incrementalSync)
+      };
+      const generatedAt = String(sessionSummary.collected_at || operation.updated_at);
+      const fullGeneratedExport = await buildCanonicalExportPackage(
+        operation, sessionSummary, cumulativeArtifactValue, generatedAt, false
+      );
+      const generatedExport = compactSessionExportPackage(fullGeneratedExport);
+      const prepared = {
+        ...operation,
+        export_policy: "SESSION_FINAL",
+        export_state: EXPORT_STATES.GENERATED,
+        session_export_summary: clone(sessionSummary),
+        session_incremental_sync: clone(incrementalSync),
+        generated_export: generatedExport,
+        updated_at: isoNow(adapters),
+        revision: operation.revision + 1
+      };
+      await writeOperation(prepared);
+      return summarizeOperation(prepared);
     }
 
     async function driveInternal(operationId, options = {}) {
@@ -1230,7 +1343,8 @@
           revision: current.revision + 1
         };
       });
-      const artifact = clone(dispatching.generated_export.artifacts[artifactKey(artifactType)]);
+      const storedArtifact = clone(dispatching.generated_export.artifacts[artifactKey(artifactType)]);
+      const artifact = await materializeOperationArtifact(dispatching, artifactType, storedArtifact);
       await exportArtifacts.verifyExportArtifact(artifact);
 
       let downloadId;
@@ -1300,7 +1414,11 @@
       const generatedExport = clone(operation.generated_export);
       const entries = artifactEntries(generatedExport);
       if (entries.length !== 2) throw new Error("EXPORT_ARTIFACT_PACKAGE_INCOMPLETE");
-      for (const [, artifact] of entries) await exportArtifacts.verifyExportArtifact(artifact);
+      for (const [type, artifact] of entries) {
+        await exportArtifacts.verifyExportArtifact(
+          await materializeOperationArtifact(operation, type, artifact)
+        );
+      }
 
       const attemptId = adapters.uuid();
       const timestamp = isoNow(adapters);
@@ -1417,6 +1535,9 @@
     async function claimExports(operationId) {
       const recovered = await recoverExportArtifacts(operationId);
       const operation = recovered.operation;
+      if (operation.export_policy === "SESSION_FINAL") {
+        throw new Error("AUTO_SESSION_BACKGROUND_DELIVERY_REQUIRED");
+      }
       if ([EXPORT_STATES.DELIVERING, EXPORT_STATES.DELIVERY_AMBIGUOUS].includes(operation.export_state)) {
         return { claimed: false, export_state: EXPORT_STATES.DELIVERY_AMBIGUOUS, artifacts: null };
       }
@@ -1604,6 +1725,7 @@
       markExportsDeliveryFailed,
       markExportsDeliveryStarted,
       markExportsDelivered,
+      prepareSessionExports,
       readState,
       recoverActive,
       recoverExportDelivery,

@@ -8,7 +8,9 @@
   const cancelButton = document.getElementById("cancel-operation");
   const exportButton = document.getElementById("export-completed");
   const refreshButton = document.getElementById("refresh-status");
+  const autoResumeButton = document.getElementById("collect-auto-resume");
   let currentOperation = null;
+  let currentSession = null;
   let busy = false;
 
   function setBusy(nextBusy) {
@@ -88,15 +90,32 @@
     ].includes(operation.state));
   }
 
+  function isSessionActive(autoCollection) {
+    return autoCollection?.session_state === "RUNNING";
+  }
+
+  function elapsedLabel(startedAt, completedAt) {
+    const start = Date.parse(startedAt || "");
+    const parsedEnd = Date.parse(completedAt || "");
+    if (!Number.isFinite(start)) return "—";
+    const end = Number.isFinite(parsedEnd) ? parsedEnd : Date.now();
+    const seconds = Math.max(0, Math.floor((end - start) / 1000));
+    const minutes = Math.floor(seconds / 60);
+    return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+  }
+
   function updateActionAvailability() {
     if (busy) return;
-    const active = isOperationActive(currentOperation);
+    const activeSession = isSessionActive(currentSession);
+    const active = isOperationActive(currentOperation) || activeSession;
     const pendingExport = Boolean(
-      currentOperation?.state === "COMPLETED" && currentOperation.export_state !== "DELIVERED"
+      currentOperation?.state === "COMPLETED" &&
+      !["DELIVERED", "INTERNAL_ONLY"].includes(currentOperation.export_state)
     );
     const cancellable = active && currentOperation?.state !== "COMMITTING";
     document.getElementById("collect-new").disabled = active || pendingExport;
     document.getElementById("collect-resume").disabled = active || pendingExport;
+    autoResumeButton.disabled = active || pendingExport;
     cancelButton.hidden = !cancellable;
     cancelButton.disabled = !cancellable;
     const downloadableState = currentOperation?.state === "COMPLETED" && [
@@ -117,6 +136,7 @@
 
   function renderStatusView(view) {
     currentOperation = view?.operation || null;
+    currentSession = view?.auto_session || null;
     setText("collector-version", view?.collector_version);
     setText("stored-post-count", view?.cumulative_posts ?? 0);
     setText("checkpoint-page", view?.checkpoint_last_page);
@@ -126,9 +146,34 @@
     setText("operation-page", currentOperation?.expected_page ?? view?.current_page);
     setText("operation-warning-count", currentOperation?.warnings?.length || 0);
     setText("operation-error", currentOperation?.failure_reason || "—");
+    setText("session-state", currentSession?.session_state || "IDLE");
+    setText("session-stage", currentSession?.stage || "—");
+    setText("session-checkpoint", currentSession?.current_checkpoint);
+    setText("session-chunk", currentSession?.current_chunk_number || "—");
+    setText("session-pages", currentSession
+      ? `${currentSession.pages_completed}/${currentSession.configured_page_limit}`
+      : "0/50");
+    setText("session-chunks", currentSession?.chunks_completed || 0);
+    setText("session-new-posts", currentSession?.new_unique_posts || 0);
+    setText("session-db-sync", currentSession?.incremental_sync?.status || "—");
+    setText("session-elapsed", elapsedLabel(currentSession?.started_at, currentSession?.completed_at));
+    setText("session-stop-reason", currentSession?.failure_reason || currentSession?.stop_reason || "—");
     updateActionAvailability();
 
-    if (isOperationActive(currentOperation)) {
+    if (isSessionActive(currentSession)) {
+      setStatus(
+        `収集中 — popupを閉じても続行します。${currentSession.pages_completed}/${currentSession.configured_page_limit}ページ、${currentSession.chunks_completed} chunks完了。`
+      );
+    } else if (currentSession?.session_state === "COMPLETED") {
+      setStatus(
+        `自動収集完了: ${currentSession.pages_completed}ページ、累積${currentSession.unique_posts_current}作品。session/cumulative JSONを保存済みです。`
+      );
+    } else if (["PAUSED", "FAILED"].includes(currentSession?.session_state)) {
+      setStatus(
+        `自動収集停止: ${currentSession.failure_reason || currentSession.stop_reason}。最後のsuccessful checkpoint ${currentSession.current_checkpoint}から再開できます。`,
+        true
+      );
+    } else if (isOperationActive(currentOperation)) {
       setStatus(`background収集中: ${currentOperation.stage}（${currentOperation.pages_staged}/${currentOperation.max_pages}ページ）`);
     } else if (
       currentOperation?.state === "COMPLETED" &&
@@ -212,14 +257,42 @@
     }
   }
 
+  async function startAutoCollection() {
+    setBusy(true);
+    setStatus("backgroundへ自動収集sessionを依頼中です…");
+    try {
+      const tab = await activeTab();
+      assertSupportedTab(tab);
+      currentSession = await sendToBackground({
+        type: "MYFANS_AUTO_SESSION_START",
+        session_id: `auto-${new Date().toISOString()}-${globalThis.crypto.randomUUID()}`,
+        tab_id: tab.id,
+        configured_page_limit: 50
+      });
+      setStatus("自動収集を開始しました。popupを閉じても最大50ページまで継続します。");
+      await refreshStatus({ quiet: true });
+    } catch (error) {
+      setStatus(`自動収集を開始できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function cancelCollection() {
-    if (!currentOperation?.operation_id) return;
+    if (!currentOperation?.operation_id && !currentSession?.session_id) return;
     setBusy(true);
     try {
-      await sendToBackground({
-        type: "MYFANS_ORCHESTRATOR_CANCEL",
-        operation_id: currentOperation.operation_id
-      });
+      if (isSessionActive(currentSession)) {
+        await sendToBackground({
+          type: "MYFANS_AUTO_SESSION_CANCEL",
+          session_id: currentSession.session_id
+        });
+      } else {
+        await sendToBackground({
+          type: "MYFANS_ORCHESTRATOR_CANCEL",
+          operation_id: currentOperation.operation_id
+        });
+      }
       await refreshStatus();
     } catch (error) {
       setStatus(`キャンセルできませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
@@ -271,6 +344,7 @@
   }
 
   document.getElementById("collect-current").addEventListener("click", collectCurrentPage);
+  autoResumeButton.addEventListener("click", startAutoCollection);
   document.getElementById("collect-new").addEventListener("click", () => startCollection("NEW"));
   document.getElementById("collect-resume").addEventListener("click", () => startCollection("RESUME"));
   document.getElementById("collect-probe").addEventListener("click", probe);

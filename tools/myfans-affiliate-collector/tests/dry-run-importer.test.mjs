@@ -167,7 +167,7 @@ test("rejects an unsupported collector version", () => {
 });
 
 test("accepts collector 0.2.x/0.3.x run and cumulative metadata without changing dry-run semantics", () => {
-  for (const collectorVersion of ["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0"]) {
+  for (const collectorVersion of ["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", "0.5.0"]) {
     const bundle = syntheticImportBundle([syntheticImportPost()], {
       collector_version: collectorVersion,
       export_kind: "CUMULATIVE",
@@ -196,6 +196,28 @@ test("accepts collector 0.2.x/0.3.x run and cumulative metadata without changing
     assert.equal(report.counts.accepted, 1, collectorVersion);
     assert.equal(report.db_write_count, 0, collectorVersion);
   }
+});
+
+test("accepts a 0.5.0 cumulative artifact with an additive incremental-sync sidecar", () => {
+  const bundle = syntheticImportBundle([syntheticImportPost()], {
+    collector_version: "0.5.0"
+  });
+  bundle.incremental_sync = {
+    schema_version: "myfans-incremental-dry-run-v1",
+    status: "DB_SYNC_READY",
+    counts: {
+      posts: { NEW: 1, EXISTING_IDENTICAL: 0, UPDATE_NEEDED: 0, CONFLICT: 0 },
+      creators: { NEW: 1, EXISTING_IDENTICAL: 0, UPDATE_NEEDED: 0, CONFLICT: 0 }
+    },
+    deletes: 0,
+    unpublishes: 0,
+    requires_database_resolution: true
+  };
+  const report = dryRunCatalogImport(bundle);
+  assert.equal(report.status, "PASS");
+  assert.equal(report.counts.accepted, 1);
+  assert.equal(report.db_query_count, 0);
+  assert.equal(report.db_write_count, 0);
 });
 
 test("rejects an unsupported collector schema", () => {
