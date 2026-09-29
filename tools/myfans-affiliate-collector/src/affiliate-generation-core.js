@@ -35,6 +35,10 @@
     "/affiliates/search/from_url",
     "/affiliates/url"
   ]);
+  const GENERATION_SURFACES = Object.freeze({
+    SEARCH_RESULT_CARD: "SEARCH_RESULT_CARD",
+    DEDICATED_FORM: "DEDICATED_FORM"
+  });
 
   function clone(value) {
     return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -167,7 +171,8 @@
       failure_reason: journal.failure_reason,
       next_allowed_at: journal.next_allowed_at,
       result_deadline: journal.result_deadline,
-      observed_url_shape: clone(journal.observed_url_shape)
+      observed_url_shape: clone(journal.observed_url_shape),
+      generation_surface: journal.generation_surface || null
     };
   }
 
@@ -208,19 +213,64 @@
   }
 
   function classifyGenerationUiAudit(input) {
-    if (!input?.route) return { ready: false, reason: "OFFICIAL_GENERATION_ROUTE_REQUIRED" };
-    if (input.input_count !== 1) return { ready: false, reason: "OFFICIAL_GENERATION_INPUT_NOT_UNIQUE" };
-    if (input.generate_control_count !== 1) return { ready: false, reason: "OFFICIAL_GENERATE_CONTROL_NOT_UNIQUE" };
-    return { ready: true, reason: null };
+    if (input?.authenticated_affiliate_scope !== true) {
+      return { ready: false, reason: "AUTHENTICATED_AFFILIATE_CENTER_SCOPE_REQUIRED" };
+    }
+
+    if (Number(input?.target_card_count) > 0) {
+      if (input.target_card_count !== 1) {
+        return { ready: false, reason: "AFFILIATE_TARGET_CARD_AMBIGUOUS" };
+      }
+      if (input.target_card_post_identity_count !== 1) {
+        return { ready: false, reason: "AFFILIATE_TARGET_CARD_IDENTITY_AMBIGUOUS" };
+      }
+      if (input.target_card_action_count !== 1) {
+        return { ready: false, reason: "OFFICIAL_CARD_GENERATION_CONTROL_NOT_UNIQUE" };
+      }
+      return {
+        ready: true,
+        reason: null,
+        surface_kind: GENERATION_SURFACES.SEARCH_RESULT_CARD
+      };
+    }
+
+    if (Number(input?.target_identity_count) > 0 || Number(input?.target_card_action_count) > 0) {
+      return { ready: false, reason: "AFFILIATE_TARGET_CARD_NOT_UNIQUE" };
+    }
+    if (input?.route && input?.input_count === 1 && input?.generate_control_count === 1) {
+      return {
+        ready: true,
+        reason: null,
+        surface_kind: GENERATION_SURFACES.DEDICATED_FORM
+      };
+    }
+    if (input?.route && input?.input_count !== 1) {
+      return { ready: false, reason: "OFFICIAL_GENERATION_INPUT_NOT_UNIQUE" };
+    }
+    if (input?.route && input?.generate_control_count !== 1) {
+      return { ready: false, reason: "OFFICIAL_GENERATE_CONTROL_NOT_UNIQUE" };
+    }
+    return { ready: false, reason: "OFFICIAL_AFFILIATE_GENERATION_CAPABILITY_NOT_FOUND" };
   }
 
   function classifyJournalResult(journal, result) {
-    return classifyVisibleResult({
+    const filteredResult = {
       ...result,
       visible_urls: (result?.visible_urls || []).filter((url) =>
         !(journal.pre_dispatch_visible_urls || []).includes(parseAffiliateUrl(url))
       )
-    });
+    };
+    if (
+      filteredResult.visible_urls.length === 0 &&
+      filteredResult.copy_success_visible &&
+      journal.pre_dispatch_copy_success_visible === true &&
+      filteredResult.structural_fingerprint === journal.pre_dispatch_structural_fingerprint
+    ) {
+      filteredResult.copy_success_visible = false;
+      filteredResult.visible_text = String(filteredResult.visible_text || "")
+        .replace(/(?:コピーしました|クリップボードにコピー)/gu, "");
+    }
+    return classifyVisibleResult(filteredResult);
   }
 
   function createAffiliateGenerationOrchestrator(adapters) {
@@ -291,7 +341,10 @@
         checkpoint: 0,
         observations: [],
         observed_url_shape: null,
+        generation_surface: null,
         pre_dispatch_visible_urls: [],
+        pre_dispatch_copy_success_visible: false,
+        pre_dispatch_structural_fingerprint: null,
         dispatch_nonce: null,
         generation_dispatched_at: null,
         result_deadline: null,
@@ -338,7 +391,9 @@
         affiliate_link_status: "ACTIVE",
         first_seen_at: now,
         last_seen_at: now,
-        source_surface: "official_generation_ui",
+        source_surface: journal.generation_surface === GENERATION_SURFACES.SEARCH_RESULT_CARD
+          ? "affiliate_search_result_card"
+          : "official_generation_ui",
         generation_session_id: journal.session_id
       };
       observation.affiliate_url_hash = await exportArtifacts.sha256Utf8(observation.affiliate_url);
@@ -418,9 +473,12 @@
           journal = await writeJournal(patch(journal, {
             stage: SESSION_STAGES.READY_TO_DISPATCH,
             dispatch_nonce: adapters.uuid(),
+            generation_surface: prepared.surface_kind || null,
             pre_dispatch_visible_urls: [...new Set(
               (prepared.baseline_visible_urls || []).map(parseAffiliateUrl).filter(Boolean)
-            )]
+            )],
+            pre_dispatch_copy_success_visible: prepared.baseline_copy_success_visible === true,
+            pre_dispatch_structural_fingerprint: prepared.baseline_structural_fingerprint || null
           }));
         }
         if (journal.stage === SESSION_STAGES.READY_TO_DISPATCH) {
@@ -498,6 +556,7 @@
     FUTURE_BATCH_SIZE,
     GENERATION_COOLDOWN_MS,
     GENERATION_ROUTES,
+    GENERATION_SURFACES,
     LAST_SESSION_KEY,
     PILOT_MAX_TARGETS,
     RESULT_TIMEOUT_MS,

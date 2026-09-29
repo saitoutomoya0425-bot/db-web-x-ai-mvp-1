@@ -96,17 +96,82 @@ test("visible success, clipboard-only, rate limit, CAPTCHA, and login are distin
   assert.equal(core.classifyVisibleResult({ visible_text: "生成中…" }).status, "PENDING");
 });
 
-test("official generation UI requires one route, input, and generate control", () => {
-  assert.equal(core.classifyGenerationUiAudit({ route: "/affiliates/url", input_count: 1, generate_control_count: 1 }).ready, true);
-  assert.equal(core.classifyGenerationUiAudit({ route: null, input_count: 1, generate_control_count: 1 }).reason, "OFFICIAL_GENERATION_ROUTE_REQUIRED");
-  assert.equal(core.classifyGenerationUiAudit({ route: "/affiliates/url", input_count: 0, generate_control_count: 1 }).reason, "OFFICIAL_GENERATION_INPUT_NOT_UNIQUE");
-  assert.equal(core.classifyGenerationUiAudit({ route: "/affiliates/url", input_count: 1, generate_control_count: 2 }).reason, "OFFICIAL_GENERATE_CONTROL_NOT_UNIQUE");
+test("official generation capability accepts an exact search-result card without route gating", () => {
+  const result = core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    route: null,
+    target_identity_count: 1,
+    target_card_count: 1,
+    target_card_post_identity_count: 1,
+    target_card_action_count: 1,
+    input_count: 0,
+    generate_control_count: 0,
+  });
+  assert.equal(result.ready, true);
+  assert.equal(result.surface_kind, "SEARCH_RESULT_CARD");
+});
+
+test("dedicated form remains supported but route alone never proves generation capability", () => {
+  const form = core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    route: "/affiliates/url",
+    input_count: 1,
+    generate_control_count: 1,
+    target_card_count: 0,
+  });
+  assert.equal(form.ready, true);
+  assert.equal(form.surface_kind, "DEDICATED_FORM");
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    route: "/affiliates/url",
+    input_count: 0,
+    generate_control_count: 0,
+    target_card_count: 0,
+  }).reason, "OFFICIAL_GENERATION_INPUT_NOT_UNIQUE");
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    route: null,
+    input_count: 1,
+    generate_control_count: 1,
+    target_card_count: 0,
+  }).reason, "OFFICIAL_AFFILIATE_GENERATION_CAPABILITY_NOT_FOUND");
+});
+
+test("exact UUID to card to action mapping fails closed on ambiguity", () => {
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    target_identity_count: 2,
+    target_card_count: 2,
+    target_card_post_identity_count: 1,
+    target_card_action_count: 1,
+  }).reason, "AFFILIATE_TARGET_CARD_AMBIGUOUS");
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    target_identity_count: 1,
+    target_card_count: 1,
+    target_card_post_identity_count: 2,
+    target_card_action_count: 1,
+  }).reason, "AFFILIATE_TARGET_CARD_IDENTITY_AMBIGUOUS");
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    target_identity_count: 1,
+    target_card_count: 1,
+    target_card_post_identity_count: 1,
+    target_card_action_count: 2,
+  }).reason, "OFFICIAL_CARD_GENERATION_CONTROL_NOT_UNIQUE");
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: false,
+    target_identity_count: 1,
+    target_card_count: 1,
+    target_card_post_identity_count: 1,
+    target_card_action_count: 1,
+  }).reason, "AUTHENTICATED_AFFILIATE_CENTER_SCOPE_REQUIRED");
 });
 
 test("one explicit pilot action processes exactly three targets with durable cooldown checkpoints", async () => {
   const value = harness();
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "pilot", tab_id: 7, collector_version: "0.6.0" });
+  await orchestrator.start({ session_id: "pilot", tab_id: 7, collector_version: "0.6.1" });
   await orchestrator.recover(7);
   assert.equal(value.dispatches.length, 1);
   for (let index = 1; index <= 3; index += 1) {
@@ -131,7 +196,7 @@ test("one explicit pilot action processes exactly three targets with durable coo
 test("worker restart while waiting inspects but never dispatches the same target again", async () => {
   const value = harness();
   let orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "restart", tab_id: 8, collector_version: "0.6.0" });
+  await orchestrator.start({ session_id: "restart", tab_id: 8, collector_version: "0.6.1" });
   await orchestrator.recover(8);
   assert.equal(value.dispatches.length, 1);
   value.adapters.inspect_result = async () => ({
@@ -147,7 +212,7 @@ test("worker restart while waiting inspects but never dispatches the same target
 test("one generated URL cannot be mapped to two different posts", async () => {
   const value = harness();
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "duplicate-url", tab_id: 10, collector_version: "0.6.0" });
+  await orchestrator.start({ session_id: "duplicate-url", tab_id: 10, collector_version: "0.6.1" });
   await orchestrator.recover(10);
   let journal = value.storage.dump()[core.ACTIVE_SESSION_KEY];
   const result = { visible_urls: ["https://link.affiliate.myfans.jp/generated/same"], visible_text: "生成完了" };
@@ -165,9 +230,9 @@ test("one generated URL cannot be mapped to two different posts", async () => {
 test("duplicate active session is rejected and cancel cannot race an already dispatched write", async () => {
   const value = harness();
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "one", tab_id: 9, collector_version: "0.6.0" });
+  await orchestrator.start({ session_id: "one", tab_id: 9, collector_version: "0.6.1" });
   await assert.rejects(
-    orchestrator.start({ session_id: "two", tab_id: 9, collector_version: "0.6.0" }),
+    orchestrator.start({ session_id: "two", tab_id: 9, collector_version: "0.6.1" }),
     /DUPLICATE_AFFILIATE_SESSION/,
   );
   await orchestrator.recover(9);
@@ -178,9 +243,69 @@ test("message or UI stage failure is journaled fail-closed instead of leaving RU
   const value = harness();
   value.adapters.prepare_target = async () => { throw new Error("OFFICIAL_GENERATION_INPUT_NOT_UNIQUE"); };
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "stage-failure", tab_id: 11, collector_version: "0.6.0" });
+  await orchestrator.start({ session_id: "stage-failure", tab_id: 11, collector_version: "0.6.1" });
   const status = await orchestrator.recover(11);
   assert.equal(status.session_state, "PAUSED_REQUIRES_RECOVERY");
   assert.equal(status.failure_reason, "OFFICIAL_GENERATION_INPUT_NOT_UNIQUE");
   assert.equal(value.dispatches.length, 0);
+});
+
+test("clipboard-only search-card result stops after the first dispatched target", async () => {
+  const value = harness();
+  value.adapters.prepare_target = async () => ({
+    ready: true,
+    surface_kind: "SEARCH_RESULT_CARD",
+    baseline_visible_urls: [],
+    baseline_copy_success_visible: false,
+    baseline_structural_fingerprint: "before",
+  });
+  const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
+  await orchestrator.start({ session_id: "clipboard-only", tab_id: 12, collector_version: "0.6.1" });
+  await orchestrator.recover(12);
+  const journal = value.storage.dump()[core.ACTIVE_SESSION_KEY];
+  await orchestrator.handleResult({
+    session_id: "clipboard-only",
+    dispatch_nonce: journal.dispatch_nonce,
+    result: {
+      visible_urls: [],
+      visible_text: "コピーしました",
+      copy_success_visible: true,
+      structural_fingerprint: "after",
+    },
+  });
+  value.advance(core.GENERATION_COOLDOWN_MS);
+  await orchestrator.recover(12);
+  const status = (await orchestrator.getStatus()).active;
+  assert.equal(status.session_state, "PAUSED_REQUIRES_RECOVERY");
+  assert.equal(status.failure_reason, "AUTOMATION_BLOCKED_BY_CLIPBOARD_ONLY_UI");
+  assert.equal(status.completed, 0);
+  assert.equal(value.dispatches.length, 1);
+});
+
+test("unchanged pre-existing copy notice is not mistaken for a new clipboard-only result", async () => {
+  const value = harness();
+  value.adapters.prepare_target = async () => ({
+    ready: true,
+    surface_kind: "SEARCH_RESULT_CARD",
+    baseline_visible_urls: [],
+    baseline_copy_success_visible: true,
+    baseline_structural_fingerprint: "same",
+  });
+  const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
+  await orchestrator.start({ session_id: "stale-copy", tab_id: 13, collector_version: "0.6.1" });
+  await orchestrator.recover(13);
+  const journal = value.storage.dump()[core.ACTIVE_SESSION_KEY];
+  const status = await orchestrator.handleResult({
+    session_id: "stale-copy",
+    dispatch_nonce: journal.dispatch_nonce,
+    result: {
+      visible_urls: [],
+      visible_text: "コピーしました",
+      copy_success_visible: true,
+      structural_fingerprint: "same",
+    },
+  });
+  assert.equal(status.session_state, "RUNNING");
+  assert.equal(status.stage, "WAITING_FOR_RESULT");
+  assert.equal(value.dispatches.length, 1);
 });

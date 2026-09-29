@@ -2,17 +2,17 @@
 
 ## Official UI contract
 
-The documented Affiliate Center flow accepts a public post/profile URL, exposes a visible generate action, and reports that the resulting affiliate URL is copied. The update guide also documents a generated-link management surface. No official bulk-generation API/feed/CSV is available, so collector `0.6.0` treats only these authenticated, user-visible pages as authorized surfaces.
+The documented Affiliate Center flow exposes official affiliate-link actions in authenticated UI, including the per-post action on search results. The update guide also documents a generated-link management surface. No official bulk-generation API/feed/CSV is available, so collector `0.6.1` treats only authenticated, user-visible capabilities as authorized surfaces.
 
 - URL generation guide: <https://support.myfans.jp/hc/ja/articles/15722941497487>
 - Affiliate Center update/generated-link guide: <https://support.myfans.jp/hc/ja/articles/15929691377039>
 - Approved-creator/link validity guide: <https://support.myfans.jp/hc/ja/articles/17400497455119>
 
-The implementation deliberately does not encode generated CSS classes or assume an undocumented DOM hierarchy. On `/affiliates/search/from_url` or `/affiliates/url`, it requires exactly one visible editable control whose accessible text identifies a post/profile/MyFans URL, and exactly one enabled visible generation control with an explicit generate label. Any ambiguity stops before the click.
+The implementation deliberately does not encode generated CSS classes or assume an undocumented DOM hierarchy. A search-result page is supported when the frozen UUID resolves to exactly one semantic post card, that card contains exactly one post identity, and exactly one enabled visible action labelled `投稿のアフィURLのコピー` exists inside that same card. It never selects a global button by ordinal position. A dedicated URL form remains supported when exactly one visible editable URL input and exactly one explicit generation control are present. Route name alone neither grants nor denies capability; any identity/card/control ambiguity stops before the click.
 
 ## Output and clipboard boundary
 
-After generation, only a URL visible in an anchor `href`, a visible input/textarea value, a visible control's narrowly allowlisted `data-clipboard-text`/`data-url`/`data-link` attribute, or rendered text is considered. It must use HTTPS, exact host `link.affiliate.myfans.jp`, no credentials, no fragment, and a non-empty path or query. The first successfully observed pilot URL establishes the path-segment/query-key shape for the remaining two pilot records; a differing shape is a conflict, not an inferred replacement.
+After generation, only a URL visible in the exact target card or an official result dialog/status region—as an anchor `href`, a visible input/textarea value, a visible control's narrowly allowlisted `data-clipboard-text`/`data-url`/`data-link` attribute, or rendered text—is considered. It must use HTTPS, exact host `link.affiliate.myfans.jp`, no credentials, no fragment, and a non-empty path or query. The first successfully observed pilot URL establishes the path-segment/query-key shape for the remaining two pilot records; a differing shape is a conflict, not an inferred replacement.
 
 The clipboard is never read. If the official UI reports only “copied” and does not render the generated URL in any allowed visible form, the session pauses with `AUTOMATION_BLOCKED_BY_CLIPBOARD_ONLY_UI`. This is the explicit live-pilot decision boundary.
 
@@ -32,4 +32,4 @@ The pure incremental resolver classifies `ACTIVE_NEW`, `ACTIVE_IDENTICAL`, `CONF
 
 ## Live-pilot handoff
 
-Load collector `0.6.0`, open the signed-in official URL-generation screen, and press **Affiliate URL生成パイロット（最大3件）** once. That explicit click is the authorization for the three official-UI writes. Do not start catalog collection and do not repeat the pilot after a terminal result. The run will either produce three mapped visible links and stop, or stop at the first real UI/safety boundary with its journal intact.
+Load collector `0.6.1`, open the signed-in Affiliate Center search-results page containing the frozen target cards (a dedicated generation form remains optional), and press **Affiliate URL生成パイロット（最大3件）** once. That explicit click is the authorization for at most three official-UI writes. The previous `0.6.0` failure at `0/3` occurred before dispatch, generated no link, and is a terminal prior journal that does not consume a target. Do not start catalog collection and do not repeat the new pilot after a terminal result. The run will either produce three mapped visible links and stop, or stop at the first real UI/safety boundary with its journal intact.

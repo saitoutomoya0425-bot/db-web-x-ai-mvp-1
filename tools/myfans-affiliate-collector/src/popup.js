@@ -307,14 +307,10 @@
 
   async function startAffiliatePilot() {
     setBusy(true);
-    setStatus("公式Affiliate URL生成画面を検証しています…");
+    setStatus("公式Affiliate URL生成操作を検証しています…");
     try {
       const tab = await activeTab();
-      const url = new URL(tab.url || "");
-      if (
-        url.origin !== "https://www.affiliate.myfans.jp" ||
-        !["/affiliates/search/from_url", "/affiliates/url"].includes(url.pathname.replace(/\/+$/u, ""))
-      ) throw new Error("OFFICIAL_AFFILIATE_GENERATION_PAGE_REQUIRED");
+      assertSupportedTab(tab);
       currentAffiliateSession = await sendToBackground({
         type: "MYFANS_AFFILIATE_GENERATION_START_PILOT",
         session_id: `affiliate-pilot-${new Date().toISOString()}-${globalThis.crypto.randomUUID()}`,

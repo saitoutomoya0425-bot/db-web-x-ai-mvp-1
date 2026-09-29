@@ -50,9 +50,9 @@ test("runtime has no network, credential-store, browser-debug, or interception A
   }
 });
 
-test("manifest adds only alarms for durable rate-safe pilot scheduling", () => {
+test("manifest permissions remain unchanged for the search-result-card pilot", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.6.0");
+  assert.equal(manifest.version, "0.6.1");
   assert.deepEqual(manifest.permissions, ["activeTab", "storage", "downloads", "alarms"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
@@ -99,6 +99,19 @@ test("generation is visible-DOM only and never uses hidden API or inferred URLs"
   assert.equal(contentScriptSource.includes("link\\.affiliate\\.myfans\\.jp"), true);
   assert.match(backgroundSource, /PILOT_TARGET_HASH/);
   assert.match(backgroundSource, /pilot_limit:\s*3/);
+  assert.match(contentScriptSource, /function resolveTargetCard/);
+  assert.match(contentScriptSource, /cardGenerationControlCandidates\(card\)/);
+  assert.match(contentScriptSource, /current\.card !== prepared\.card/);
+  assert.match(contentScriptSource, /POST_AFFILIATE_URL_COPY/);
+  assert.equal(popupSource.includes("OFFICIAL_AFFILIATE_GENERATION_PAGE_REQUIRED"), false);
+  assert.equal(/navigator\.clipboard|document\.execCommand/u.test(runtimeSource), false);
+});
+
+test("affiliate result inspection is limited to the exact card and official result UI", () => {
+  assert.match(contentScriptSource, /function officialResultRoots\(card, surfaceKind\)/);
+  assert.match(contentScriptSource, /\[role='dialog'\].*\[role='status'\].*\[role='alert'\].*\[aria-live\]/s);
+  assert.match(contentScriptSource, /inspectPreparedAffiliateResult\(message\)/);
+  assert.equal(contentScriptSource.includes("visibleAffiliateResult()"), false);
 });
 
 test("missing-title segment diagnostics use rendered innerText only", () => {

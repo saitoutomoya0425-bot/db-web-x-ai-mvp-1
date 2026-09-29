@@ -1,6 +1,6 @@
 # MyFans Affiliate Catalog Local Collector
 
-Chrome Manifest V3 extension for exporting catalog text already rendered in the signed-in MyFans Affiliate Center UI. Collector `0.6.0` also prepares a fail-closed, user-started three-post pilot that uses only the official visible affiliate-link generation form. It does not call MyFans APIs, infer links, read the clipboard or browser credentials, download images, or write to a database.
+Chrome Manifest V3 extension for exporting catalog text already rendered in the signed-in MyFans Affiliate Center UI. Collector `0.6.1` also prepares a fail-closed, user-started three-post pilot that uses the official visible per-card affiliate action on search results or the separate official generation form. It does not call MyFans APIs, infer links, read the clipboard or browser credentials, download images, or write to a database.
 
 ## Install
 
@@ -18,7 +18,7 @@ Open the extension popup on a supported page, then select one action:
 - **現在ページを取得** exports the visible page once.
 - **新規収集（内部5ページ）** and **1 chunkだけ収集（5ページ）** remain under Advanced / Diagnostic.
 - **Diagnostic / Probe** exports an anonymized structure summary when parsing does not match the current UI.
-- **Affiliate URL生成パイロット（最大3件）** uses the official visible generation form. One explicit click freezes three attested eligible/MISSING targets; no mass run starts.
+- **Affiliate URL生成パイロット（最大3件）** uses an exact target card's official action on search results or the separate official generation form. One explicit click freezes three attested eligible/MISSING targets; no mass run starts.
 
 Each internal chunk remains bounded to five pages and commits its cumulative/checkpoint state atomically. The background worker immediately starts the next chunk without requiring the popup. A normal session ends at 50 pages or a settled missing/disabled next control, then automatically saves exactly one lightweight session summary and one latest cumulative export. The cumulative state is keyed by a canonical scope that excludes `page` but includes the route, category/search filters, media filter, and sort. A checkpoint is never reused across different scopes.
 
@@ -36,7 +36,7 @@ Collector `0.4.0` moves physical artifact delivery into the MV3 background servi
 
 Collector `0.5.0` adds a persistent automatic-session journal above the proven five-page operation state machine. Five pages are an internal atomic checkpoint, not a user interaction boundary. The default session chains up to ten chunks (50 pages), survives popup closure and service-worker restart, and never merges a partial failed chunk. It produces no physical per-chunk files. At session completion it derives an additive incremental dry-run (`NEW`, `EXISTING_IDENTICAL`, `UPDATE_NEEDED`, `CONFLICT`) against the starting cumulative baseline, explicitly proposes zero deletes/unpublishes, and marks `DB_SYNC_READY` only when no identity conflict exists. To avoid duplicating a growing cumulative JSON in `chrome.storage.local`, the final session journal retains canonical artifact hash/length metadata and the small logical summary; immediately before download, the worker deterministically regenerates the cumulative bytes from the formal catalog and requires the hash and length to match. This artifact prepares a later database resolver; it does not query or mutate a database.
 
-Collector `0.6.0` adds a separate background-owned `AFFILIATE_GENERATION_SESSION`. It is hard-capped at three targets with a four-second cooldown and durable target/progress/result hashes. Popup closure and worker restart preserve the journal; after a dispatched click, recovery inspects the visible result and never clicks again. CAPTCHA, rate limit, login challenge, ineligible result, ambiguous selector/output, different-link conflict, or clipboard-only success stops fail-closed. Only a visible `https://link.affiliate.myfans.jp/...` result is accepted.
+Collector `0.6.1` keeps the separate background-owned `AFFILIATE_GENERATION_SESSION`. It is hard-capped at three targets with a four-second cooldown and durable target/progress/result hashes. On search results it resolves the exact UUID to one semantic card and one official `投稿のアフィURLのコピー` action inside that card; global ordinal button selection is forbidden. Popup closure and worker restart preserve the journal; after a dispatched click, recovery inspects only the target card and official result UI and never clicks again. CAPTCHA, rate limit, login challenge, ineligible result, ambiguous selector/output, different-link conflict, or clipboard-only success stops fail-closed. Only a visible `https://link.affiliate.myfans.jp/...` result is accepted.
 
 The journal retains the original hydration start/deadline, last observed page/record count/fingerprint, and settle candidate, so a service-worker restart resumes the remaining deadline instead of starting a new ten-second window. Temporary zero-row snapshots remain in `WAITING_FOR_NEW_DOCUMENT`; a permanent zero-row page fails as `CATALOG_ROWS_NOT_READY`, an unchanged fingerprint as `PAGE_FINGERPRINT_UNCHANGED`, and an unstable populated page as `PAGE_SNAPSHOT_NOT_STABLE`.
 
@@ -53,7 +53,8 @@ The popup shows cumulative count, checkpoint, automatic session/chunk progress, 
 - `/affiliates/search/creators/tab/registered`
 - creator detail routes under `/affiliates/search/creators/`
 - `/affiliates/generated` child routes are permitted for visible-link detection, but are not the Phase 1 parsing priority
-- `/affiliates/search/from_url` and `/affiliates/url` are generation routes; the visible input and control must each be unique
+- an authenticated search-result route is a generation surface only when the target UUID, semantic card, and per-card official action are each unambiguous
+- `/affiliates/search/from_url` and `/affiliates/url` remain supported when the visible input and generation control are each unique; route alone is not authorization
 
 The content script is not installed on report, account, media-management, or payment pages.
 
@@ -64,7 +65,7 @@ The content script is not installed on report, account, media-management, or pay
 - No cookies, tokens, page local/session storage, credential values, raw HTML, screenshots, network capture, or request interception
 - Operation journal, staged snapshots, checkpoint, and cumulative catalogs use only `chrome.storage.local`; the page's storage is never read
 - No extension-originated `fetch` or XHR
-- No copy-button activation or clipboard read. The generate control is activated only by the explicit three-post pilot on an official generation route.
+- No clipboard read. A per-card copy/generation control or dedicated generate control is activated only by the explicit three-post pilot after exact capability validation.
 - Login redirects, rate-limit/anti-bot text, unexpected visible modals, timeouts, and duplicate page fingerprints stop collection
 - Output is local JSON only; the included staging-plan function has `apply: false` and performs no database operation
 
@@ -74,7 +75,7 @@ The checkpoint records collector version, canonical scope, start/last page, an o
 
 Cumulative merge uses the strict post UUID as identity. A new UUID is added, an identical allowed-field observation is a no-op, an allowed-field change replaces the latest observation as an update candidate, and a UUID/creator identity conflict fails closed before storage is changed. Records absent from later snapshots are never deleted or unpublished. Per-post and per-creator sidecars retain first/last seen time, run, source page, and collector version without raw HTML or media URLs.
 
-Manual bounded-run export remains compatible. Automatic sessions instead emit a lightweight session summary and a cumulative export with an `incremental_sync` sidecar. The cumulative export remains `myfans-affiliate-catalog-local-v1` and can be passed directly to the dry-run importer. Export artifacts are generated once at session end and retained until delivery succeeds. Chrome marks an artifact delivered only after the Downloads API reports `complete` and readback confirms the expected filename family, exact byte length, and `exists=true`. Interrupted or unresolvable delivery never auto-retries. Delivered/downloading artifacts reject duplicate delivery. The dry-run importer accepts through collector `0.6.0`; it still performs no database or network operation.
+Manual bounded-run export remains compatible. Automatic sessions instead emit a lightweight session summary and a cumulative export with an `incremental_sync` sidecar. The cumulative export remains `myfans-affiliate-catalog-local-v1` and can be passed directly to the dry-run importer. Export artifacts are generated once at session end and retained until delivery succeeds. Chrome marks an artifact delivered only after the Downloads API reports `complete` and readback confirms the expected filename family, exact byte length, and `exists=true`. Interrupted or unresolvable delivery never auto-retries. Delivered/downloading artifacts reject duplicate delivery. The dry-run importer accepts through collector `0.6.1`; it still performs no database or network operation.
 
 See [MYFANS_LOCAL_COLLECTOR.md](../../docs/MYFANS_LOCAL_COLLECTOR.md) for the field policy and operational notes.
 

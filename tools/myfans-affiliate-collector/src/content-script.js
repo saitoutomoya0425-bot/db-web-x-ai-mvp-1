@@ -59,6 +59,20 @@
     return affiliateGeneration?.generationRoute(globalThis.location.href) || null;
   }
 
+  function authenticatedAffiliateScope() {
+    try {
+      const url = new URL(globalThis.location.href);
+      return (
+        url.protocol === "https:" &&
+        url.hostname === "www.affiliate.myfans.jp" &&
+        url.pathname.startsWith("/affiliates/") &&
+        allVisible(document, "input[type='password']").length === 0
+      );
+    } catch {
+      return false;
+    }
+  }
+
   function semanticText(element) {
     if (!(element instanceof Element)) return "";
     const labels = element.labels ? [...element.labels].map(visibleText) : [];
@@ -69,6 +83,24 @@
       element.getAttribute("name") || "",
       visibleText(element)
     ].join(" "));
+  }
+
+  function semanticLabelCandidates(element) {
+    if (!(element instanceof Element)) return [];
+    const labels = element.labels ? [...element.labels].map(visibleText) : [];
+    return [...new Set([
+      ...labels,
+      element.getAttribute("aria-label") || "",
+      element.getAttribute("title") || "",
+      element.matches("input[type='button'], input[type='submit']") ? element.value : "",
+      visibleText(element)
+    ].map(core.normalizeSpace).filter(Boolean))];
+  }
+
+  function isOfficialPostAffiliateAction(element) {
+    return semanticLabelCandidates(element).some((label) =>
+      /^投稿のアフィ(?:リエイト)?URL(?:の|を)?コピー$/u.test(label)
+    );
   }
 
   function generationInputCandidates() {
@@ -83,48 +115,180 @@
       .filter((element) => /^(?:アフィリエイトURLを生成|アフィURLを生成|生成する|生成)$/u.test(semanticText(element)));
   }
 
-  function visibleAffiliateResult() {
-    const visibleUrls = [];
-    for (const anchor of allVisible(document, "a[href]")) {
-      if (affiliateGeneration.parseAffiliateUrl(anchor.href)) visibleUrls.push(anchor.href);
-    }
-    for (const field of allVisible(document, "input, textarea")) {
-      if (affiliateGeneration.parseAffiliateUrl(field.value)) visibleUrls.push(field.value);
-    }
-    for (const element of allVisible(document, "[data-clipboard-text], [data-url], [data-link]")) {
-      for (const attribute of ["data-clipboard-text", "data-url", "data-link"]) {
-        const value = element.getAttribute(attribute);
-        if (affiliateGeneration.parseAffiliateUrl(value)) visibleUrls.push(value);
+  function cardGenerationControlCandidates(card) {
+    if (!(card instanceof Element)) return [];
+    return allVisible(
+      card,
+      "button, [role='button'], a[href], input[type='button'], input[type='submit']"
+    )
+      .filter((element) => !element.disabled && element.getAttribute("aria-disabled") !== "true")
+      .filter(isOfficialPostAffiliateAction);
+  }
+
+  function cardPostIdentityCount(card) {
+    if (!(card instanceof Element)) return 0;
+    return new Set(
+      allVisible(card, "a[href]")
+        .map((anchor) => core.parsePostUrl(anchor.href)?.post_uuid)
+        .filter(Boolean)
+    ).size;
+  }
+
+  function resolveTargetCard(identity) {
+    const matchingAnchors = allVisible(document, "a[href]")
+      .filter((anchor) => core.parsePostUrl(anchor.href)?.post_uuid === identity.post_uuid);
+    const selections = matchingAnchors
+      .map((anchor) => selectPostCardContainer(anchor))
+      .filter((selection) =>
+        selection?.evidence?.contains_target_post === true &&
+        selection.evidence.post_link_count === 1 &&
+        selection.evidence.has_affiliate_copy_action === true
+      );
+    const cards = [];
+    const seen = new Set();
+    for (const selection of selections) {
+      if (!seen.has(selection.container)) {
+        seen.add(selection.container);
+        cards.push(selection.container);
       }
     }
-    const rendered = core.normalizeSpace(document.body?.innerText || "");
-    for (const match of rendered.matchAll(/https:\/\/link\.affiliate\.myfans\.jp\/[^\s<>'"]+/giu)) {
-      if (affiliateGeneration.parseAffiliateUrl(match[0])) visibleUrls.push(match[0]);
+    const card = cards.length === 1 ? cards[0] : null;
+    const controls = card ? cardGenerationControlCandidates(card) : [];
+    return {
+      target_identity_count: matchingAnchors.length,
+      target_card_count: cards.length,
+      target_card_post_identity_count: card ? cardPostIdentityCount(card) : 0,
+      target_card_action_count: controls.length,
+      card,
+      control: controls.length === 1 ? controls[0] : null
+    };
+  }
+
+  function uniqueRoots(roots) {
+    return [...new Set((roots || []).filter((root) => root instanceof Element))];
+  }
+
+  function allVisibleIncludingRoot(root, selector) {
+    return [
+      ...(root.matches(selector) && isVisible(root) ? [root] : []),
+      ...allVisible(root, selector)
+    ];
+  }
+
+  function structuralFingerprint(roots) {
+    const descriptors = [];
+    for (const root of uniqueRoots(roots)) {
+      const elements = [root, ...allVisible(root, "a[href], input, textarea, button, [role], [aria-live], [data-clipboard-text], [data-url], [data-link]")]
+        .filter(isVisible)
+        .slice(0, 400);
+      for (const element of elements) {
+        const affiliateValues = [];
+        if (element.matches("a[href]") && affiliateGeneration.parseAffiliateUrl(element.href)) {
+          affiliateValues.push("AFFILIATE_HREF");
+        }
+        if (element.matches("input, textarea") && affiliateGeneration.parseAffiliateUrl(element.value)) {
+          affiliateValues.push("AFFILIATE_VALUE");
+        }
+        for (const attribute of ["data-clipboard-text", "data-url", "data-link"]) {
+          if (affiliateGeneration.parseAffiliateUrl(element.getAttribute(attribute))) {
+            affiliateValues.push(attribute.toUpperCase());
+          }
+        }
+        const labels = semanticLabelCandidates(element);
+        descriptors.push({
+          tag: element.tagName.toLowerCase(),
+          role: element.getAttribute("role") || null,
+          known_label: labels.some((label) => /^投稿のアフィ(?:リエイト)?URL(?:の|を)?コピー$/u.test(label))
+            ? "POST_AFFILIATE_URL_COPY"
+            : labels.some((label) => /(?:コピーしました|クリップボードにコピー)/u.test(label))
+              ? "COPY_SUCCESS"
+              : null,
+          affiliate_values: affiliateValues.sort()
+        });
+      }
     }
+    return core.stableHash(JSON.stringify(descriptors));
+  }
+
+  function visibleAffiliateResult(roots) {
+    const inspectedRoots = uniqueRoots(roots);
+    const visibleUrls = [];
+    const renderedParts = [];
+    for (const root of inspectedRoots) {
+      for (const anchor of allVisibleIncludingRoot(root, "a[href]")) {
+        if (affiliateGeneration.parseAffiliateUrl(anchor.href)) visibleUrls.push(anchor.href);
+      }
+      for (const field of allVisibleIncludingRoot(root, "input, textarea")) {
+        if (affiliateGeneration.parseAffiliateUrl(field.value)) visibleUrls.push(field.value);
+      }
+      for (const element of allVisibleIncludingRoot(root, "[data-clipboard-text], [data-url], [data-link]")) {
+        for (const attribute of ["data-clipboard-text", "data-url", "data-link"]) {
+          const value = element.getAttribute(attribute);
+          if (affiliateGeneration.parseAffiliateUrl(value)) visibleUrls.push(value);
+        }
+      }
+      const rendered = visibleText(root);
+      renderedParts.push(rendered);
+      for (const match of rendered.matchAll(/https:\/\/link\.affiliate\.myfans\.jp\/[^\s<>'"]+/giu)) {
+        if (affiliateGeneration.parseAffiliateUrl(match[0])) visibleUrls.push(match[0]);
+      }
+    }
+    const rendered = core.normalizeSpace(renderedParts.join(" "));
     return {
       visible_urls: [...new Set(visibleUrls)],
       visible_text: rendered.slice(0, 12000),
       has_login_form: allVisible(document, "input[type='password']").length > 0,
-      copy_success_visible: /(?:コピーしました|クリップボードにコピー)/u.test(rendered)
+      copy_success_visible: /(?:コピーしました|クリップボードにコピー)/u.test(rendered),
+      structural_fingerprint: structuralFingerprint(inspectedRoots)
     };
   }
 
-  function inspectAffiliateGenerationUi() {
+  function officialResultRoots(card, surfaceKind) {
+    if (surfaceKind === affiliateGeneration.GENERATION_SURFACES.DEDICATED_FORM) {
+      return [document.body];
+    }
+    return [
+      card,
+      ...allVisible(document, "[role='dialog'], [aria-modal='true'], [role='status'], [role='alert'], [aria-live]")
+    ];
+  }
+
+  function inspectAffiliateGenerationUi(identity) {
     const route = generationUiRoute();
-    const inputs = route ? generationInputCandidates() : [];
-    const controls = route ? generationControlCandidates() : [];
+    const inputs = generationInputCandidates();
+    const controls = generationControlCandidates();
+    const target = identity ? resolveTargetCard(identity) : {
+      target_identity_count: 0,
+      target_card_count: 0,
+      target_card_post_identity_count: 0,
+      target_card_action_count: 0,
+      card: null,
+      control: null
+    };
     const decision = affiliateGeneration?.classifyGenerationUiAudit({
+      authenticated_affiliate_scope: authenticatedAffiliateScope(),
       route,
       input_count: inputs.length,
-      generate_control_count: controls.length
+      generate_control_count: controls.length,
+      target_identity_count: target.target_identity_count,
+      target_card_count: target.target_card_count,
+      target_card_post_identity_count: target.target_card_post_identity_count,
+      target_card_action_count: target.target_card_action_count
     }) || { ready: false, reason: "AFFILIATE_GENERATION_CORE_REQUIRED" };
+    const roots = officialResultRoots(target.card, decision.surface_kind);
     return {
       route,
       input_count: inputs.length,
       generate_control_count: controls.length,
-      output: visibleAffiliateResult(),
+      target_identity_count: target.target_identity_count,
+      target_card_count: target.target_card_count,
+      target_card_post_identity_count: target.target_card_post_identity_count,
+      target_card_action_count: target.target_card_action_count,
+      surface_kind: decision.surface_kind || null,
+      output: visibleAffiliateResult(roots),
       ready: decision.ready,
-      reason: decision.reason
+      reason: decision.reason,
+      target
     };
   }
 
@@ -143,26 +307,37 @@
     if (!affiliateGeneration) throw new Error("AFFILIATE_GENERATION_CORE_REQUIRED");
     const identity = affiliateGeneration.parseCanonicalPostUrl(message.canonical_url);
     if (!identity || identity.post_uuid !== message.post_uuid) throw new Error("AFFILIATE_TARGET_IDENTITY_INVALID");
-    const audit = inspectAffiliateGenerationUi();
+    const inspected = inspectAffiliateGenerationUi(identity);
+    const { target, ...audit } = inspected;
     if (!audit.ready) return { ready: false, reason: audit.reason, audit };
-    const input = generationInputCandidates()[0];
-    const control = generationControlCandidates()[0];
-    setNativeInputValue(input, identity.canonical_url);
-    if (String(input.value).trim() !== identity.canonical_url) {
-      return { ready: false, reason: "OFFICIAL_GENERATION_INPUT_VALUE_MISMATCH", audit };
+    let control = target.control;
+    if (audit.surface_kind === affiliateGeneration.GENERATION_SURFACES.DEDICATED_FORM) {
+      const input = generationInputCandidates()[0];
+      control = generationControlCandidates()[0];
+      setNativeInputValue(input, identity.canonical_url);
+      if (String(input.value).trim() !== identity.canonical_url) {
+        return { ready: false, reason: "OFFICIAL_GENERATION_INPUT_VALUE_MISMATCH", audit };
+      }
     }
     preparedAffiliateGeneration = {
       session_id: message.session_id,
       post_uuid: identity.post_uuid,
       canonical_url: identity.canonical_url,
+      surface_kind: audit.surface_kind,
+      card: target.card,
       control
     };
     return {
       ready: true,
       route: audit.route,
-      input_count: 1,
-      generate_control_count: 1,
-      baseline_visible_urls: audit.output.visible_urls
+      surface_kind: audit.surface_kind,
+      input_count: audit.input_count,
+      generate_control_count: audit.generate_control_count,
+      target_card_count: audit.target_card_count,
+      target_card_action_count: audit.target_card_action_count,
+      baseline_visible_urls: audit.output.visible_urls,
+      baseline_copy_success_visible: audit.output.copy_success_visible,
+      baseline_structural_fingerprint: audit.output.structural_fingerprint
     };
   }
 
@@ -178,10 +353,32 @@
       prepared.post_uuid !== message.post_uuid ||
       prepared.canonical_url !== message.canonical_url
     ) throw new Error("AFFILIATE_PREPARED_TARGET_MISMATCH");
+    if (prepared.surface_kind === affiliateGeneration.GENERATION_SURFACES.SEARCH_RESULT_CARD) {
+      const identity = affiliateGeneration.parseCanonicalPostUrl(message.canonical_url);
+      const current = identity ? resolveTargetCard(identity) : null;
+      if (
+        !current ||
+        current.target_card_count !== 1 ||
+        current.target_card_post_identity_count !== 1 ||
+        current.target_card_action_count !== 1 ||
+        current.card !== prepared.card ||
+        current.control !== prepared.control
+      ) throw new Error("AFFILIATE_TARGET_CARD_CHANGED_BEFORE_DISPATCH");
+    }
     if (!isVisible(prepared.control) || prepared.control.disabled) throw new Error("OFFICIAL_GENERATE_CONTROL_NOT_READY");
     dispatchedAffiliateNonces.add(message.dispatch_nonce);
     globalThis.setTimeout(() => prepared.control.click(), 0);
     return { accepted: true, already_dispatched: false };
+  }
+
+  function inspectPreparedAffiliateResult(message) {
+    const prepared = preparedAffiliateGeneration;
+    if (
+      !prepared ||
+      prepared.session_id !== message.session_id ||
+      prepared.post_uuid !== message.post_uuid
+    ) throw new Error("AFFILIATE_PREPARED_TARGET_MISMATCH");
+    return visibleAffiliateResult(officialResultRoots(prepared.card, prepared.surface_kind));
   }
 
   function closestSemanticContainer(anchor) {
@@ -1061,7 +1258,7 @@
     }
     if (message.type === "MYFANS_AFFILIATE_INSPECT_RESULT") {
       try {
-        sendResponse({ ok: true, result: visibleAffiliateResult() });
+        sendResponse({ ok: true, result: inspectPreparedAffiliateResult(message) });
       } catch (error) {
         sendResponse({ ok: false, error: error instanceof Error ? error.message : "AFFILIATE_RESULT_INSPECTION_FAILED" });
       }

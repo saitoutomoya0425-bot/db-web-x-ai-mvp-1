@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MyFans Affiliate Catalog Local Collector",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Safely collects catalog text and runs a bounded user-started official-UI affiliate generation pilot.",
   "permissions": [
     "activeTab",

@@ -259,8 +259,8 @@ function createHarness(options = {}) {
   };
 }
 
-test("collector 0.6.0 keeps five pages as an internal chunk and defaults sessions to 50 pages", () => {
-  assert.equal(collector.COLLECTOR_VERSION, "0.6.0");
+test("collector 0.6.1 keeps five pages as an internal chunk and defaults sessions to 50 pages", () => {
+  assert.equal(collector.COLLECTOR_VERSION, "0.6.1");
   assert.equal(collector.MAX_RUN_PAGES, 5);
   assert.equal(sessions.DEFAULT_PAGE_LIMIT, 50);
   assert.deepEqual([...sessions.ALLOWED_PAGE_LIMITS], [25, 50, 100]);

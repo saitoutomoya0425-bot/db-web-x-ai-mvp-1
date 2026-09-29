@@ -223,8 +223,8 @@ function navigationHarness(options = {}) {
   };
 }
 
-test("reports collector version 0.6.0 and a five-page internal chunk limit", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.6.0");
+test("reports collector version 0.6.1 and a five-page internal chunk limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.6.1");
   assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
@@ -254,7 +254,7 @@ test("later snapshot absence never erases an observed affiliate URL", () => {
     affiliate_link_status: "ACTIVE",
     affiliate_observation: {
       first_seen_at: "2026-09-29T00:00:00.000Z",
-      first_seen_collector_version: "0.6.0"
+      first_seen_collector_version: "0.6.1"
     }
   });
   const observed = cumulativePost(1, 2, { displayed_affiliate_url: null });
