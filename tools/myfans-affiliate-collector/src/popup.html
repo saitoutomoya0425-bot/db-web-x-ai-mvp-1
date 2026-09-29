@@ -16,6 +16,8 @@
 
       <section class="actions" aria-label="収集操作">
         <button id="collect-auto-resume" class="primary" type="button">続きから自動収集</button>
+        <button id="affiliate-generation-pilot" type="button">Affiliate URL生成パイロット（最大3件）</button>
+        <p class="lede">生成パイロットは公式画面へ実際に書き込みます。対象3件を固定し、4秒間隔で処理して必ず停止します。</p>
         <button id="refresh-status" type="button">状態更新</button>
         <button id="export-completed" type="button" hidden>完了したJSONを保存</button>
         <button id="cancel-operation" class="danger" type="button" hidden>収集を安全にキャンセル</button>
@@ -28,6 +30,18 @@
             <button id="collect-probe" class="quiet" type="button">Diagnostic / Probe</button>
           </div>
         </details>
+      </section>
+
+      <section aria-label="affiliate generation pilot status">
+        <dl class="metrics operation-metrics">
+          <div><dt>Affiliate pilot</dt><dd id="affiliate-session-state">IDLE</dd></div>
+          <div><dt>Stage</dt><dd id="affiliate-session-stage">—</dd></div>
+          <div><dt>Progress</dt><dd id="affiliate-session-progress">0/3</dd></div>
+          <div><dt>Eligible targets</dt><dd id="affiliate-eligible-targets">—</dd></div>
+          <div><dt>Conflicts</dt><dd id="affiliate-conflicts">0</dd></div>
+        </dl>
+        <p id="affiliate-stop-reason" class="operation-error">—</p>
+        <button id="cancel-affiliate-generation" class="danger" type="button" hidden>Affiliate生成を安全に停止</button>
       </section>
 
       <p id="status" role="status" aria-live="polite">対応するAffiliate Center画面を開いてください。</p>
@@ -72,7 +86,7 @@
         <div id="samples" class="samples" aria-label="最大3件のsample"></div>
       </section>
 
-      <footer>Phase 1: affiliate URL生成・DB更新・画像取得は行いません。</footer>
+      <footer>公式UIに可視表示されたURLだけを扱います。hidden API・URL推測・clipboard読取・DB更新・画像取得は行いません。</footer>
     </main>
     <script src="popup.js"></script>
   </body>

@@ -2,12 +2,15 @@
   "use strict";
 
   const core = globalThis.MyFansCollectorCore;
+  const affiliateGeneration = globalThis.MyFansAffiliateGenerationCore;
   if (!core || globalThis.__MYFANS_LOCAL_COLLECTOR_INSTALLED__) return;
   globalThis.__MYFANS_LOCAL_COLLECTOR_INSTALLED__ = true;
   const dispatchedNavigationNonces = new Set();
   let readyHeartbeatInterval = null;
   let readyHeartbeatTimeout = null;
   let readySignalDebounce = null;
+  let preparedAffiliateGeneration = null;
+  const dispatchedAffiliateNonces = new Set();
 
   const SAFE_QUERY_KEYS = new Set([
     "genre_id",
@@ -50,6 +53,135 @@
 
   function allVisible(root, selector) {
     return [...root.querySelectorAll(selector)].filter(isVisible);
+  }
+
+  function generationUiRoute() {
+    return affiliateGeneration?.generationRoute(globalThis.location.href) || null;
+  }
+
+  function semanticText(element) {
+    if (!(element instanceof Element)) return "";
+    const labels = element.labels ? [...element.labels].map(visibleText) : [];
+    return core.normalizeSpace([
+      ...labels,
+      element.getAttribute("aria-label") || "",
+      element.getAttribute("placeholder") || "",
+      element.getAttribute("name") || "",
+      visibleText(element)
+    ].join(" "));
+  }
+
+  function generationInputCandidates() {
+    return allVisible(document, "input:not([type]), input[type='text'], input[type='url'], textarea")
+      .filter((element) => !element.disabled && !element.readOnly)
+      .filter((element) => /(?:投稿|作品|プロフィール|MyFans|URL|リンク)/iu.test(semanticText(element)));
+  }
+
+  function generationControlCandidates() {
+    return allVisible(document, "button, [role='button'], input[type='button'], input[type='submit']")
+      .filter((element) => !element.disabled && element.getAttribute("aria-disabled") !== "true")
+      .filter((element) => /^(?:アフィリエイトURLを生成|アフィURLを生成|生成する|生成)$/u.test(semanticText(element)));
+  }
+
+  function visibleAffiliateResult() {
+    const visibleUrls = [];
+    for (const anchor of allVisible(document, "a[href]")) {
+      if (affiliateGeneration.parseAffiliateUrl(anchor.href)) visibleUrls.push(anchor.href);
+    }
+    for (const field of allVisible(document, "input, textarea")) {
+      if (affiliateGeneration.parseAffiliateUrl(field.value)) visibleUrls.push(field.value);
+    }
+    for (const element of allVisible(document, "[data-clipboard-text], [data-url], [data-link]")) {
+      for (const attribute of ["data-clipboard-text", "data-url", "data-link"]) {
+        const value = element.getAttribute(attribute);
+        if (affiliateGeneration.parseAffiliateUrl(value)) visibleUrls.push(value);
+      }
+    }
+    const rendered = core.normalizeSpace(document.body?.innerText || "");
+    for (const match of rendered.matchAll(/https:\/\/link\.affiliate\.myfans\.jp\/[^\s<>'"]+/giu)) {
+      if (affiliateGeneration.parseAffiliateUrl(match[0])) visibleUrls.push(match[0]);
+    }
+    return {
+      visible_urls: [...new Set(visibleUrls)],
+      visible_text: rendered.slice(0, 12000),
+      has_login_form: allVisible(document, "input[type='password']").length > 0,
+      copy_success_visible: /(?:コピーしました|クリップボードにコピー)/u.test(rendered)
+    };
+  }
+
+  function inspectAffiliateGenerationUi() {
+    const route = generationUiRoute();
+    const inputs = route ? generationInputCandidates() : [];
+    const controls = route ? generationControlCandidates() : [];
+    const decision = affiliateGeneration?.classifyGenerationUiAudit({
+      route,
+      input_count: inputs.length,
+      generate_control_count: controls.length
+    }) || { ready: false, reason: "AFFILIATE_GENERATION_CORE_REQUIRED" };
+    return {
+      route,
+      input_count: inputs.length,
+      generate_control_count: controls.length,
+      output: visibleAffiliateResult(),
+      ready: decision.ready,
+      reason: decision.reason
+    };
+  }
+
+  function setNativeInputValue(input, value) {
+    const prototype = input instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    if (!setter) throw new Error("OFFICIAL_GENERATION_INPUT_SETTER_UNAVAILABLE");
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function prepareAffiliateTarget(message) {
+    if (!affiliateGeneration) throw new Error("AFFILIATE_GENERATION_CORE_REQUIRED");
+    const identity = affiliateGeneration.parseCanonicalPostUrl(message.canonical_url);
+    if (!identity || identity.post_uuid !== message.post_uuid) throw new Error("AFFILIATE_TARGET_IDENTITY_INVALID");
+    const audit = inspectAffiliateGenerationUi();
+    if (!audit.ready) return { ready: false, reason: audit.reason, audit };
+    const input = generationInputCandidates()[0];
+    const control = generationControlCandidates()[0];
+    setNativeInputValue(input, identity.canonical_url);
+    if (String(input.value).trim() !== identity.canonical_url) {
+      return { ready: false, reason: "OFFICIAL_GENERATION_INPUT_VALUE_MISMATCH", audit };
+    }
+    preparedAffiliateGeneration = {
+      session_id: message.session_id,
+      post_uuid: identity.post_uuid,
+      canonical_url: identity.canonical_url,
+      control
+    };
+    return {
+      ready: true,
+      route: audit.route,
+      input_count: 1,
+      generate_control_count: 1,
+      baseline_visible_urls: audit.output.visible_urls
+    };
+  }
+
+  function dispatchAffiliateGeneration(message) {
+    if (!message.dispatch_nonce) throw new Error("AFFILIATE_DISPATCH_NONCE_REQUIRED");
+    if (dispatchedAffiliateNonces.has(message.dispatch_nonce)) {
+      return { accepted: true, already_dispatched: true };
+    }
+    const prepared = preparedAffiliateGeneration;
+    if (
+      !prepared ||
+      prepared.session_id !== message.session_id ||
+      prepared.post_uuid !== message.post_uuid ||
+      prepared.canonical_url !== message.canonical_url
+    ) throw new Error("AFFILIATE_PREPARED_TARGET_MISMATCH");
+    if (!isVisible(prepared.control) || prepared.control.disabled) throw new Error("OFFICIAL_GENERATE_CONTROL_NOT_READY");
+    dispatchedAffiliateNonces.add(message.dispatch_nonce);
+    globalThis.setTimeout(() => prepared.control.click(), 0);
+    return { accepted: true, already_dispatched: false };
   }
 
   function closestSemanticContainer(anchor) {
@@ -899,6 +1031,39 @@
           operation_stage: message.operation_stage || null,
           error: error instanceof Error ? error.message : "NAVIGATION_DISPATCH_FAILED"
         });
+      }
+      return false;
+    }
+    if (message.type === "MYFANS_AFFILIATE_UI_AUDIT") {
+      try {
+        sendResponse({ ok: true, audit: inspectAffiliateGenerationUi() });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "AFFILIATE_UI_AUDIT_FAILED" });
+      }
+      return false;
+    }
+    if (message.type === "MYFANS_AFFILIATE_PREPARE_TARGET") {
+      try {
+        sendResponse({ ok: true, prepared: prepareAffiliateTarget(message) });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "AFFILIATE_TARGET_PREPARE_FAILED" });
+      }
+      return false;
+    }
+    if (message.type === "MYFANS_AFFILIATE_DISPATCH_GENERATION") {
+      try {
+        const ack = dispatchAffiliateGeneration(message);
+        sendResponse({ ok: true, ack });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "AFFILIATE_GENERATION_DISPATCH_FAILED" });
+      }
+      return false;
+    }
+    if (message.type === "MYFANS_AFFILIATE_INSPECT_RESULT") {
+      try {
+        sendResponse({ ok: true, result: visibleAffiliateResult() });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : "AFFILIATE_RESULT_INSPECTION_FAILED" });
       }
       return false;
     }

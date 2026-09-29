@@ -166,8 +166,8 @@ test("rejects an unsupported collector version", () => {
   assert.equal(report.counts.accepted, 0);
 });
 
-test("accepts collector 0.2.x/0.3.x run and cumulative metadata without changing dry-run semantics", () => {
-  for (const collectorVersion of ["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", "0.5.0"]) {
+test("accepts collector 0.2.x through 0.6.x cumulative metadata without changing dry-run semantics", () => {
+  for (const collectorVersion of ["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", "0.5.0", "0.6.0"]) {
     const bundle = syntheticImportBundle([syntheticImportPost()], {
       collector_version: collectorVersion,
       export_kind: "CUMULATIVE",
@@ -196,6 +196,36 @@ test("accepts collector 0.2.x/0.3.x run and cumulative metadata without changing
     assert.equal(report.counts.accepted, 1, collectorVersion);
     assert.equal(report.db_write_count, 0, collectorVersion);
   }
+});
+
+test("0.6.0 maps only an exact-host visible affiliate URL to ACTIVE preview fields", () => {
+  const affiliateUrl = "https://link.affiliate.myfans.jp/observed-link";
+  const post = syntheticImportPost(0, {
+    displayed_affiliate_url: affiliateUrl,
+    affiliate_link_status: "ACTIVE",
+    affiliate_observation: {
+      first_seen_at: "2026-09-29T00:00:00.000Z",
+      last_seen_at: "2026-09-29T00:00:00.000Z",
+      source_surface: "official_generation_ui",
+      generation_session_id: "synthetic-session"
+    }
+  });
+  const report = dryRunCatalogImport(syntheticImportBundle([post], { collector_version: "0.6.0" }));
+  assert.equal(report.status, "PASS");
+  assert.equal(report.targets.myfans_posts[0].db_row.affiliate_link_status, "active");
+  assert.equal(report.targets.myfans_posts[0].db_row.affiliate_url, affiliateUrl);
+  assert.equal(report.db_write_count, 0);
+});
+
+test("0.6.0 rejects spoof-host affiliate URLs", () => {
+  const report = dryRunCatalogImport(syntheticImportBundle([
+    syntheticImportPost(0, {
+      displayed_affiliate_url: "https://link.affiliate.myfans.jp.evil.example/path",
+      affiliate_link_status: "ACTIVE"
+    })
+  ], { collector_version: "0.6.0" }));
+  assert.equal(report.status, "FIX_REQUIRED");
+  assert.equal(report.rejection_reasons.INVALID_AFFILIATE_URL, 1);
 });
 
 test("accepts a 0.5.0 cumulative artifact with an additive incremental-sync sidecar", () => {

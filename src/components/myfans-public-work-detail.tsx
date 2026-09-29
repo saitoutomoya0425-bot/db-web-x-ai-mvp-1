@@ -36,9 +36,12 @@ export function MyFansPublicWorkDetail({ work }: { work: MyFansPublicWork }) {
               <ExternalLink className="size-5" />{work.canonicalCtaLabel}
             </a>
             {work.showAffiliateCta && work.affiliateUrl && (
-              <a href={work.affiliateUrl} target="_blank" rel="sponsored noreferrer" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 font-bold text-white">
-                <ExternalLink className="size-5" />アフィリエイトリンクで本編を見る
-              </a>
+              <div className="grid gap-2">
+                <a href={work.affiliateUrl} target="_blank" rel="sponsored noreferrer" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 font-bold text-white">
+                  <ExternalLink className="size-5" />アフィリエイトリンクで本編を見る
+                </a>
+                <p className="text-center text-xs text-slate-500">PR / アフィリエイトリンクを含みます</p>
+              </div>
             )}
           </div>
         </aside>

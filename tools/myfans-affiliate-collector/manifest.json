@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "MyFans Affiliate Catalog Local Collector",
-  "version": "0.5.0",
-  "description": "Safely resumes, checkpoints, and exports visible MyFans Affiliate Center catalog text.",
+  "version": "0.6.0",
+  "description": "Safely collects catalog text and runs a bounded user-started official-UI affiliate generation pilot.",
   "permissions": [
     "activeTab",
     "storage",
-    "downloads"
+    "downloads",
+    "alarms"
   ],
   "host_permissions": [
     "https://www.affiliate.myfans.jp/*"
@@ -22,9 +23,12 @@
     {
       "matches": [
         "https://www.affiliate.myfans.jp/affiliates/search*",
-        "https://www.affiliate.myfans.jp/affiliates/generated*"
+        "https://www.affiliate.myfans.jp/affiliates/generated*",
+        "https://www.affiliate.myfans.jp/affiliates/url*"
       ],
       "js": [
+        "src/export-artifacts.js",
+        "src/affiliate-generation-core.js",
         "src/collector-core.js",
         "src/content-script.js"
       ],

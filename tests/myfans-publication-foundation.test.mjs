@@ -76,7 +76,7 @@ test("MISSING affiliate link does not block publication and hides CTA", () => {
 });
 
 test("ACTIVE valid MyFans affiliate link shows CTA", () => {
-  const affiliateUrl = `https://myfans.jp/posts/${id}?affiliate=synthetic`;
+  const affiliateUrl = "https://link.affiliate.myfans.jp/synthetic-affiliate-link";
   const result = decideMyFansPublication({
     ...approved,
     affiliateLinkStatus: MYFANS_AFFILIATE_LINK_STATUS.ACTIVE,
@@ -90,11 +90,28 @@ test("ACTIVE valid MyFans affiliate link shows CTA", () => {
   });
 });
 
+test("ACTIVE affiliate URL validation rejects HTTP, credentials, and spoof hosts", () => {
+  for (const affiliateUrl of [
+    "http://link.affiliate.myfans.jp/path",
+    "https://user:pass@link.affiliate.myfans.jp/path",
+    "https://link.affiliate.myfans.jp.evil.example/path",
+    "https://evil.example/path",
+  ]) {
+    const result = decideMyFansPublication({
+      ...approved,
+      affiliateLinkStatus: MYFANS_AFFILIATE_LINK_STATUS.ACTIVE,
+      affiliateUrl,
+    });
+    assert.equal(result.affiliateCta.show, false);
+    assert.equal(result.affiliateCta.reason, "active_url_invalid");
+  }
+});
+
 test("REVOKED affiliate link hides CTA", () => {
   const result = decideMyFansPublication({
     ...approved,
     affiliateLinkStatus: MYFANS_AFFILIATE_LINK_STATUS.REVOKED,
-    affiliateUrl: `https://myfans.jp/posts/${id}?affiliate=synthetic`,
+    affiliateUrl: "https://link.affiliate.myfans.jp/synthetic-affiliate-link",
   });
   assert.equal(result.eligible, true);
   assert.equal(result.affiliateCta.show, false);

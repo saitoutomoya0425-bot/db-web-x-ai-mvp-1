@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 export const IMPORTER_VERSION = "myfans-catalog-dry-run-v1";
 export const EXPECTED_SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
-export const SUPPORTED_COLLECTOR_VERSIONS = Object.freeze(["0.1.8", "0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", "0.5.0"]);
+export const SUPPORTED_COLLECTOR_VERSIONS = Object.freeze(["0.1.8", "0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", "0.5.0", "0.6.0"]);
 
 const SOURCE_NAME = "MYFANS_AFFILIATE_CENTER";
 const SOURCE_TYPE = "OFFICIAL_AUTH_UI";
@@ -56,6 +56,8 @@ const POST_FIELDS = new Set([
   "relative_published_text",
   "affiliate_eligible",
   "displayed_affiliate_url",
+  "affiliate_link_status",
+  "affiliate_observation",
   "source_surface",
   "source_page_url",
   "collected_at",
@@ -96,15 +98,16 @@ export const FIELD_MAPPING = Object.freeze([
   { source: "creator_name", target: "myfans_creators.display_name", classification: "A", rule: "non-empty trim" },
   { source: "creator_username/profile_url", target: "myfans_creators.official_url", classification: "B", rule: "canonical https://myfans.jp/<slug>" },
   { source: "collected_at", target: "myfans_creators.fetched_at", classification: "B", rule: "latest exact observation per creator" },
-  { source: "affiliate_reward_rate", target: null, classification: "C", rule: "affiliate-state schema missing" },
-  { source: "estimated_reward_jpy", target: null, classification: "C", rule: "affiliate-state schema missing" },
-  { source: "affiliate_eligible", target: null, classification: "C", rule: "affiliate-state schema missing" },
+  { source: "affiliate_reward_rate", target: null, classification: "C", rule: "reward observation column missing" },
+  { source: "estimated_reward_jpy", target: null, classification: "C", rule: "reward observation column missing" },
+  { source: "affiliate_eligible", target: null, classification: "C", rule: "eligibility observation column missing" },
   { source: "video_duration,video_duration_seconds", target: null, classification: "C", rule: "migration 029 has no duration column" },
   { source: "likes", target: null, classification: "C", rule: "metric snapshot schema missing" },
   { source: "collector_version,source_page_url,source_surface,parser_confidence", target: null, classification: "C", rule: "observation/provenance schema missing; retained in dry-run sidecar" },
   { source: "relative_published_text", target: null, classification: "D", rule: "relative time is never converted to published_at" },
   { source: "title_diagnostic", target: null, classification: "D", rule: "diagnostic data is not staged" },
-  { source: "displayed_affiliate_url", target: null, classification: "D", rule: "affiliate link lifecycle is outside Phase 6K.1" },
+  { source: "displayed_affiliate_url", target: "myfans_posts.affiliate_url", classification: "A", rule: "exact HTTPS link.affiliate.myfans.jp host only" },
+  { source: "affiliate_link_status", target: "myfans_posts.affiliate_link_status", classification: "A", rule: "ACTIVE requires a valid displayed affiliate URL" },
   { source: "image/avatar/thumbnail/OGP/video URL", target: null, classification: "D", rule: "prohibited by text-only permission boundary" },
   { source: "plan display data", target: "myfans_plans", classification: "E", rule: "hold until a stable plan ID exists" },
   { source: "visibility/approval scope", target: null, classification: "E", rule: "do not overload content visibility; affiliate-state schema required" }
@@ -114,7 +117,6 @@ export const SCHEMA_GAPS = Object.freeze([
   "DATA_SOURCE_ID_REQUIRES_READ_ONLY_DB_RESOLUTION",
   "CREATOR_ID_REQUIRES_READ_ONLY_DB_RESOLUTION",
   "AUTH_UI_PROVENANCE_STORAGE_MISSING",
-  "POST_AFFILIATE_STATE_STORAGE_MISSING",
   "CREATOR_AFFILIATE_STATE_STORAGE_MISSING",
   "METRIC_SNAPSHOT_STORAGE_MISSING",
   "VIDEO_DURATION_STORAGE_MISSING",
@@ -192,6 +194,25 @@ function parsePostIdentity(postUuid, postUrl) {
     return { error: "MALFORMED_OR_MISMATCHED_POST_PUBLIC_URL" };
   }
   return { uuid, officialUrl: `https://myfans.jp/posts/${uuid}` };
+}
+
+function parseAffiliateUrl(value) {
+  if (value == null || value === "") return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.hostname.toLowerCase() !== "link.affiliate.myfans.jp" ||
+      url.username ||
+      url.password ||
+      (url.port && url.port !== "443") ||
+      url.hash ||
+      ((!url.pathname || url.pathname === "/") && !url.search)
+    ) return false;
+    return url.href;
+  } catch {
+    return false;
+  }
 }
 
 function parseCreatorProfileUrl(value) {
@@ -290,7 +311,7 @@ function sourceSurfaceFromUrl(value) {
   return null;
 }
 
-function normalizedPostSource(post, identity, creator) {
+function normalizedPostSource(post, identity, creator, affiliateUrl = null) {
   return {
     post_uuid: identity.uuid,
     post_public_url: identity.officialUrl,
@@ -303,7 +324,8 @@ function normalizedPostSource(post, identity, creator) {
     media_type: post.media_type,
     video_duration_seconds: post.video_duration_seconds ?? null,
     likes: post.likes ?? null,
-    affiliate_eligible: post.affiliate_eligible
+    affiliate_eligible: post.affiliate_eligible,
+    affiliate_url: affiliateUrl
   };
 }
 
@@ -334,6 +356,12 @@ function normalizePost(post, index, bundle) {
     "video_duration_seconds",
     reasons
   );
+  const affiliateUrl = parseAffiliateUrl(post?.displayed_affiliate_url);
+  if (affiliateUrl === false) reasons.push("INVALID_AFFILIATE_URL");
+  if (post?.affiliate_link_status != null && !["ACTIVE", "active"].includes(post.affiliate_link_status)) {
+    reasons.push("INVALID_AFFILIATE_LINK_STATUS");
+  }
+  if (post?.affiliate_link_status != null && !affiliateUrl) reasons.push("ACTIVE_AFFILIATE_URL_MISSING");
   if (estimatedReward !== null && price === null) reasons.push("ESTIMATED_REWARD_WITHOUT_PRICE");
   if (estimatedReward !== null && price !== null && estimatedReward > price) {
     reasons.push("ESTIMATED_REWARD_EXCEEDS_PRICE");
@@ -357,7 +385,7 @@ function normalizePost(post, index, bundle) {
     return { accepted: false, skipped: true, index, externalId: identity.uuid, reasons: ["AFFILIATE_INELIGIBLE"] };
   }
 
-  const sourceRecord = normalizedPostSource(post, identity, creator);
+  const sourceRecord = normalizedPostSource(post, identity, creator, affiliateUrl || null);
   const sourceHash = sha256(sourceRecord);
   const coreMetadata = {
     external_post_id: identity.uuid,
@@ -386,6 +414,8 @@ function normalizePost(post, index, bundle) {
     price,
     currency: "JPY",
     review_status: "needs_visibility_review",
+    affiliate_link_status: affiliateUrl ? "active" : "missing",
+    affiliate_url: affiliateUrl || null,
     raw_public_metadata: {},
     metadata_hash: sha256(coreMetadata),
     fetched_at: collectedAt
@@ -420,7 +450,9 @@ function normalizePost(post, index, bundle) {
       held_affiliate_state: {
         affiliate_enabled: true,
         affiliate_reward_rate: rewardRate,
-        estimated_reward_jpy: estimatedReward
+        estimated_reward_jpy: estimatedReward,
+        affiliate_link_status: affiliateUrl ? "active" : "missing",
+        affiliate_url: affiliateUrl || null
       },
       held_metrics: {
         likes,
@@ -429,7 +461,7 @@ function normalizePost(post, index, bundle) {
       },
       intentionally_not_stored: {
         relative_published_text: post.relative_published_text ?? null,
-        displayed_affiliate_url: post.displayed_affiliate_url ? "REDACTED_PRESENT" : null,
+        displayed_affiliate_url: null,
         thumbnail_url: null,
         published_at: null
       }

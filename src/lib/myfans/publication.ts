@@ -109,9 +109,12 @@ export function isCanonicalMyFansPostUrl(value: string | null, externalPostId: s
 
 export function isValidMyFansAffiliateUrl(value: string | null) {
   const url = normalizedHttpsUrl(value);
-  if (!url) return false;
-  const host = url.hostname.toLowerCase();
-  return host === "myfans.jp" || host.endsWith(".myfans.jp");
+  return Boolean(
+    url &&
+    url.hostname.toLowerCase() === "link.affiliate.myfans.jp" &&
+    url.hash === "" &&
+    (url.pathname !== "/" || url.search !== ""),
+  );
 }
 
 export function decideMyFansAffiliateCta(

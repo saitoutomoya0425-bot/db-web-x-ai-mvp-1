@@ -9,6 +9,7 @@ const extensionRoot = path.resolve(testDir, "..");
 const runtimeFiles = [
   "src/collector-core.js",
   "src/export-artifacts.js",
+  "src/affiliate-generation-core.js",
   "src/download-delivery.js",
   "src/orchestrator-core.js",
   "src/session-core.js",
@@ -49,16 +50,17 @@ test("runtime has no network, credential-store, browser-debug, or interception A
   }
 });
 
-test("manifest adds only downloads to the prior least privileges", () => {
+test("manifest adds only alarms for durable rate-safe pilot scheduling", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.5.0");
-  assert.deepEqual(manifest.permissions, ["activeTab", "storage", "downloads"]);
+  assert.equal(manifest.version, "0.6.0");
+  assert.deepEqual(manifest.permissions, ["activeTab", "storage", "downloads", "alarms"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
   assert.equal("web_accessible_resources" in manifest, false);
   assert.deepEqual(manifest.content_scripts[0].matches, [
     "https://www.affiliate.myfans.jp/affiliates/search*",
-    "https://www.affiliate.myfans.jp/affiliates/generated*"
+    "https://www.affiliate.myfans.jp/affiliates/generated*",
+    "https://www.affiliate.myfans.jp/affiliates/url*"
   ]);
   assert.equal(runtimeSource.includes("chrome.downloads.open"), false);
   assert.match(backgroundSource, /chrome\.downloads\.search\(\{ id: downloadId \}\)/);
@@ -81,8 +83,22 @@ test("journal and cumulative persistence use extension storage only", () => {
   assert.equal(/\b(?:window\.)?sessionStorage\b/.test(runtimeSource), false);
 });
 
-test("runtime never reads form values", () => {
-  assert.equal(/\.value\b/.test(runtimeSource), false);
+test("form values are used only for the visible official generation input/output", () => {
+  for (const [file, source] of Object.entries(sources)) {
+    if (file === "src/content-script.js") continue;
+    assert.equal(/\.value\b/.test(source), false, file);
+  }
+  assert.match(contentScriptSource, /function visibleAffiliateResult[\s\S]*?field\.value/);
+  assert.match(contentScriptSource, /function setNativeInputValue/);
+  assert.equal(/navigator\.clipboard|document\.execCommand/u.test(runtimeSource), false);
+});
+
+test("generation is visible-DOM only and never uses hidden API or inferred URLs", () => {
+  assert.equal(/api\.affiliate\.myfans|\/api\//iu.test(runtimeSource), false);
+  assert.equal(/chrome\.cookies|document\.cookie/iu.test(runtimeSource), false);
+  assert.equal(contentScriptSource.includes("link\\.affiliate\\.myfans\\.jp"), true);
+  assert.match(backgroundSource, /PILOT_TARGET_HASH/);
+  assert.match(backgroundSource, /pilot_limit:\s*3/);
 });
 
 test("missing-title segment diagnostics use rendered innerText only", () => {

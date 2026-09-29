@@ -98,7 +98,7 @@ test("canonical CTA remains separate from a missing affiliate CTA", () => {
 });
 
 test("ACTIVE valid affiliate URL alone enables the affiliate CTA", () => {
-  const affiliateUrl = `https://myfans.jp/posts/${id}?affiliate=synthetic`;
+  const affiliateUrl = "https://link.affiliate.myfans.jp/synthetic-affiliate-link";
   const work = toMyFansPublicWork({
     ...row,
     affiliate_link_status: "active",
@@ -149,6 +149,12 @@ test("MyFans components contain no remote image or FANZA media reuse", async () 
   assert.match(card, /work[.]placeholder[.]label/);
   assert.match(detail, /canonicalCtaLabel/);
   assert.match(detail, /showAffiliateCta && work[.]affiliateUrl/);
+});
+
+test("MyFans affiliate CTA has an adjacent PR disclosure", async () => {
+  const detail = await readFile(new URL("../src/components/myfans-public-work-detail.tsx", import.meta.url), "utf8");
+  assert.match(detail, /PR \/ アフィリエイトリンクを含みます/u);
+  assert.match(detail, /rel="sponsored noreferrer"/u);
 });
 
 test("disabled detail route fails closed before its database query", async () => {

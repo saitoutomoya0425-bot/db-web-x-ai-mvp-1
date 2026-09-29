@@ -1,12 +1,12 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.5.0";
+  const COLLECTOR_VERSION = "0.6.0";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const CHECKPOINT_SCHEMA_VERSION = "myfans-affiliate-checkpoint-v1";
   const CUMULATIVE_SCHEMA_VERSION = "myfans-affiliate-cumulative-v1";
   const MAX_RUN_PAGES = 5;
-  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", COLLECTOR_VERSION]);
+  const RESUMABLE_CHECKPOINT_COLLECTOR_VERSIONS = new Set(["0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.3.2", "0.4.0", "0.5.0", COLLECTOR_VERSION]);
   const OPERATION_STAGES = Object.freeze({
     PREPARE_RESUME: "PREPARE_RESUME",
     COLLECT_PAGE: "COLLECT_PAGE",
@@ -147,6 +147,7 @@
     const url = parseUrl(value);
     if (!isSafeHttpsUrl(url)) return null;
     if (url.hostname !== "link.affiliate.myfans.jp") return null;
+    if (url.hash || ((url.pathname === "/" || !url.pathname) && !url.search)) return null;
     return url.href;
   }
 
@@ -1301,6 +1302,29 @@
     return merged;
   }
 
+  function mergePostRecord(existingPost, observedPost) {
+    const existingAffiliateUrl = parseDisplayedAffiliateUrl(existingPost?.displayed_affiliate_url);
+    const observedAffiliateUrl = parseDisplayedAffiliateUrl(observedPost?.displayed_affiliate_url);
+    if (existingAffiliateUrl && observedAffiliateUrl && existingAffiliateUrl !== observedAffiliateUrl) {
+      throw new Error(`AFFILIATE_URL_IDENTITY_CONFLICT:${existingPost.post_uuid}`);
+    }
+    const merged = { ...observedPost };
+    if (existingAffiliateUrl && !observedAffiliateUrl) {
+      merged.displayed_affiliate_url = existingAffiliateUrl;
+      merged.affiliate_link_status = existingPost.affiliate_link_status || "ACTIVE";
+      if (existingPost.affiliate_observation) {
+        merged.affiliate_observation = existingPost.affiliate_observation;
+      }
+    } else if (observedAffiliateUrl && existingPost?.affiliate_observation) {
+      merged.affiliate_observation = {
+        ...observedPost.affiliate_observation,
+        first_seen_at: existingPost.affiliate_observation.first_seen_at,
+        first_seen_collector_version: existingPost.affiliate_observation.first_seen_collector_version
+      };
+    }
+    return merged;
+  }
+
   function observationFor(record, identityField, runId, existingObservation) {
     const identity = record[identityField];
     const collectedAt = record.collected_at;
@@ -1379,10 +1403,11 @@
       const existingPost = postMap.get(observedPost.post_uuid);
       if (existingPost) {
         assertCompatiblePostIdentity(existingPost, observedPost);
-        if (stableJson(comparableRecord(existingPost)) === stableJson(comparableRecord(observedPost))) {
+        const mergedPost = mergePostRecord(existingPost, observedPost);
+        if (stableJson(comparableRecord(existingPost)) === stableJson(comparableRecord(mergedPost))) {
           mergeCounts.posts_unchanged += 1;
         } else {
-          postMap.set(observedPost.post_uuid, observedPost);
+          postMap.set(observedPost.post_uuid, mergedPost);
           mergeCounts.posts_updated += 1;
         }
       } else {
@@ -2261,6 +2286,7 @@
     parseRelativePublishedText,
     pageNumberFromUrl,
     mergeCumulativeCatalog,
+    mergePostRecord,
     operationError,
     runNavigationStateMachine,
     runPagination,

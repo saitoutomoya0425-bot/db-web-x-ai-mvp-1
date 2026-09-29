@@ -223,8 +223,8 @@ function navigationHarness(options = {}) {
   };
 }
 
-test("reports collector version 0.5.0 and a five-page internal chunk limit", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.5.0");
+test("reports collector version 0.6.0 and a five-page internal chunk limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.6.0");
   assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
@@ -246,6 +246,32 @@ test("accepts only an already displayed link.affiliate URL, never an API host", 
   );
   assert.equal(core.parseDisplayedAffiliateUrl("https://api.affiliate.myfans.jp/api/links"), null);
   assert.equal(core.parseDisplayedAffiliateUrl("https://www.affiliate.myfans.jp/affiliates/generated"), null);
+});
+
+test("later snapshot absence never erases an observed affiliate URL", () => {
+  const existing = cumulativePost(1, 1, {
+    displayed_affiliate_url: "https://link.affiliate.myfans.jp/observed-link",
+    affiliate_link_status: "ACTIVE",
+    affiliate_observation: {
+      first_seen_at: "2026-09-29T00:00:00.000Z",
+      first_seen_collector_version: "0.6.0"
+    }
+  });
+  const observed = cumulativePost(1, 2, { displayed_affiliate_url: null });
+  const merged = plain(core.mergePostRecord(existing, observed));
+  assert.equal(merged.displayed_affiliate_url, existing.displayed_affiliate_url);
+  assert.equal(merged.affiliate_link_status, "ACTIVE");
+  assert.equal(merged.affiliate_observation.first_seen_at, existing.affiliate_observation.first_seen_at);
+});
+
+test("different visible affiliate URLs for one UUID fail closed", () => {
+  const existing = cumulativePost(2, 1, {
+    displayed_affiliate_url: "https://link.affiliate.myfans.jp/first"
+  });
+  const observed = cumulativePost(2, 2, {
+    displayed_affiliate_url: "https://link.affiliate.myfans.jp/second"
+  });
+  assert.throws(() => core.mergePostRecord(existing, observed), /AFFILIATE_URL_IDENTITY_CONFLICT/);
 });
 
 test("uses a visible Affiliate Center creator route for identity without inventing a public profile URL", () => {

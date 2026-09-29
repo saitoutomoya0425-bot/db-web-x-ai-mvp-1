@@ -9,8 +9,11 @@
   const exportButton = document.getElementById("export-completed");
   const refreshButton = document.getElementById("refresh-status");
   const autoResumeButton = document.getElementById("collect-auto-resume");
+  const affiliatePilotButton = document.getElementById("affiliate-generation-pilot");
+  const cancelAffiliateButton = document.getElementById("cancel-affiliate-generation");
   let currentOperation = null;
   let currentSession = null;
+  let currentAffiliateSession = null;
   let busy = false;
 
   function setBusy(nextBusy) {
@@ -94,6 +97,10 @@
     return autoCollection?.session_state === "RUNNING";
   }
 
+  function isAffiliateSessionActive(session) {
+    return session?.session_state === "RUNNING";
+  }
+
   function elapsedLabel(startedAt, completedAt) {
     const start = Date.parse(startedAt || "");
     const parsedEnd = Date.parse(completedAt || "");
@@ -107,7 +114,9 @@
   function updateActionAvailability() {
     if (busy) return;
     const activeSession = isSessionActive(currentSession);
-    const active = isOperationActive(currentOperation) || activeSession;
+    const affiliateActive = isAffiliateSessionActive(currentAffiliateSession);
+    const affiliateCancellable = affiliateActive && currentAffiliateSession?.stage !== "WAITING_FOR_RESULT";
+    const active = isOperationActive(currentOperation) || activeSession || affiliateActive;
     const pendingExport = Boolean(
       currentOperation?.state === "COMPLETED" &&
       !["DELIVERED", "INTERNAL_ONLY"].includes(currentOperation.export_state)
@@ -116,8 +125,11 @@
     document.getElementById("collect-new").disabled = active || pendingExport;
     document.getElementById("collect-resume").disabled = active || pendingExport;
     autoResumeButton.disabled = active || pendingExport;
+    affiliatePilotButton.disabled = active || pendingExport;
     cancelButton.hidden = !cancellable;
     cancelButton.disabled = !cancellable;
+    cancelAffiliateButton.hidden = !affiliateActive;
+    cancelAffiliateButton.disabled = !affiliateCancellable;
     const downloadableState = currentOperation?.state === "COMPLETED" && [
       "GENERATED",
       "DELIVERY_FAILED",
@@ -130,13 +142,14 @@
       ? "ファイルが存在しないことを確認して再保存"
       : "完了したJSONを保存";
     refreshButton.disabled = false;
-    document.getElementById("collect-current").disabled = false;
-    document.getElementById("collect-probe").disabled = false;
+    document.getElementById("collect-current").disabled = active;
+    document.getElementById("collect-probe").disabled = active;
   }
 
   function renderStatusView(view) {
     currentOperation = view?.operation || null;
     currentSession = view?.auto_session || null;
+    currentAffiliateSession = view?.affiliate_generation || null;
     setText("collector-version", view?.collector_version);
     setText("stored-post-count", view?.cumulative_posts ?? 0);
     setText("checkpoint-page", view?.checkpoint_last_page);
@@ -158,12 +171,28 @@
     setText("session-db-sync", currentSession?.incremental_sync?.status || "—");
     setText("session-elapsed", elapsedLabel(currentSession?.started_at, currentSession?.completed_at));
     setText("session-stop-reason", currentSession?.failure_reason || currentSession?.stop_reason || "—");
+    setText("affiliate-session-state", currentAffiliateSession?.session_state || "IDLE");
+    setText("affiliate-session-stage", currentAffiliateSession?.stage || "—");
+    setText("affiliate-session-progress", currentAffiliateSession
+      ? `${currentAffiliateSession.completed}/${currentAffiliateSession.total_targets}`
+      : "0/3");
+    setText("affiliate-eligible-targets", currentAffiliateSession?.eligible_target_count);
+    setText("affiliate-conflicts", currentAffiliateSession?.conflicts || 0);
+    setText("affiliate-stop-reason", currentAffiliateSession?.failure_reason || currentAffiliateSession?.stop_reason || "—");
     updateActionAvailability();
 
-    if (isSessionActive(currentSession)) {
+    if (isAffiliateSessionActive(currentAffiliateSession)) {
+      setStatus(`公式UIでAffiliate URL生成パイロットを実行中です（${currentAffiliateSession.completed}/${currentAffiliateSession.total_targets}）。popupを閉じてもjournalは維持されます。`);
+    } else if (isSessionActive(currentSession)) {
       setStatus(
         `収集中 — popupを閉じても続行します。${currentSession.pages_completed}/${currentSession.configured_page_limit}ページ、${currentSession.chunks_completed} chunks完了。`
       );
+    } else if (isOperationActive(currentOperation)) {
+      setStatus(`background収集中: ${currentOperation.stage}（${currentOperation.pages_staged}/${currentOperation.max_pages}ページ）`);
+    } else if (currentAffiliateSession?.session_state === "PILOT_COMPLETED") {
+      setStatus(`Affiliate URL生成パイロット完了: ${currentAffiliateSession.completed}/3。上限到達のため残りは実行していません。`);
+    } else if (["FAILED", "PAUSED_REQUIRES_RECOVERY"].includes(currentAffiliateSession?.session_state)) {
+      setStatus(`Affiliate URL生成を停止しました: ${currentAffiliateSession.failure_reason || currentAffiliateSession.stop_reason}`, true);
     } else if (currentSession?.session_state === "COMPLETED") {
       setStatus(
         `自動収集完了: ${currentSession.pages_completed}ページ、累積${currentSession.unique_posts_current}作品。session/cumulative JSONを保存済みです。`
@@ -173,8 +202,6 @@
         `自動収集停止: ${currentSession.failure_reason || currentSession.stop_reason}。最後のsuccessful checkpoint ${currentSession.current_checkpoint}から再開できます。`,
         true
       );
-    } else if (isOperationActive(currentOperation)) {
-      setStatus(`background収集中: ${currentOperation.stage}（${currentOperation.pages_staged}/${currentOperation.max_pages}ページ）`);
     } else if (
       currentOperation?.state === "COMPLETED" &&
       currentOperation.export_state === "DOWNLOADING"
@@ -278,6 +305,46 @@
     }
   }
 
+  async function startAffiliatePilot() {
+    setBusy(true);
+    setStatus("公式Affiliate URL生成画面を検証しています…");
+    try {
+      const tab = await activeTab();
+      const url = new URL(tab.url || "");
+      if (
+        url.origin !== "https://www.affiliate.myfans.jp" ||
+        !["/affiliates/search/from_url", "/affiliates/url"].includes(url.pathname.replace(/\/+$/u, ""))
+      ) throw new Error("OFFICIAL_AFFILIATE_GENERATION_PAGE_REQUIRED");
+      currentAffiliateSession = await sendToBackground({
+        type: "MYFANS_AFFILIATE_GENERATION_START_PILOT",
+        session_id: `affiliate-pilot-${new Date().toISOString()}-${globalThis.crypto.randomUUID()}`,
+        tab_id: tab.id
+      });
+      setStatus("最大3件の公式UI生成パイロットを開始しました。4秒間隔・3件上限で必ず停止します。");
+      await refreshStatus({ quiet: true });
+    } catch (error) {
+      setStatus(`Affiliate URL生成を開始できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelAffiliatePilot() {
+    if (!currentAffiliateSession?.session_id) return;
+    setBusy(true);
+    try {
+      await sendToBackground({
+        type: "MYFANS_AFFILIATE_GENERATION_CANCEL",
+        session_id: currentAffiliateSession.session_id
+      });
+      await refreshStatus();
+    } catch (error) {
+      setStatus(`Affiliate生成を停止できませんでした: ${error instanceof Error ? error.message : "UNKNOWN_ERROR"}`, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function cancelCollection() {
     if (!currentOperation?.operation_id && !currentSession?.session_id) return;
     setBusy(true);
@@ -345,6 +412,8 @@
 
   document.getElementById("collect-current").addEventListener("click", collectCurrentPage);
   autoResumeButton.addEventListener("click", startAutoCollection);
+  affiliatePilotButton.addEventListener("click", startAffiliatePilot);
+  cancelAffiliateButton.addEventListener("click", cancelAffiliatePilot);
   document.getElementById("collect-new").addEventListener("click", () => startCollection("NEW"));
   document.getElementById("collect-resume").addEventListener("click", () => startCollection("RESUME"));
   document.getElementById("collect-probe").addEventListener("click", probe);
