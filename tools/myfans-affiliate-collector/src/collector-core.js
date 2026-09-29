@@ -1,7 +1,7 @@
 (function installMyFansCollectorCore(global) {
   "use strict";
 
-  const COLLECTOR_VERSION = "0.6.1";
+  const COLLECTOR_VERSION = "0.6.2";
   const SCHEMA_VERSION = "myfans-affiliate-catalog-local-v1";
   const CHECKPOINT_SCHEMA_VERSION = "myfans-affiliate-checkpoint-v1";
   const CUMULATIVE_SCHEMA_VERSION = "myfans-affiliate-cumulative-v1";

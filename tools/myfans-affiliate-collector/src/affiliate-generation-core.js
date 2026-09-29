@@ -120,20 +120,67 @@
     })));
   }
 
-  async function freezePilotTargets(catalog, options = {}) {
-    const pilotLimit = Number(options.pilot_limit ?? PILOT_MAX_TARGETS);
-    if (!Number.isSafeInteger(pilotLimit) || pilotLimit < 1 || pilotLimit > PILOT_MAX_TARGETS) {
-      throw new Error("AFFILIATE_PILOT_LIMIT_INVALID");
+  function selectCurrentPageTargets(catalog, currentPageSnapshot, options = {}) {
+    const maxTargets = Number(options.max_targets ?? PILOT_MAX_TARGETS);
+    if (!Number.isSafeInteger(maxTargets) || maxTargets < 1 || maxTargets > FUTURE_BATCH_SIZE) {
+      throw new Error("AFFILIATE_CURRENT_PAGE_TARGET_LIMIT_INVALID");
     }
+    if (
+      !currentPageSnapshot ||
+      currentPageSnapshot.source_surface !== "post_search" ||
+      !Array.isArray(currentPageSnapshot.posts)
+    ) throw new Error("AFFILIATE_CURRENT_PAGE_SNAPSHOT_REQUIRED");
+    if (currentPageSnapshot.stop_reason) throw new Error(String(currentPageSnapshot.stop_reason));
+
     const eligibleTargets = (catalog?.posts || [])
       .map(normalizeTarget)
       .filter(Boolean)
       .sort((left, right) => left.post_uuid.localeCompare(right.post_uuid));
+    const eligibleByUuid = new Map();
+    for (const target of eligibleTargets) {
+      if (eligibleByUuid.has(target.post_uuid)) throw new Error("AFFILIATE_ELIGIBLE_TARGET_IDENTITY_CONFLICT");
+      eligibleByUuid.set(target.post_uuid, target);
+    }
+
+    const excluded = new Set(
+      (options.excluded_post_uuids || []).map((value) => String(value || "").toLowerCase())
+    );
+    const seen = new Set();
+    const candidates = [];
+    for (const post of currentPageSnapshot.posts) {
+      const identity = parseCanonicalPostUrl(post?.post_public_url);
+      if (!identity || identity.post_uuid !== String(post?.post_uuid || "").toLowerCase()) {
+        throw new Error("AFFILIATE_CURRENT_PAGE_IDENTITY_INVALID");
+      }
+      if (seen.has(identity.post_uuid)) throw new Error("AFFILIATE_CURRENT_PAGE_IDENTITY_CONFLICT");
+      seen.add(identity.post_uuid);
+      const target = eligibleByUuid.get(identity.post_uuid);
+      if (target && !excluded.has(identity.post_uuid)) candidates.push(target);
+    }
+
+    return {
+      targets: candidates.slice(0, maxTargets),
+      eligible_target_count: eligibleTargets.length,
+      current_page_post_count: currentPageSnapshot.posts.length,
+      current_page_candidate_count: candidates.length,
+      source_page_url: currentPageSnapshot.source_page_url || null,
+      page_fingerprint: currentPageSnapshot.fingerprint || null
+    };
+  }
+
+  async function freezePilotTargets(catalog, currentPageSnapshot, options = {}) {
+    const pilotLimit = Number(options.pilot_limit ?? PILOT_MAX_TARGETS);
+    if (!Number.isSafeInteger(pilotLimit) || pilotLimit < 1 || pilotLimit > PILOT_MAX_TARGETS) {
+      throw new Error("AFFILIATE_PILOT_LIMIT_INVALID");
+    }
+    const selected = selectCurrentPageTargets(catalog, currentPageSnapshot, {
+      max_targets: pilotLimit
+    });
     if (
       options.expected_eligible_count != null &&
-      eligibleTargets.length !== Number(options.expected_eligible_count)
+      selected.eligible_target_count !== Number(options.expected_eligible_count)
     ) throw new Error("AFFILIATE_ELIGIBLE_TARGET_COUNT_MISMATCH");
-    const targets = eligibleTargets.slice(0, pilotLimit);
+    const targets = selected.targets;
     if (targets.length !== pilotLimit) throw new Error("AFFILIATE_PILOT_TARGETS_INSUFFICIENT");
     const targetSetHash = await exportArtifacts.sha256Utf8(targetText(targets));
     if (options.expected_target_hash && targetSetHash !== options.expected_target_hash) {
@@ -142,8 +189,12 @@
     return {
       targets,
       target_set_hash: targetSetHash,
-      eligible_target_count: eligibleTargets.length,
-      pilot_target_count: targets.length
+      eligible_target_count: selected.eligible_target_count,
+      pilot_target_count: targets.length,
+      current_page_post_count: selected.current_page_post_count,
+      current_page_candidate_count: selected.current_page_candidate_count,
+      source_page_url: selected.source_page_url,
+      page_fingerprint: selected.page_fingerprint
     };
   }
 
@@ -158,6 +209,10 @@
       target_set_hash: journal.target_set_hash,
       total_targets: journal.total_targets,
       eligible_target_count: journal.eligible_target_count,
+      current_page_post_count: journal.current_page_post_count,
+      current_page_candidate_count: journal.current_page_candidate_count,
+      target_source_page_url: journal.target_source_page_url,
+      target_page_fingerprint: journal.target_page_fingerprint,
       current_index: journal.current_index,
       completed: journal.completed,
       failed: journal.failed,
@@ -274,7 +329,13 @@
   }
 
   function createAffiliateGenerationOrchestrator(adapters) {
-    if (!adapters?.storage || !adapters?.get_catalog || !adapters?.prepare_target || !adapters?.dispatch_generation) {
+    if (
+      !adapters?.storage ||
+      !adapters?.get_catalog ||
+      !adapters?.get_current_page ||
+      !adapters?.prepare_target ||
+      !adapters?.dispatch_generation
+    ) {
       throw new Error("AFFILIATE_GENERATION_ADAPTERS_INVALID");
     }
     const inFlight = new Map();
@@ -310,7 +371,11 @@
       const prior = await readJournal();
       if (prior.active && !terminal(prior.active)) throw new Error("DUPLICATE_AFFILIATE_SESSION");
       const catalogContext = await adapters.get_catalog(input.tab_id);
-      const frozen = await freezePilotTargets(catalogContext.catalog, {
+      const currentPageContext = await adapters.get_current_page(input.tab_id, catalogContext.scope_key);
+      if (!currentPageContext || currentPageContext.scope_key !== catalogContext.scope_key) {
+        throw new Error("AFFILIATE_CURRENT_PAGE_SCOPE_MISMATCH");
+      }
+      const frozen = await freezePilotTargets(catalogContext.catalog, currentPageContext.snapshot, {
         pilot_limit: input.pilot_limit,
         expected_target_hash: input.expected_target_hash,
         expected_eligible_count: input.expected_eligible_count
@@ -328,6 +393,10 @@
         revision: 1,
         target_set_hash: frozen.target_set_hash,
         eligible_target_count: frozen.eligible_target_count,
+        current_page_post_count: frozen.current_page_post_count,
+        current_page_candidate_count: frozen.current_page_candidate_count,
+        target_source_page_url: frozen.source_page_url,
+        target_page_fingerprint: frozen.page_fingerprint,
         total_targets: frozen.pilot_target_count,
         targets: frozen.targets,
         current_index: 0,
@@ -571,6 +640,7 @@
     generationRoute,
     parseAffiliateUrl,
     parseCanonicalPostUrl,
+    selectCurrentPageTargets,
     summarize,
     targetText,
     terminal

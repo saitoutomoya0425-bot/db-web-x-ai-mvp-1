@@ -2,7 +2,7 @@
 
 ## Official UI contract
 
-The documented Affiliate Center flow exposes official affiliate-link actions in authenticated UI, including the per-post action on search results. The update guide also documents a generated-link management surface. No official bulk-generation API/feed/CSV is available, so collector `0.6.1` treats only authenticated, user-visible capabilities as authorized surfaces.
+The documented Affiliate Center flow exposes official affiliate-link actions in authenticated UI, including the per-post action on search results. The update guide also documents a generated-link management surface. No official bulk-generation API/feed/CSV is available, so collector `0.6.2` treats only authenticated, user-visible capabilities as authorized surfaces.
 
 - URL generation guide: <https://support.myfans.jp/hc/ja/articles/15722941497487>
 - Affiliate Center update/generated-link guide: <https://support.myfans.jp/hc/ja/articles/15929691377039>
@@ -18,7 +18,9 @@ The clipboard is never read. If the official UI reports only “copied” and do
 
 ## Durable three-post pilot
 
-The background service worker owns `AFFILIATE_GENERATION_SESSION`; `chrome.storage.local` is authoritative. The cumulative candidate count must still be exactly 1,194 at start. The frozen targets are the sorted first three records that have a valid post UUID/canonical URL, `affiliate_eligible=true`, and no observed active link. Their deterministic target hash must equal the read-only production attestation `sha256:c997ffabd37cdfbbb66eba8e04490e61de9a893d040b3a4a801fd78e46ebd3f4`. This binds the local pilot to three independently confirmed approved/MISSING production targets without persisting a production UUID list in documentation. A future mass session requires its own fresh production target freeze; a fourth target is structurally unreachable here.
+The background service worker owns `AFFILIATE_GENERATION_SESSION`; `chrome.storage.local` is authoritative. The cumulative candidate count must still be exactly 1,194 at start. The worker first obtains a validated, read-only snapshot of the current authenticated post-search page and requires its canonical scope to equal the cumulative catalog scope. It then intersects the current DOM-ordered post identities with cumulative records having a valid UUID/canonical URL, `affiliate_eligible=true`, and no observed active link. Exactly the first three intersecting records are frozen, and their dynamic target hash plus page URL/fingerprint are journaled. A fourth target is structurally unreachable here.
+
+Version `0.6.1` instead sorted all 1,194 cumulative candidates by UUID and froze the first three without checking current-page membership. In the failed page-60 attempt, those records came from saved pages 5, 6, and 25, so none could resolve to a page-60 card. The resulting `OFFICIAL_AFFILIATE_GENERATION_CAPABILITY_NOT_FOUND` was a correct pre-action failure; selector widening would not have fixed it.
 
 Each write is journaled before the content-script click, separated by a four-second cooldown, and inspected for a visible result for a bounded 30 seconds. A worker restart after dispatch never re-clicks; it only inspects. The pilot stops after exactly three successes and exposes no mass-generation start message.
 
@@ -32,4 +34,10 @@ The pure incremental resolver classifies `ACTIVE_NEW`, `ACTIVE_IDENTICAL`, `CONF
 
 ## Live-pilot handoff
 
-Load collector `0.6.1`, open the signed-in Affiliate Center search-results page containing the frozen target cards (a dedicated generation form remains optional), and press **Affiliate URL生成パイロット（最大3件）** once. That explicit click is the authorization for at most three official-UI writes. The previous `0.6.0` failure at `0/3` occurred before dispatch, generated no link, and is a terminal prior journal that does not consume a target. Do not start catalog collection and do not repeat the new pilot after a terminal result. The run will either produce three mapped visible links and stop, or stop at the first real UI/safety boundary with its journal intact.
+Load collector `0.6.2`, open the signed-in Affiliate Center post-search page to be tested, and press **Affiliate URL生成パイロット（最大3件）** once. That explicit click is the authorization for at most three official-UI writes. The prior `0.6.1` page-60 failure at `0/3` occurred before dispatch, generated no link, and is a terminal prior journal that does not consume a target. Starting the fixed pilot archives that terminal summary and creates a new current-page target freeze; it never resumes the stale arbitrary targets. Do not start catalog collection and do not repeat the pilot after a terminal result. The run will either produce three mapped visible links and stop, or stop at the first real UI/safety boundary with its journal intact.
+
+## Future one-click mass-session boundary
+
+Mass generation is not enabled by `0.6.2`. The settled future design reuses the existing durable background navigation/checkpoint machinery: one explicit user start freezes the eligible/MISSING UUID universe, traverses the exact Affiliate Center scope page by page, intersects each validated visible page with that frozen set, and processes visible cards sequentially with bounded rate and a persistent completed-UUID checkpoint. Every click still requires exact UUID → one card → one official action. Popup closure or worker restart resumes the current page/target without re-clicking a dispatched target; login, CAPTCHA, rate limit, scope drift, identity ambiguity, or UI error pauses at the last confirmed checkpoint.
+
+All 1,194 current cumulative records have usable exact `source_page_url`, first-seen page, and last-seen page provenance. That provenance may be used as a navigation hint, but live page traversal and identity revalidation remain authoritative because catalog contents can move. There is no manual per-page or three-at-a-time user loop, no URL construction, and no hidden API. Enabling that mass session requires a later phase after the three-card DOM pilot succeeds.

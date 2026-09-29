@@ -24,6 +24,19 @@ function post(index, overrides = {}) {
   };
 }
 
+function currentPage(posts, overrides = {}) {
+  return {
+    source_surface: "post_search",
+    source_page_url: "https://www.affiliate.myfans.jp/affiliates/search/genres/f-beautiful-woman/result?genre_name=%E7%BE%8E%E5%A5%B3&sexual_orientation=woman&page=60",
+    fingerprint: "page-60-fingerprint",
+    posts,
+    creators: [],
+    warnings: [],
+    stop_reason: null,
+    ...overrides,
+  };
+}
+
 function fakeStorage(initial = {}) {
   let state = structuredClone(initial);
   return {
@@ -35,8 +48,8 @@ function fakeStorage(initial = {}) {
   };
 }
 
-function harness() {
-  const storage = fakeStorage();
+function harness(options = {}) {
+  const storage = fakeStorage(options.storage);
   let now = Date.parse("2026-09-29T00:00:00.000Z");
   const dispatches = [];
   const schedules = [];
@@ -46,7 +59,12 @@ function harness() {
     uuid: () => `nonce-${dispatches.length + 1}`,
     get_catalog: async () => ({
       scope_key: "scope:test",
-      catalog: { posts: [post(1), post(2), post(3), post(4)] },
+      catalog: options.catalog || { posts: [post(1), post(2), post(3), post(4)] },
+    }),
+    get_current_page: async () => ({
+      scope_key: options.current_scope_key || "scope:test",
+      page: 60,
+      snapshot: options.current_page || currentPage([post(1), post(2), post(3), post(4)]),
     }),
     prepare_target: async () => ({ ready: true }),
     dispatch_generation: async (_tabId, request) => { dispatches.push(request); return { accepted: true }; },
@@ -71,19 +89,82 @@ test("affiliate URL validation permits only exact HTTPS official host without cr
   ]) assert.equal(core.parseAffiliateUrl(value), null);
 });
 
-test("pilot target freeze excludes ACTIVE, ineligible, and malformed records and caps at three", async () => {
+test("pilot freezes three eligible/MISSING targets from the current validated page in DOM order", async () => {
   const catalog = { posts: [
     post(4), post(3), post(2), post(1),
     post(5, { affiliate_eligible: false }),
     post(6, { displayed_affiliate_url: "https://link.affiliate.myfans.jp/existing" }),
     post(7, { post_public_url: "https://example.test/post" }),
   ] };
-  const frozen = await core.freezePilotTargets(catalog);
+  const page = currentPage([post(4), post(2), post(1), post(3)]);
+  const frozen = await core.freezePilotTargets(catalog, page);
   assert.equal(frozen.pilot_target_count, 3);
   assert.equal(frozen.eligible_target_count, 4);
-  assert.deepEqual([...frozen.targets].map((target) => target.post_uuid), [post(1).post_uuid, post(2).post_uuid, post(3).post_uuid]);
-  await assert.rejects(core.freezePilotTargets(catalog, { expected_target_hash: "sha256:wrong" }), /ATTESTATION_MISMATCH/);
-  await assert.rejects(core.freezePilotTargets(catalog, { expected_eligible_count: 1194 }), /TARGET_COUNT_MISMATCH/);
+  assert.equal(frozen.current_page_post_count, 4);
+  assert.equal(frozen.current_page_candidate_count, 4);
+  assert.deepEqual([...frozen.targets].map((target) => target.post_uuid), [post(4).post_uuid, post(2).post_uuid, post(1).post_uuid]);
+  await assert.rejects(core.freezePilotTargets(catalog, page, { expected_target_hash: "sha256:wrong" }), /ATTESTATION_MISMATCH/);
+  await assert.rejects(core.freezePilotTargets(catalog, page, { expected_eligible_count: 1194 }), /TARGET_COUNT_MISMATCH/);
+});
+
+test("arbitrary cumulative targets absent from page 60 cannot be frozen or clicked", async () => {
+  const catalog = { posts: [post(1), post(2), post(3), post(60), post(61)] };
+  const page = currentPage([post(60), post(61)]);
+  await assert.rejects(core.freezePilotTargets(catalog, page), /PILOT_TARGETS_INSUFFICIENT/);
+  assert.deepEqual(
+    [...core.selectCurrentPageTargets(catalog, page, { max_targets: 3 }).targets].map((target) => target.post_uuid),
+    [post(60).post_uuid, post(61).post_uuid],
+  );
+});
+
+test("page-60 style twenty-card fixture selects exactly three and makes a fourth unreachable", async () => {
+  const posts = Array.from({ length: 20 }, (_, index) => post(100 + index));
+  const frozen = await core.freezePilotTargets({ posts }, currentPage(posts));
+  assert.equal(frozen.current_page_post_count, 20);
+  assert.equal(frozen.current_page_candidate_count, 20);
+  assert.equal(frozen.targets.length, 3);
+  assert.deepEqual([...frozen.targets].map((target) => target.post_uuid), posts.slice(0, 3).map((item) => item.post_uuid));
+  assert.equal([...frozen.targets].some((target) => target.post_uuid === posts[3].post_uuid), false);
+});
+
+test("current-page UUID missing from cumulative and identity ambiguity fail before dispatch", async () => {
+  await assert.rejects(
+    core.freezePilotTargets({ posts: [post(1), post(2), post(3)] }, currentPage([post(98), post(99), post(100)])),
+    /PILOT_TARGETS_INSUFFICIENT/,
+  );
+  await assert.rejects(
+    core.freezePilotTargets({ posts: [post(1), post(2), post(3)] }, currentPage([post(1), post(1), post(2)])),
+    /CURRENT_PAGE_IDENTITY_CONFLICT/,
+  );
+});
+
+test("future page traversal planner can resume from a persisted UUID checkpoint without duplicates", () => {
+  const catalogPosts = Array.from({ length: 60 }, (_, index) => post(200 + index));
+  const catalog = { posts: catalogPosts };
+  let persistedCheckpoint = { completed_post_uuids: [], last_page: 0 };
+  for (let pageNumber = 1; pageNumber <= 3; pageNumber += 1) {
+    const start = (pageNumber - 1) * 20;
+    const pagePosts = pageNumber === 2
+      ? [catalogPosts[19], ...catalogPosts.slice(start, start + 19)]
+      : catalogPosts.slice(start, start + 20);
+    const selected = core.selectCurrentPageTargets(catalog, currentPage(pagePosts, {
+      source_page_url: `https://www.affiliate.myfans.jp/affiliates/search/genres/f-beautiful-woman/result?genre_name=%E7%BE%8E%E5%A5%B3&sexual_orientation=woman&page=${pageNumber}`,
+      fingerprint: `page-${pageNumber}`,
+    }), {
+      max_targets: 20,
+      excluded_post_uuids: persistedCheckpoint.completed_post_uuids,
+    });
+    persistedCheckpoint = structuredClone({
+      completed_post_uuids: [
+        ...persistedCheckpoint.completed_post_uuids,
+        ...selected.targets.map((target) => target.post_uuid),
+      ],
+      last_page: pageNumber,
+    });
+  }
+  assert.equal(persistedCheckpoint.last_page, 3);
+  assert.equal(new Set(persistedCheckpoint.completed_post_uuids).size, persistedCheckpoint.completed_post_uuids.length);
+  assert.equal(persistedCheckpoint.completed_post_uuids.includes(catalogPosts[19].post_uuid), true);
 });
 
 test("visible success, clipboard-only, rate limit, CAPTCHA, and login are distinct", () => {
@@ -109,6 +190,19 @@ test("official generation capability accepts an exact search-result card without
   });
   assert.equal(result.ready, true);
   assert.equal(result.surface_kind, "SEARCH_RESULT_CARD");
+});
+
+test("missing current target card returns the exact pre-action capability failure", () => {
+  assert.equal(core.classifyGenerationUiAudit({
+    authenticated_affiliate_scope: true,
+    route: null,
+    target_identity_count: 0,
+    target_card_count: 0,
+    target_card_post_identity_count: 0,
+    target_card_action_count: 0,
+    input_count: 0,
+    generate_control_count: 0,
+  }).reason, "OFFICIAL_AFFILIATE_GENERATION_CAPABILITY_NOT_FOUND");
 });
 
 test("dedicated form remains supported but route alone never proves generation capability", () => {
@@ -171,7 +265,7 @@ test("exact UUID to card to action mapping fails closed on ambiguity", () => {
 test("one explicit pilot action processes exactly three targets with durable cooldown checkpoints", async () => {
   const value = harness();
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "pilot", tab_id: 7, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "pilot", tab_id: 7, collector_version: "0.6.2" });
   await orchestrator.recover(7);
   assert.equal(value.dispatches.length, 1);
   for (let index = 1; index <= 3; index += 1) {
@@ -196,7 +290,7 @@ test("one explicit pilot action processes exactly three targets with durable coo
 test("worker restart while waiting inspects but never dispatches the same target again", async () => {
   const value = harness();
   let orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "restart", tab_id: 8, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "restart", tab_id: 8, collector_version: "0.6.2" });
   await orchestrator.recover(8);
   assert.equal(value.dispatches.length, 1);
   value.adapters.inspect_result = async () => ({
@@ -212,7 +306,7 @@ test("worker restart while waiting inspects but never dispatches the same target
 test("one generated URL cannot be mapped to two different posts", async () => {
   const value = harness();
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "duplicate-url", tab_id: 10, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "duplicate-url", tab_id: 10, collector_version: "0.6.2" });
   await orchestrator.recover(10);
   let journal = value.storage.dump()[core.ACTIVE_SESSION_KEY];
   const result = { visible_urls: ["https://link.affiliate.myfans.jp/generated/same"], visible_text: "生成完了" };
@@ -230,9 +324,9 @@ test("one generated URL cannot be mapped to two different posts", async () => {
 test("duplicate active session is rejected and cancel cannot race an already dispatched write", async () => {
   const value = harness();
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "one", tab_id: 9, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "one", tab_id: 9, collector_version: "0.6.2" });
   await assert.rejects(
-    orchestrator.start({ session_id: "two", tab_id: 9, collector_version: "0.6.1" }),
+    orchestrator.start({ session_id: "two", tab_id: 9, collector_version: "0.6.2" }),
     /DUPLICATE_AFFILIATE_SESSION/,
   );
   await orchestrator.recover(9);
@@ -243,11 +337,55 @@ test("message or UI stage failure is journaled fail-closed instead of leaving RU
   const value = harness();
   value.adapters.prepare_target = async () => { throw new Error("OFFICIAL_GENERATION_INPUT_NOT_UNIQUE"); };
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "stage-failure", tab_id: 11, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "stage-failure", tab_id: 11, collector_version: "0.6.2" });
   const status = await orchestrator.recover(11);
   assert.equal(status.session_state, "PAUSED_REQUIRES_RECOVERY");
   assert.equal(status.failure_reason, "OFFICIAL_GENERATION_INPUT_NOT_UNIQUE");
   assert.equal(value.dispatches.length, 0);
+});
+
+test("a terminal 0.6.1 paused pre-action journal allows a fresh current-page pilot", async () => {
+  const priorPaused = {
+    schema_version: core.SESSION_SCHEMA_VERSION,
+    collector_version: "0.6.1",
+    session_id: "old-paused",
+    tab_id: 11,
+    scope_key: "scope:test",
+    session_state: core.SESSION_STATES.PAUSED_REQUIRES_RECOVERY,
+    stage: core.SESSION_STAGES.PAUSED_REQUIRES_RECOVERY,
+    revision: 2,
+    target_set_hash: "sha256:old",
+    eligible_target_count: 1194,
+    total_targets: 3,
+    current_index: 0,
+    completed: 0,
+    failed: 1,
+    skipped: 0,
+    conflicts: 0,
+    checkpoint: 0,
+    started_at: "2026-09-29T00:00:00.000Z",
+    updated_at: "2026-09-29T00:00:01.000Z",
+    stop_reason: "OFFICIAL_AFFILIATE_GENERATION_CAPABILITY_NOT_FOUND",
+    failure_reason: "OFFICIAL_AFFILIATE_GENERATION_CAPABILITY_NOT_FOUND",
+  };
+  const value = harness({ storage: { [core.ACTIVE_SESSION_KEY]: priorPaused } });
+  const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
+  const started = await orchestrator.start({ session_id: "replacement", tab_id: 11, collector_version: "0.6.2" });
+  assert.equal(started.session_state, "RUNNING");
+  assert.equal(started.current_page_candidate_count, 4);
+  assert.equal(value.dispatches.length, 0);
+  assert.equal(value.storage.dump()[core.LAST_SESSION_KEY].session_id, "old-paused");
+});
+
+test("current-page scope mismatch fails before a pilot journal or click exists", async () => {
+  const value = harness({ current_scope_key: "scope:other" });
+  const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
+  await assert.rejects(
+    orchestrator.start({ session_id: "scope-mismatch", tab_id: 14, collector_version: "0.6.2" }),
+    /CURRENT_PAGE_SCOPE_MISMATCH/,
+  );
+  assert.equal(value.dispatches.length, 0);
+  assert.equal(value.storage.dump()[core.ACTIVE_SESSION_KEY], undefined);
 });
 
 test("clipboard-only search-card result stops after the first dispatched target", async () => {
@@ -260,7 +398,7 @@ test("clipboard-only search-card result stops after the first dispatched target"
     baseline_structural_fingerprint: "before",
   });
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "clipboard-only", tab_id: 12, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "clipboard-only", tab_id: 12, collector_version: "0.6.2" });
   await orchestrator.recover(12);
   const journal = value.storage.dump()[core.ACTIVE_SESSION_KEY];
   await orchestrator.handleResult({
@@ -292,7 +430,7 @@ test("unchanged pre-existing copy notice is not mistaken for a new clipboard-onl
     baseline_structural_fingerprint: "same",
   });
   const orchestrator = core.createAffiliateGenerationOrchestrator(value.adapters);
-  await orchestrator.start({ session_id: "stale-copy", tab_id: 13, collector_version: "0.6.1" });
+  await orchestrator.start({ session_id: "stale-copy", tab_id: 13, collector_version: "0.6.2" });
   await orchestrator.recover(13);
   const journal = value.storage.dump()[core.ACTIVE_SESSION_KEY];
   const status = await orchestrator.handleResult({

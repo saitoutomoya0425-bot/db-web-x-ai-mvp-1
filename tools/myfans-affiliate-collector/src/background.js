@@ -7,7 +7,6 @@ const durable = globalThis.MyFansOrchestratorCore;
 const autoSession = globalThis.MyFansAutoSessionCore;
 const downloadDelivery = globalThis.MyFansDownloadDelivery;
 const affiliateGeneration = globalThis.MyFansAffiliateGenerationCore;
-const PILOT_TARGET_HASH = "sha256:c997ffabd37cdfbbb66eba8e04490e61de9a893d040b3a4a801fd78e46ebd3f4";
 const AFFILIATE_ALARM_PREFIX = "myfans-affiliate-generation:";
 
 async function sendToTab(tabId, message) {
@@ -109,6 +108,23 @@ const affiliateOrchestrator = affiliateGeneration.createAffiliateGenerationOrche
   now: () => Date.now(),
   uuid: () => globalThis.crypto.randomUUID(),
   get_catalog: readAffiliateCatalog,
+  get_current_page: async (tabId, expectedScopeKey) => {
+    const context = await adapters.get_context(tabId);
+    if (
+      context?.collection_scope?.source_surface !== "post_search" ||
+      context.collection_scope.key !== expectedScopeKey
+    ) throw new Error("AFFILIATE_CURRENT_PAGE_SCOPE_MISMATCH");
+    const snapshot = await adapters.collect_page(tabId, {
+      operation_stage: "FREEZING_AFFILIATE_PILOT_TARGETS",
+      expected_scope_key: expectedScopeKey,
+      expected_page: context.page
+    });
+    return {
+      scope_key: context.collection_scope.key,
+      page: context.page,
+      snapshot
+    };
+  },
   prepare_target: async (tabId, target) => {
     const response = await sendToTab(tabId, { type: "MYFANS_AFFILIATE_PREPARE_TARGET", ...target });
     if (!response?.ok || !response.prepared) throw new Error(response?.error || "AFFILIATE_TARGET_PREPARE_FAILED");
@@ -302,7 +318,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         tab_id: message.tab_id,
         pilot_limit: 3,
         expected_eligible_count: 1194,
-        expected_target_hash: PILOT_TARGET_HASH,
         collector_version: collector.COLLECTOR_VERSION
       });
       queueAffiliateRecovery(message.tab_id);

@@ -52,7 +52,7 @@ test("runtime has no network, credential-store, browser-debug, or interception A
 
 test("manifest permissions remain unchanged for the search-result-card pilot", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "0.6.1");
+  assert.equal(manifest.version, "0.6.2");
   assert.deepEqual(manifest.permissions, ["activeTab", "storage", "downloads", "alarms"]);
   assert.deepEqual(manifest.host_permissions, ["https://www.affiliate.myfans.jp/*"]);
   assert.deepEqual(manifest.background, { service_worker: "src/background.js" });
@@ -97,8 +97,11 @@ test("generation is visible-DOM only and never uses hidden API or inferred URLs"
   assert.equal(/api\.affiliate\.myfans|\/api\//iu.test(runtimeSource), false);
   assert.equal(/chrome\.cookies|document\.cookie/iu.test(runtimeSource), false);
   assert.equal(contentScriptSource.includes("link\\.affiliate\\.myfans\\.jp"), true);
-  assert.match(backgroundSource, /PILOT_TARGET_HASH/);
+  assert.equal(backgroundSource.includes("PILOT_TARGET_HASH"), false);
   assert.match(backgroundSource, /pilot_limit:\s*3/);
+  assert.match(backgroundSource, /get_current_page/);
+  assert.match(backgroundSource, /MYFANS_COLLECT_CURRENT_PAGE/);
+  assert.match(backgroundSource, /AFFILIATE_CURRENT_PAGE_SCOPE_MISMATCH/);
   assert.match(contentScriptSource, /function resolveTargetCard/);
   assert.match(contentScriptSource, /cardGenerationControlCandidates\(card\)/);
   assert.match(contentScriptSource, /current\.card !== prepared\.card/);

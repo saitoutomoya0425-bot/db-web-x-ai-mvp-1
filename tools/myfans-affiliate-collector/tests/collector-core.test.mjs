@@ -223,8 +223,8 @@ function navigationHarness(options = {}) {
   };
 }
 
-test("reports collector version 0.6.1 and a five-page internal chunk limit", () => {
-  assert.equal(core.COLLECTOR_VERSION, "0.6.1");
+test("reports collector version 0.6.2 and a five-page internal chunk limit", () => {
+  assert.equal(core.COLLECTOR_VERSION, "0.6.2");
   assert.equal(core.MAX_RUN_PAGES, 5);
 });
 
